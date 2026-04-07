@@ -4,12 +4,54 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Romega design system tokens */
+@theme {
+  --color-rs-primary-50: hsla(207, 77%, 95%, 1);
+  --color-rs-primary-100: hsla(209, 84%, 88%, 1);
+  --color-rs-primary-200: hsla(209, 89%, 78%, 1);
+  --color-rs-primary-300: hsla(209, 96%, 65%, 1);
+  --color-rs-primary-400: hsla(209, 100%, 55%, 1);
+  --color-rs-primary-500: hsla(209, 100%, 45%, 1);
+  --color-rs-primary-600: hsla(209, 80%, 35%, 1);
+  --color-rs-primary-700: hsla(209, 100%, 28%, 1);
+  --color-rs-primary-800: hsla(209, 100%, 23%, 1);
+  --color-rs-primary-900: hsla(209, 90%, 18%, 1);
+  --color-rs-primary-950: hsla(209, 70%, 12%, 1);
+
+  --color-rs-accent-50: hsla(42, 77%, 95%, 1);
+  --color-rs-accent-100: hsla(42, 100%, 88%, 1);
+  --color-rs-accent-200: hsla(42, 95%, 76%, 1);
+  --color-rs-accent-300: hsla(42, 95%, 62%, 1);
+  --color-rs-accent-400: hsla(42, 95%, 52%, 1);
+  --color-rs-accent-500: hsla(42, 94%, 45%, 1);
+  --color-rs-accent-600: hsla(42, 94%, 43%, 1);
+  --color-rs-accent-700: hsla(42, 94%, 38%, 1);
+  --color-rs-accent-800: hsla(42, 86%, 30%, 1);
+  --color-rs-accent-900: hsla(43, 76%, 18%, 1);
+  --color-rs-accent-950: hsla(42, 60%, 10%, 1);
+
+  --color-rs-neutral-50: hsla(208, 87%, 97%, 1);
+  --color-rs-neutral-100: hsla(209, 69%, 90%, 1);
+  --color-rs-neutral-200: hsla(209, 60%, 80%, 1);
+  --color-rs-neutral-300: hsla(209, 50%, 70%, 1);
+  --color-rs-neutral-400: hsla(209, 40%, 60%, 1);
+  --color-rs-neutral-500: hsla(209, 35%, 50%, 1);
+  --color-rs-neutral-600: hsla(209, 40%, 35%, 1);
+  --color-rs-neutral-700: hsla(209, 50%, 25%, 1);
+  --color-rs-neutral-800: hsla(208, 60%, 18%, 1);
+  --color-rs-neutral-900: hsla(209, 67%, 13%, 1);
+  --color-rs-neutral-950: hsla(208, 74%, 9%, 1);
+
+  --font-body: "Source Sans 3", "Source Sans Pro", system-ui, sans-serif;
+  --font-heading: "Merriweather", Georgia, serif;
+}
+
+/* shadcn/ui theme tokens */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -123,6 +165,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
   }
   html {
     @apply font-sans;
