@@ -1,0 +1,142 @@
+"use client";
+import { X, Users } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { TreeNode } from "@/types";
+
+interface Props {
+  person: TreeNode | null;
+  onClose: () => void;
+}
+
+export function PersonDetailPanel({ person, onClose }: Props) {
+  return (
+    <AnimatePresence>
+      {person && (
+        <motion.aside
+          initial={{ x: 320, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 320, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="absolute top-0 right-0 z-20 h-full w-80 bg-rs-neutral-900 border-l border-rs-neutral-800 shadow-2xl flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-rs-neutral-800">
+            <h3 className="text-sm font-semibold text-rs-neutral-100">
+              Person Details
+            </h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-rs-neutral-400 hover:text-rs-neutral-100"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Avatar and name */}
+            <div className="flex flex-col items-center text-center gap-3">
+              <Avatar className="w-20 h-20" size="lg">
+                {person.photoUrl && <AvatarImage src={person.photoUrl} />}
+                <AvatarFallback className="bg-rs-primary-500/20 text-rs-primary-400 text-lg">
+                  {person.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-lg font-semibold text-rs-neutral-100">
+                  {person.name}
+                </p>
+                <p className="text-sm text-rs-neutral-400">{person.title}</p>
+              </div>
+            </div>
+
+            {/* Department */}
+            {person.department && (
+              <div>
+                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2">
+                  Department
+                </p>
+                <Badge
+                  className="text-xs"
+                  style={{
+                    backgroundColor: person.department.color
+                      ? `${person.department.color}20`
+                      : undefined,
+                    color: person.department.color || undefined,
+                    borderColor: person.department.color
+                      ? `${person.department.color}40`
+                      : undefined,
+                  }}
+                >
+                  {person.department.name}
+                </Badge>
+              </div>
+            )}
+
+            {/* Employment type */}
+            {person.employmentType && (
+              <div>
+                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2">
+                  Employment Type
+                </p>
+                <p className="text-sm text-rs-neutral-200">
+                  {person.employmentType}
+                </p>
+              </div>
+            )}
+
+            {/* Direct reports */}
+            {person.children.length > 0 && (
+              <div>
+                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  Direct Reports ({person.children.length})
+                </p>
+                <div className="space-y-2">
+                  {person.children.map((child) => (
+                    <div
+                      key={child.id}
+                      className="flex items-center gap-2 p-2 rounded-md bg-rs-neutral-800/50"
+                    >
+                      <Avatar className="w-7 h-7" size="sm">
+                        {child.photoUrl && (
+                          <AvatarImage src={child.photoUrl} />
+                        )}
+                        <AvatarFallback className="bg-rs-primary-500/10 text-rs-primary-400 text-[10px]">
+                          {child.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-rs-neutral-200 truncate">
+                          {child.name}
+                        </p>
+                        <p className="text-[10px] text-rs-neutral-500 truncate">
+                          {child.title}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
+  );
+}
