@@ -7,6 +7,8 @@ import { ChartToolbar } from "@/components/layout/chart-toolbar";
 import { ExportButtons } from "@/components/export/export-buttons";
 import { PersonDetailPanel } from "./person-detail-panel";
 import { TopDownTree } from "./top-down-tree";
+import { HorizontalTree } from "./horizontal-tree";
+import { CollapsibleTree } from "./collapsible-tree";
 import { DepartmentGrid } from "./department-grid";
 import type { TreeNode } from "@/types";
 
@@ -110,14 +112,31 @@ export function ChartCanvas({ isEditor }: Props) {
       </div>
 
       {/* Active view */}
-      {view === "grid" ? (
+      {view === "grid" && (
         <DepartmentGrid
           tree={data.tree}
           departments={data.departments}
           onNodeClick={handleNodeClick}
         />
-      ) : (
+      )}
+      {view === "top-down" && (
         <TopDownTree
+          tree={data.tree}
+          isEditor={isEditor}
+          onNodeClick={handleNodeClick}
+          onInit={handleInit}
+        />
+      )}
+      {view === "horizontal" && (
+        <HorizontalTree
+          tree={data.tree}
+          isEditor={isEditor}
+          onNodeClick={handleNodeClick}
+          onInit={handleInit}
+        />
+      )}
+      {view === "collapsible" && (
+        <CollapsibleTree
           tree={data.tree}
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
