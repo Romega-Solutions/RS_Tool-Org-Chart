@@ -17,11 +17,17 @@ interface Props {
 }
 
 export function ChartCanvas({ isEditor }: Props) {
-  const { data, loading } = useChartData();
+  const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+
+  const showFeedback = useCallback((msg: string) => {
+    setFeedbackMsg(msg);
+    setTimeout(() => setFeedbackMsg(null), 3000);
+  }, []);
 
   const handleNodeClick = useCallback((person: TreeNode) => {
     setSelectedPerson(person);
@@ -46,6 +52,119 @@ export function ChartCanvas({ isEditor }: Props) {
   const handleInit = useCallback((instance: ReactFlowInstance) => {
     rfInstanceRef.current = instance;
   }, []);
+
+  // Drag-to-edit: reassign a person's reportsTo when dropped near another node
+  const handleDrop = useCallback(
+    async (personId: number, targetId: number) => {
+      // Prevent self-assignment
+      if (personId === targetId) return;
+
+      try {
+        // Fetch current person to get old reportsTo for undo
+        const personRes = await fetch(`/api/people/${personId}`);
+        if (!personRes.ok) throw new Error("Failed to fetch person");
+        const person = await personRes.json();
+        const oldReportsTo = person.reportsTo;
+
+        // Skip if already reporting to target
+        if (oldReportsTo === targetId) return;
+
+        // Patch reportsTo
+        const patchRes = await fetch(`/api/people/${personId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportsTo: targetId }),
+        });
+        if (!patchRes.ok) throw new Error("Failed to update reporting line");
+
+        // Push undo action
+        push({
+          description: `Move ${person.name} to report to #${targetId}`,
+          undo: async () => {
+            await fetch(`/api/people/${personId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reportsTo: oldReportsTo }),
+            });
+            await refetch();
+          },
+          redo: async () => {
+            await fetch(`/api/people/${personId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reportsTo: targetId }),
+            });
+            await refetch();
+          },
+        });
+
+        showFeedback(`Moved ${person.name} under new manager`);
+        await refetch();
+      } catch (err) {
+        console.error("Drag-to-edit failed:", err);
+        showFeedback("Failed to reassign reporting line");
+      }
+    },
+    [push, refetch, showFeedback]
+  );
+
+  // Toggle active/inactive
+  const handleToggle = useCallback(
+    async (personId: number) => {
+      try {
+        const res = await fetch(`/api/people/${personId}/toggle`, {
+          method: "PATCH",
+        });
+        if (!res.ok) throw new Error("Failed to toggle person");
+        const updated = await res.json();
+
+        push({
+          description: `Toggle ${updated.name} active status`,
+          undo: async () => {
+            await fetch(`/api/people/${personId}/toggle`, { method: "PATCH" });
+            await refetch();
+          },
+          redo: async () => {
+            await fetch(`/api/people/${personId}/toggle`, { method: "PATCH" });
+            await refetch();
+          },
+        });
+
+        showFeedback(
+          `${updated.name} ${updated.isActive ? "activated" : "deactivated"}`
+        );
+        await refetch();
+      } catch (err) {
+        console.error("Toggle failed:", err);
+        showFeedback("Failed to toggle active status");
+      }
+    },
+    [push, refetch, showFeedback]
+  );
+
+  // Delete person with confirmation
+  const handleDelete = useCallback(
+    async (personId: number, personName: string) => {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete "${personName}"? This cannot be undone.`
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`/api/people/${personId}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete person");
+
+        showFeedback(`Deleted ${personName}`);
+        await refetch();
+      } catch (err) {
+        console.error("Delete failed:", err);
+        showFeedback("Failed to delete person");
+      }
+    },
+    [refetch, showFeedback]
+  );
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -111,6 +230,13 @@ export function ChartCanvas({ isEditor }: Props) {
         <ExportButtons />
       </div>
 
+      {/* Feedback toast */}
+      {feedbackMsg && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-rs-neutral-800 border border-rs-neutral-700 text-rs-neutral-200 text-sm px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
+          {feedbackMsg}
+        </div>
+      )}
+
       {/* Active view */}
       {view === "grid" && (
         <DepartmentGrid
@@ -125,6 +251,9 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          onDrop={handleDrop}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
         />
       )}
       {view === "horizontal" && (

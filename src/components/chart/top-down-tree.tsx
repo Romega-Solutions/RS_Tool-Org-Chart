@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
   ReactFlow,
   useNodesState,
@@ -7,6 +7,7 @@ import {
   type Node,
   type Edge,
   type ReactFlowInstance,
+  type NodeDragHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode } from "./person-node";
@@ -14,14 +15,25 @@ import type { TreeNode } from "@/types";
 
 const X_GAP = 200;
 const Y_GAP = 120;
+const DROP_RADIUS = 80;
 
 const nodeTypes = { person: PersonNode };
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  nodeId: string;
+  person: TreeNode;
+}
 
 interface Props {
   tree: TreeNode[];
   isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
+  onDrop?: (personId: number, targetId: number) => void;
+  onToggle?: (personId: number) => void;
+  onDelete?: (personId: number, personName: string) => void;
 }
 
 /** Recursively compute subtree width (number of leaf-equivalent slots). */
@@ -93,7 +105,15 @@ function layoutTree(roots: TreeNode[]) {
   return { nodes, edges, personMap };
 }
 
-export function TopDownTree({ tree, isEditor, onNodeClick, onInit }: Props) {
+export function TopDownTree({
+  tree,
+  isEditor,
+  onNodeClick,
+  onInit,
+  onDrop,
+  onToggle,
+  onDelete,
+}: Props) {
   const { nodes: initialNodes, edges: initialEdges, personMap } = useMemo(
     () => layoutTree(tree),
     [tree]
@@ -101,29 +121,172 @@ export function TopDownTree({ tree, isEditor, onNodeClick, onInit }: Props) {
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target as HTMLElement)
+      ) {
+        setContextMenu(null);
+      }
+    }
+    if (contextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [contextMenu]);
+
+  // Close context menu on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setContextMenu(null);
+    }
+    if (contextMenu) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [contextMenu]);
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      setContextMenu(null);
       const person = personMap.get(node.id);
       if (person) onNodeClick(person);
     },
     [personMap, onNodeClick]
   );
 
+  // Drag-to-edit: when a node is dropped near another node, call onDrop
+  const handleNodeDragStop: NodeDragHandler = useCallback(
+    (_event, draggedNode) => {
+      if (!isEditor || !onDrop) return;
+
+      const draggedId = draggedNode.id;
+      const draggedPos = draggedNode.position;
+
+      // Approximate center of the dragged node (node is ~160px wide, ~60px tall)
+      const draggedCenterX = draggedPos.x + 80;
+      const draggedCenterY = draggedPos.y + 30;
+
+      let closestId: string | null = null;
+      let closestDist = Infinity;
+
+      for (const node of nodes) {
+        if (node.id === draggedId) continue;
+
+        const nodeCenterX = node.position.x + 80;
+        const nodeCenterY = node.position.y + 30;
+
+        const dx = draggedCenterX - nodeCenterX;
+        const dy = draggedCenterY - nodeCenterY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestId = node.id;
+        }
+      }
+
+      if (closestId && closestDist <= DROP_RADIUS) {
+        onDrop(Number(draggedId), Number(closestId));
+      }
+    },
+    [isEditor, onDrop, nodes]
+  );
+
+  // Right-click context menu
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (!isEditor) return;
+      event.preventDefault();
+      const person = personMap.get(node.id);
+      if (!person) return;
+
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        nodeId: node.id,
+        person,
+      });
+    },
+    [isEditor, personMap]
+  );
+
+  const handleContextEdit = useCallback(() => {
+    if (!contextMenu) return;
+    // Open the person detail panel via onNodeClick
+    onNodeClick(contextMenu.person);
+    setContextMenu(null);
+  }, [contextMenu, onNodeClick]);
+
+  const handleContextToggle = useCallback(() => {
+    if (!contextMenu || !onToggle) return;
+    onToggle(contextMenu.person.id);
+    setContextMenu(null);
+  }, [contextMenu, onToggle]);
+
+  const handleContextDelete = useCallback(() => {
+    if (!contextMenu || !onDelete) return;
+    onDelete(contextMenu.person.id, contextMenu.person.name);
+    setContextMenu(null);
+  }, [contextMenu, onDelete]);
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={handleNodeClick}
-      onInit={onInit}
-      nodeTypes={nodeTypes}
-      nodesDraggable={isEditor}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      proOptions={{ hideAttribution: true }}
-      className="bg-rs-neutral-950"
-    />
+    <div className="relative h-full w-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
+        onNodeDragStop={handleNodeDragStop}
+        onNodeContextMenu={handleNodeContextMenu}
+        onInit={onInit}
+        nodeTypes={nodeTypes}
+        nodesDraggable={isEditor}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        proOptions={{ hideAttribution: true }}
+        className="bg-rs-neutral-950"
+      />
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-50 min-w-[160px] rounded-lg border border-rs-neutral-700 bg-rs-neutral-900 shadow-xl py-1 animate-in fade-in zoom-in-95"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <div className="px-3 py-1.5 border-b border-rs-neutral-700">
+            <p className="text-xs text-rs-neutral-400 truncate">
+              {contextMenu.person.name}
+            </p>
+          </div>
+          <button
+            onClick={handleContextEdit}
+            className="w-full px-3 py-1.5 text-left text-sm text-rs-neutral-200 hover:bg-rs-neutral-800 transition-colors"
+          >
+            Edit Details
+          </button>
+          <button
+            onClick={handleContextToggle}
+            className="w-full px-3 py-1.5 text-left text-sm text-rs-neutral-200 hover:bg-rs-neutral-800 transition-colors"
+          >
+            {contextMenu.person.isActive ? "Deactivate" : "Activate"}
+          </button>
+          <div className="border-t border-rs-neutral-700 my-0.5" />
+          <button
+            onClick={handleContextDelete}
+            className="w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
