@@ -89,7 +89,7 @@ export function ChartCanvas({ isEditor }: Props) {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-rs-neutral-950">
+    <div id="chart-container" className="relative h-full w-full overflow-hidden bg-rs-neutral-950">
       {/* Toolbar */}
       <ChartToolbar
         view={view}
