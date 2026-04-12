@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chart", label: "Chart", icon: Network },
   { href: "/admin/people", label: "People", icon: Users },
   { href: "/admin/departments", label: "Departments", icon: Building2 },
