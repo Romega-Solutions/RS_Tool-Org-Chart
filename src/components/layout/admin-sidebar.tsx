@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Building2, Upload, Settings, Network, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,8 +24,14 @@ export function AdminSidebar() {
   return (
     <aside className="w-60 bg-sidebar border-r border-border flex flex-col h-screen sticky top-0">
       <div className="p-4 border-b border-border">
-        <h2 className="text-sm font-bold text-rs-primary-400">Romega Solutions</h2>
-        <p className="text-xs text-muted-foreground">Org Chart</p>
+        <NextImage
+          src="/assets/romega-logo.svg"
+          alt="Romega Solutions"
+          width={140}
+          height={36}
+          className="mb-1 dark:invert"
+        />
+        <p className="text-xs text-muted-foreground">Org Chart Generator</p>
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item) => {
