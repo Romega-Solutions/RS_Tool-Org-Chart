@@ -19,7 +19,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
 
   return (
     <div
-      className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
+      className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer"
       style={{
         borderLeftColor: departmentColor || undefined,
         borderLeftWidth: 3,

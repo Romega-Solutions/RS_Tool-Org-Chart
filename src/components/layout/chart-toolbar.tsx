@@ -12,17 +12,17 @@ interface Props {
 
 export function ChartToolbar({ view, onViewChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView, canUndo = false, canRedo = false, isEditor = false }: Props) {
   return (
-    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
+    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border shadow-sm transition-shadow duration-200 hover:shadow-md">
       <ViewSwitcher value={view} onChange={onViewChange} />
       <div className="w-px h-6 bg-border" />
       {isEditor && (<>
-        <Button variant="ghost" size="icon" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)"><Undo2 className="w-4 h-4" /></Button>
-        <Button variant="ghost" size="icon" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)"><Redo2 className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="cursor-pointer transition-all duration-200"><Undo2 className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)" className="cursor-pointer transition-all duration-200"><Redo2 className="w-4 h-4" /></Button>
         <div className="w-px h-6 bg-border" />
       </>)}
-      <Button variant="ghost" size="icon" onClick={onZoomIn} title="Zoom In"><ZoomIn className="w-4 h-4" /></Button>
-      <Button variant="ghost" size="icon" onClick={onZoomOut} title="Zoom Out"><ZoomOut className="w-4 h-4" /></Button>
-      <Button variant="ghost" size="icon" onClick={onFitView} title="Fit to Screen"><Maximize2 className="w-4 h-4" /></Button>
+      <Button variant="ghost" size="icon" onClick={onZoomIn} title="Zoom In" className="cursor-pointer transition-all duration-200"><ZoomIn className="w-4 h-4" /></Button>
+      <Button variant="ghost" size="icon" onClick={onZoomOut} title="Zoom Out" className="cursor-pointer transition-all duration-200"><ZoomOut className="w-4 h-4" /></Button>
+      <Button variant="ghost" size="icon" onClick={onFitView} title="Fit to Screen" className="cursor-pointer transition-all duration-200"><Maximize2 className="w-4 h-4" /></Button>
     </div>
   );
 }

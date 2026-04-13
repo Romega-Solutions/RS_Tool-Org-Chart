@@ -43,7 +43,7 @@ export function ExportButtons() {
         variant="ghost"
         size="sm"
         onClick={exportPng}
-        className="text-muted-foreground hover:text-foreground text-xs gap-1.5"
+        className="text-muted-foreground hover:text-foreground text-xs gap-1.5 cursor-pointer transition-all duration-200"
       >
         <FileImage className="w-3.5 h-3.5" />
         PNG
@@ -52,7 +52,7 @@ export function ExportButtons() {
         variant="ghost"
         size="sm"
         onClick={exportPdf}
-        className="text-muted-foreground hover:text-foreground text-xs gap-1.5"
+        className="text-muted-foreground hover:text-foreground text-xs gap-1.5 cursor-pointer transition-all duration-200"
       >
         <FileText className="w-3.5 h-3.5" />
         PDF

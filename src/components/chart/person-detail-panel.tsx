@@ -20,18 +20,18 @@ export function PersonDetailPanel({ person, onClose }: Props) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 320, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute top-0 right-0 z-20 h-full w-80 bg-card border-l border-border shadow-2xl flex flex-col"
+          className="absolute top-0 right-0 z-20 h-full w-80 bg-card border-l border-border shadow-2xl flex flex-col rounded-l-xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-sm font-semibold text-foreground tracking-wide uppercase">
               Person Details
             </h3>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-200"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -53,12 +53,14 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-lg font-semibold text-foreground">
+                <p className="text-xl font-bold text-foreground">
                   {person.name}
                 </p>
-                <p className="text-sm text-muted-foreground">{person.title}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{person.title}</p>
               </div>
             </div>
+
+            <div className="border-t border-border" />
 
             {/* Department */}
             {person.department && (
@@ -84,6 +86,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
             )}
 
             {/* Employment type */}
+            {person.employmentType && <div className="border-t border-border" />}
             {person.employmentType && (
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
@@ -96,6 +99,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
             )}
 
             {/* Direct reports */}
+            {person.children.length > 0 && <div className="border-t border-border" />}
             {person.children.length > 0 && (
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -106,7 +110,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                   {person.children.map((child) => (
                     <div
                       key={child.id}
-                      className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
+                      className="flex items-center gap-2 p-2 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-all duration-200"
                     >
                       <Avatar className="w-7 h-7" size="sm">
                         {child.photoUrl && (

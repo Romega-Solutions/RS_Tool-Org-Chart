@@ -25,7 +25,7 @@ function ColorField({ label, value, onChange }: ColorFieldProps) {
           type="color"
           value={value || "#000000"}
           onChange={(e) => onChange(e.target.value)}
-          className="w-10 h-10 rounded cursor-pointer border border-input bg-transparent"
+          className="w-10 h-10 rounded cursor-pointer border border-input bg-transparent transition-all duration-200 hover:shadow-sm hover:border-primary/40"
         />
         <Input
           value={value}
@@ -116,7 +116,7 @@ export function SettingsForm() {
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSave} className="space-y-8 max-w-2xl">
       <div>
         <h1 className="text-xl font-bold">Settings</h1>
         <p className="text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export function SettingsForm() {
       </div>
 
       {/* Organization Info */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle>Organization</CardTitle>
           <CardDescription>
@@ -164,7 +164,7 @@ export function SettingsForm() {
       </Card>
 
       {/* Logo */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle>Logo</CardTitle>
           <CardDescription>
@@ -200,6 +200,7 @@ export function SettingsForm() {
                 size="sm"
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer transition-all duration-200"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 {uploading ? "Uploading..." : "Upload Logo"}
@@ -215,7 +216,7 @@ export function SettingsForm() {
       </Card>
 
       {/* Colors */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle>Brand Colors</CardTitle>
           <CardDescription>
@@ -242,7 +243,7 @@ export function SettingsForm() {
       </Card>
 
       {/* Embed Code */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle>Embed Code</CardTitle>
           <CardDescription>
@@ -258,7 +259,7 @@ export function SettingsForm() {
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute top-2 right-2"
+              className="absolute top-2 right-2 cursor-pointer transition-all duration-200"
               onClick={handleCopyEmbed}
             >
               {copied ? (
@@ -273,7 +274,7 @@ export function SettingsForm() {
 
       <Separator />
 
-      <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+      <Button type="submit" disabled={saving} className="w-full sm:w-auto cursor-pointer transition-all duration-200">
         <Save className="w-4 h-4 mr-2" />
         {saving ? "Saving..." : "Save Settings"}
       </Button>

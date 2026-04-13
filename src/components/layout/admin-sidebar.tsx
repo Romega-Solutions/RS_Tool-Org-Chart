@@ -39,7 +39,11 @@ export function AdminSidebar() {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${isActive ? "bg-rs-primary-500/10 text-rs-primary-400" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition-all duration-200 ${
+                isActive
+                  ? "bg-rs-primary-500/15 text-rs-primary-400 font-medium border-l-2 border-rs-primary-400 pl-[10px]"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}>
               <Icon className="w-4 h-4" />{item.label}
             </Link>
           );
@@ -47,11 +51,11 @@ export function AdminSidebar() {
       </nav>
       <div className="p-4 border-t border-border space-y-1">
         <p className="text-xs text-muted-foreground mb-2">{user?.name} ({user?.role})</p>
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={toggle}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground cursor-pointer transition-all duration-200" onClick={toggle}>
           {theme === "dark" ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
           {theme === "dark" ? "Light Mode" : "Dark Mode"}
         </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={logout}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all duration-200" onClick={logout}>
           <LogOut className="w-4 h-4 mr-2" />Sign Out
         </Button>
       </div>

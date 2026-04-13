@@ -149,10 +149,10 @@ export function CsvImport() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
               dragOver
-                ? "border-rs-primary-400 bg-rs-primary-500/5"
-                : "border-border hover:border-muted-foreground"
+                ? "border-rs-primary-400 bg-rs-primary-500/5 shadow-sm"
+                : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
             }`}
           >
             <input
@@ -232,11 +232,11 @@ export function CsvImport() {
       {/* Import button */}
       {rows.length > 0 && !results && (
         <div className="flex gap-3">
-          <Button onClick={handleImport} disabled={importing}>
+          <Button onClick={handleImport} disabled={importing} className="cursor-pointer transition-all duration-200">
             <Upload className="w-4 h-4 mr-2" />
             {importing ? "Importing..." : `Import ${rows.length} row${rows.length !== 1 ? "s" : ""}`}
           </Button>
-          <Button variant="outline" onClick={handleReset}>
+          <Button variant="outline" onClick={handleReset} className="cursor-pointer transition-all duration-200">
             Cancel
           </Button>
         </div>
@@ -292,7 +292,7 @@ export function CsvImport() {
             </Table>
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleReset}>
+              <Button variant="outline" onClick={handleReset} className="cursor-pointer transition-all duration-200">
                 Import Another File
               </Button>
             </div>

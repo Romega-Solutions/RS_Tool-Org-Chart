@@ -76,7 +76,7 @@ export function PeopleTable() {
         <PersonForm
           onSave={fetchPeople}
           trigger={
-            <Button>
+            <Button className="cursor-pointer transition-all duration-200">
               <Plus className="size-4" />
               Add Person
             </Button>
@@ -120,7 +120,7 @@ export function PeopleTable() {
               {filtered.map((person) => (
                 <tr
                   key={person.id}
-                  className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+                  className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200"
                 >
                   {/* Person */}
                   <td className="px-3 py-2">
@@ -176,6 +176,7 @@ export function PeopleTable() {
                         size="icon-sm"
                         title={person.isActive ? "Deactivate" : "Activate"}
                         onClick={() => handleToggle(person.id)}
+                        className="cursor-pointer transition-all duration-200"
                       >
                         {person.isActive ? (
                           <ToggleRight className="size-4 text-green-600" />
@@ -187,7 +188,7 @@ export function PeopleTable() {
                         person={person}
                         onSave={fetchPeople}
                         trigger={
-                          <Button variant="ghost" size="icon-sm" title="Edit">
+                          <Button variant="ghost" size="icon-sm" title="Edit" className="cursor-pointer transition-all duration-200">
                             <Pencil className="size-4" />
                           </Button>
                         }
@@ -197,6 +198,7 @@ export function PeopleTable() {
                         size="icon-sm"
                         title="Delete"
                         onClick={() => handleDelete(person)}
+                        className="cursor-pointer hover:bg-destructive/10 transition-all duration-200"
                       >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>

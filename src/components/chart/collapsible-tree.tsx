@@ -63,7 +63,7 @@ function CollapsiblePersonNodeComponent({
   return (
     <div className="relative">
       <div
-        className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
+        className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer"
         style={{
           borderLeftColor: departmentColor || undefined,
           borderLeftWidth: 3,
@@ -103,7 +103,7 @@ function CollapsiblePersonNodeComponent({
       {hasChildren && (
         <button
           type="button"
-          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-muted border border-border hover:border-rs-primary-400 hover:bg-secondary transition-colors"
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-muted border border-border hover:border-rs-primary-400 hover:bg-secondary cursor-pointer transition-all duration-200"
           onClick={(e) => {
             e.stopPropagation();
             onToggle(nodeId);

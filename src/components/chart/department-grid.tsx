@@ -46,7 +46,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
         {grouped.map(({ department, people }) => (
           <div
             key={department.id}
-            className="bg-card border border-border rounded-lg overflow-hidden"
+            className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-md hover:border-primary/30 transition-all duration-200"
           >
             {/* Department header */}
             <div
@@ -84,7 +84,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
                   <button
                     key={person.id}
                     onClick={() => onNodeClick(person)}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-muted cursor-pointer transition-all duration-200 text-left"
                   >
                     <Avatar className="w-8 h-8">
                       {person.photoUrl && (
