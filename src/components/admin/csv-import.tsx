@@ -30,7 +30,12 @@ interface ImportResult {
   message?: string;
 }
 
-export function CsvImport() {
+interface CsvImportProps {
+  compact?: boolean;
+  onComplete?: () => void;
+}
+
+export function CsvImport({ compact = false, onComplete }: CsvImportProps = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -107,6 +112,7 @@ export function CsvImport() {
       }
 
       setResults(data.results);
+      onComplete?.();
     } catch {
       setParseError("Network error during import.");
     } finally {
@@ -127,13 +133,15 @@ export function CsvImport() {
   const errorCount = results?.filter((r) => r.status === "error").length ?? 0;
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-xl font-bold">Import People</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload a CSV file to bulk-import or update people in the org chart.
-        </p>
-      </div>
+    <div className={`space-y-6 ${compact ? "" : "max-w-3xl"}`}>
+      {!compact && (
+        <div>
+          <h1 className="text-xl font-bold">Import People</h1>
+          <p className="text-sm text-muted-foreground">
+            Upload a CSV file to bulk-import or update people in the org chart.
+          </p>
+        </div>
+      )}
 
       {/* Drop zone */}
       <Card>

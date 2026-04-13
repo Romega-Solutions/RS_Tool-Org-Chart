@@ -144,7 +144,7 @@ export function DashboardStats() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link href="/admin/people" className="cursor-pointer">
+          <Link href="/admin/team" className="cursor-pointer">
             <Button
               variant="outline"
               className="w-full justify-between border-border text-foreground hover:bg-muted cursor-pointer transition-all duration-200"
@@ -157,7 +157,7 @@ export function DashboardStats() {
             </Button>
           </Link>
 
-          <Link href="/admin/departments" className="cursor-pointer">
+          <Link href="/admin/team" className="cursor-pointer">
             <Button
               variant="outline"
               className="w-full justify-between border-border text-foreground hover:bg-muted cursor-pointer transition-all duration-200"

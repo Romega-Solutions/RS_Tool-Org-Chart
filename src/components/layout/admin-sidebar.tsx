@@ -2,7 +2,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Building2, Upload, Settings, Network, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Network, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chart", label: "Chart", icon: Network },
-  { href: "/admin/people", label: "People", icon: Users },
-  { href: "/admin/departments", label: "Departments", icon: Building2 },
-  { href: "/admin/import", label: "Import", icon: Upload },
+  { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

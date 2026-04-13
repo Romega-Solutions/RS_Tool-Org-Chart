@@ -5,6 +5,7 @@ import { useChartData } from "@/hooks/use-chart-data";
 import { useUndo } from "@/hooks/use-undo";
 import { ChartToolbar } from "@/components/layout/chart-toolbar";
 import { ExportButtons } from "@/components/export/export-buttons";
+import { ImportDialog } from "@/components/admin/import-dialog";
 import { PersonDetailPanel } from "./person-detail-panel";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
@@ -225,8 +226,9 @@ export function ChartCanvas({ isEditor }: Props) {
         isEditor={isEditor}
       />
 
-      {/* Export buttons */}
-      <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-border">
+      {/* Action buttons */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
+        {isEditor && <ImportDialog onImportComplete={refetch} />}
         <ExportButtons />
       </div>
 
