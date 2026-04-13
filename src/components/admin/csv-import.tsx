@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Download } from "lucide-react";
 
 interface CsvRow {
   name: string;
@@ -143,12 +143,38 @@ export function CsvImport({ compact = false, onComplete }: CsvImportProps = {}) 
         </div>
       )}
 
+      {/* Template download */}
+      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+        <div>
+          <p className="text-sm font-medium">Not sure about the format?</p>
+          <p className="text-xs text-muted-foreground">Download the template CSV with the correct columns and sample data.</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 cursor-pointer transition-all duration-200"
+          onClick={() => {
+            const template = "name,title,department,reports_to_name,photo_filename\nRobbie Galoso,Founder,Executive,,robbie.jpg\nCherry Ann Reyes,Chief of Staff,Executive,Robbie Galoso,cherry.jpg\nKen Garcia,Full Stack Developer,Technical,Robbie Galoso,ken.jpg\n";
+            const blob = new Blob([template], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "org-chart-import-template.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Download Template
+        </Button>
+      </div>
+
       {/* Drop zone */}
       <Card>
         <CardHeader>
           <CardTitle>Upload CSV</CardTitle>
           <CardDescription>
-            Expected columns: name, title, department, reports_to_name, photo_filename
+            Columns: name, title, department, reports_to_name, photo_filename
           </CardDescription>
         </CardHeader>
         <CardContent>
