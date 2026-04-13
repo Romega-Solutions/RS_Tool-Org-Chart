@@ -47,3 +47,6 @@ export function initDb() {
 }
 
 initDb();
+
+// Seed default data (settings + org structure) on first run
+import("./seed");
