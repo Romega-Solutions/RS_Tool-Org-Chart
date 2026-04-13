@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  orgchart:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - orgchart_data:/app/data
+      - orgchart_uploads:/app/public/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/api/settings"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  orgchart_data:
+  orgchart_uploads:
