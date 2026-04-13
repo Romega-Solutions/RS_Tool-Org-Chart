@@ -84,7 +84,7 @@ function layoutTree(roots: TreeNode[]) {
         source: nodeId,
         target: String(child.id),
         type: "smoothstep",
-        style: { stroke: "hsl(209, 50%, 25%)", strokeWidth: 2 },
+        style: { stroke: "hsl(209, 60%, 50%)", strokeWidth: 2 },
       });
 
       traverse(child, childX, childY, false);
