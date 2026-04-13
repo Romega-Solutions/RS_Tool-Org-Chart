@@ -154,7 +154,7 @@ export function CsvImport({ compact = false, onComplete }: CsvImportProps = {}) 
           size="sm"
           className="shrink-0 cursor-pointer transition-all duration-200"
           onClick={() => {
-            const template = "name,title,department,reports_to_name,photo_filename\nRobbie Galoso,Founder,Executive,,robbie.jpg\nCherry Ann Reyes,Chief of Staff,Executive,Robbie Galoso,cherry.jpg\nKen Garcia,Full Stack Developer,Technical,Robbie Galoso,ken.jpg\n";
+            const template = "name,title,department,reports_to_name,photo_filename\nRobbie Galoso,Founder,Executive,,robbie.jpg\nCherry Ann Reyes,Chief of Staff,Executive,Robbie Galoso,cherry.jpg\nKen Garcia,Full Stack Developer,Technical,Robbie Galoso,ken.jpg\nMark Siazon,Product Designer,Technical,Robbie Galoso,mark.jpg\n";
             const blob = new Blob([template], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
