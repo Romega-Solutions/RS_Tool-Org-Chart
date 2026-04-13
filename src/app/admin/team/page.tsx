@@ -4,17 +4,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Building2 } from "lucide-react";
 import { PeopleTable } from "@/components/admin/people-table";
 import { DepartmentList } from "@/components/admin/department-list";
+import { ImportDialog } from "@/components/admin/import-dialog";
 
 export default function TeamPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold" style={{ fontFamily: "Merriweather, serif" }}>
-          Team Management
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage people and departments in your organization.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "Merriweather, serif" }}>
+            Team Management
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage people and departments in your organization.
+          </p>
+        </div>
+        <ImportDialog />
       </div>
 
       <Tabs defaultValue="people" className="w-full">
