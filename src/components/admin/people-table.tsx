@@ -52,8 +52,17 @@ export function PeopleTable() {
   });
 
   async function handleToggle(id: number) {
-    await fetch(`/api/people/${id}/toggle`, { method: "PATCH" });
-    fetchPeople();
+    // Optimistic update — flip locally first, then sync with server
+    setPeople((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
+    );
+    const res = await fetch(`/api/people/${id}/toggle`, { method: "PATCH" });
+    if (!res.ok) {
+      // Revert on failure
+      setPeople((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
+      );
+    }
   }
 
   async function handleDelete(person: PersonRow) {
