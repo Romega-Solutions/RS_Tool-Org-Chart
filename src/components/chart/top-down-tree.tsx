@@ -124,7 +124,6 @@ export function TopDownTree({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Sync nodes/edges when tree data changes (e.g. after undo/redo refetch)
@@ -132,33 +131,6 @@ export function TopDownTree({
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
-
-  // Close context menu on outside click
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(e.target as HTMLElement)
-      ) {
-        setContextMenu(null);
-      }
-    }
-    if (contextMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [contextMenu]);
-
-  // Close context menu on Escape
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setContextMenu(null);
-    }
-    if (contextMenu) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [contextMenu]);
 
   // Update node highlight when highlightedNodeId changes
   useEffect(() => {
@@ -263,25 +235,6 @@ export function TopDownTree({
     [isEditor, personMap]
   );
 
-  const handleContextEdit = useCallback(() => {
-    if (!contextMenu) return;
-    // Open the person detail panel via onNodeClick
-    onNodeClick(contextMenu.person);
-    setContextMenu(null);
-  }, [contextMenu, onNodeClick]);
-
-  const handleContextToggle = useCallback(() => {
-    if (!contextMenu || !onToggle) return;
-    onToggle(contextMenu.person.id);
-    setContextMenu(null);
-  }, [contextMenu, onToggle]);
-
-  const handleContextDelete = useCallback(() => {
-    if (!contextMenu || !onDelete) return;
-    onDelete(contextMenu.person.id, contextMenu.person.name);
-    setContextMenu(null);
-  }, [contextMenu, onDelete]);
-
   return (
     <div className="relative h-full w-full">
       <ReactFlow
@@ -302,38 +255,16 @@ export function TopDownTree({
         className="bg-background"
       />
 
-      {/* Context Menu */}
       {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-card shadow-xl py-1 animate-in fade-in zoom-in-95"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          <div className="px-3 py-1.5 border-b border-border">
-            <p className="text-xs text-muted-foreground truncate">
-              {contextMenu.person.name}
-            </p>
-          </div>
-          <button
-            onClick={handleContextEdit}
-            className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            Edit Details
-          </button>
-          <button
-            onClick={handleContextToggle}
-            className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            {contextMenu.person.isActive ? "Deactivate" : "Activate"}
-          </button>
-          <div className="border-t border-border my-0.5" />
-          <button
-            onClick={handleContextDelete}
-            className="w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            Delete
-          </button>
-        </div>
+        <NodeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          person={contextMenu.person}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
+          onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
+          onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
+        />
       )}
     </div>
   );
