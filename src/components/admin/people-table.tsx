@@ -2,10 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonForm } from "@/components/admin/person-form";
-import { Pencil, Trash2, Plus, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import type { Person } from "@/types";
 
 interface PersonRow extends Person {
@@ -141,49 +140,46 @@ export function PeopleTable() {
                   {/* Department */}
                   <td className="px-3 py-2">
                     {person.departmentName ? (
-                      <Badge
-                        variant="outline"
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
                         style={{
-                          borderColor: person.departmentColor || undefined,
-                          color: person.departmentColor || undefined,
+                          backgroundColor: `${person.departmentColor}18` || "#88888818",
+                          color: person.departmentColor || "#888",
+                          border: `1px solid ${person.departmentColor}30` || "#88888830",
                         }}
                       >
                         <span
-                          className="mr-1 inline-block size-2 rounded-full"
-                          style={{
-                            backgroundColor: person.departmentColor || "#888",
-                          }}
+                          className="inline-block size-1.5 rounded-full"
+                          style={{ backgroundColor: person.departmentColor || "#888" }}
                         />
                         {person.departmentName}
-                      </Badge>
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">--</span>
                     )}
                   </td>
 
-                  {/* Status */}
+                  {/* Status — clickable toggle pill */}
                   <td className="px-3 py-2">
-                    <Badge variant={person.isActive ? "default" : "secondary"}>
+                    <button
+                      onClick={() => handleToggle(person.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-all duration-200 border ${
+                        person.isActive
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-400/20"
+                          : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                      }`}
+                      title={person.isActive ? "Click to deactivate" : "Click to activate"}
+                    >
+                      <span className={`inline-block size-1.5 rounded-full ${
+                        person.isActive ? "bg-emerald-500 dark:bg-emerald-400" : "bg-muted-foreground"
+                      }`} />
                       {person.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    </button>
                   </td>
 
                   {/* Actions */}
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title={person.isActive ? "Deactivate" : "Activate"}
-                        onClick={() => handleToggle(person.id)}
-                        className="cursor-pointer transition-all duration-200"
-                      >
-                        {person.isActive ? (
-                          <ToggleRight className="size-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="size-4 text-muted-foreground" />
-                        )}
-                      </Button>
                       <PersonForm
                         person={person}
                         onSave={fetchPeople}
