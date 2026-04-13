@@ -200,11 +200,21 @@ export function ChartCanvas({ isEditor }: Props) {
   if (!data || data.tree.length === 0) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
-        <div className="text-center space-y-2">
-          <p className="text-muted-foreground">No chart data available.</p>
-          <p className="text-sm text-muted-foreground">
-            Import data or add people to get started.
-          </p>
+        <div className="text-center space-y-4">
+          <div className="space-y-2">
+            <p className="text-muted-foreground">No chart data available.</p>
+            <p className="text-sm text-muted-foreground">
+              Import data or add people to get started.
+            </p>
+          </div>
+          {isEditor && (
+            <div className="flex items-center justify-center gap-3">
+              <ImportDialog onImportComplete={refetch} />
+              <a href="/admin/team" className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200">
+                Add People
+              </a>
+            </div>
+          )}
         </div>
       </div>
     );
