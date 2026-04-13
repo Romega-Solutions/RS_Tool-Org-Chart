@@ -9,8 +9,13 @@ export function useTheme() {
   useEffect(() => {
     const stored = localStorage.getItem("orgchart_theme") as Theme | null;
     const initial = stored || "dark";
-    setThemeState(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
+
+    const frameId = window.requestAnimationFrame(() => {
+      setThemeState(initial);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, []);
 
   const setTheme = useCallback((t: Theme) => {

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -13,10 +13,25 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  UserPlus,
+  FolderPlus,
+  Upload,
+  FileDown,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
+import { PersonForm } from "@/components/admin/person-form";
+import { DepartmentForm } from "@/components/admin/department-form";
+import { CsvImport } from "@/components/admin/csv-import";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -27,7 +42,8 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, logout, isEditor } = useAuth();
   const { theme, toggle } = useTheme();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -35,6 +51,17 @@ export function AdminSidebar() {
     }
     return false;
   });
+  const [importOpen, setImportOpen] = useState(false);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("orgchart_quick_actions") !== "closed";
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("orgchart_quick_actions", quickActionsOpen ? "open" : "closed");
+  }, [quickActionsOpen]);
 
   useEffect(() => {
     localStorage.setItem("orgchart_sidebar", collapsed ? "collapsed" : "expanded");
@@ -47,15 +74,15 @@ export function AdminSidebar() {
       } bg-sidebar border-r border-border flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out`}
     >
       {/* Header */}
-      <div className="p-3 border-b border-border flex items-center justify-between min-h-[60px]">
+      <div className="p-3 border-b border-border flex items-start justify-between min-h-[60px]">
         {!collapsed && (
           <div className="overflow-hidden">
             <NextImage
               src="/assets/romega-logo.svg"
               alt="Romega Solutions"
-              width={120}
-              height={32}
-              className="dark:invert"
+              width={180}
+              height={48}
+              className="dark:invert dark:brightness-[0.9] dark:saturate-[1.3]"
             />
             <p className="text-[10px] text-muted-foreground mt-0.5">Org Chart Generator</p>
           </div>
@@ -100,6 +127,107 @@ export function AdminSidebar() {
           );
         })}
       </nav>
+
+      {/* Quick Actions */}
+      {isEditor && (
+        <div className="p-2 border-t border-border space-y-1">
+          {!collapsed ? (
+            <button
+              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              className="flex items-center justify-between w-full text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1 hover:text-foreground cursor-pointer transition-colors duration-200"
+            >
+              <span>Quick Actions</span>
+              <span className="flex items-center gap-1">
+                <span className="text-[9px] normal-case tracking-normal opacity-70">
+                  {quickActionsOpen ? "Hide" : "Show"}
+                </span>
+                {quickActionsOpen ? (
+                  <ChevronDown className="w-3 h-3" />
+                ) : (
+                  <ChevronRight className="w-3 h-3" />
+                )}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
+              title={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"}
+            >
+              {quickActionsOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
+          {quickActionsOpen && <><PersonForm
+            onSave={() => router.refresh()}
+            trigger={
+              <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "sm"}
+                className={`${
+                  collapsed ? "w-full justify-center" : "w-full justify-start"
+                } text-muted-foreground hover:text-rs-primary-400 hover:bg-rs-primary-500/10 cursor-pointer transition-all duration-200`}
+                title={collapsed ? "Add Person" : undefined}
+              >
+                <UserPlus className="w-4 h-4 shrink-0" />
+                {!collapsed && <span className="ml-2">Add Person</span>}
+              </Button>
+            }
+          />
+          <DepartmentForm
+            onSave={() => router.refresh()}
+            trigger={
+              <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "sm"}
+                className={`${
+                  collapsed ? "w-full justify-center" : "w-full justify-start"
+                } text-muted-foreground hover:text-rs-accent-400 hover:bg-rs-accent-500/10 cursor-pointer transition-all duration-200`}
+                title={collapsed ? "Add Department" : undefined}
+              >
+                <FolderPlus className="w-4 h-4 shrink-0" />
+                {!collapsed && <span className="ml-2">Add Department</span>}
+              </Button>
+            }
+          />
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`${
+              collapsed ? "w-full justify-center" : "w-full justify-start"
+            } text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all duration-200`}
+            onClick={() => setImportOpen(true)}
+            title={collapsed ? "Import CSV" : undefined}
+          >
+            <Upload className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="ml-2">Import CSV</span>}
+          </Button>
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`${
+              collapsed ? "w-full justify-center" : "w-full justify-start"
+            } text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-200`}
+            onClick={() => router.push("/chart")}
+            title={collapsed ? "Export Chart" : undefined}
+          >
+            <FileDown className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="ml-2">Export Chart</span>}
+          </Button>
+          </>}
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Import People from CSV</DialogTitle>
+              </DialogHeader>
+              <CsvImport compact onComplete={() => { router.refresh(); }} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="p-2 border-t border-border space-y-1">

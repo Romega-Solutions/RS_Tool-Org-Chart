@@ -4,8 +4,9 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import { useChartData } from "@/hooks/use-chart-data";
 import { useUndo } from "@/hooks/use-undo";
 import { ChartToolbar } from "@/components/layout/chart-toolbar";
-import { ExportButtons } from "@/components/export/export-buttons";
+import { PrintButton } from "@/components/export/print-button";
 import { ImportDialog } from "@/components/admin/import-dialog";
+import { ChartSearch } from "./chart-search";
 import { PersonDetailPanel } from "./person-detail-panel";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
@@ -17,12 +18,28 @@ interface Props {
   isEditor: boolean;
 }
 
+function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
+  for (const person of tree) {
+    if (person.id === personId) {
+      return person;
+    }
+
+    const childMatch = findPersonById(person.children, personId);
+    if (childMatch) {
+      return childMatch;
+    }
+  }
+
+  return null;
+}
+
 export function ChartCanvas({ isEditor }: Props) {
   const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [highlightedNodeId, setHighlightedNodeId] = useState<number | null>(null);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   const showFeedback = useCallback((msg: string) => {
@@ -112,9 +129,19 @@ export function ChartCanvas({ isEditor }: Props) {
   // Toggle active/inactive
   const handleToggle = useCallback(
     async (personId: number) => {
+      const current = data ? findPersonById(data.tree, personId) : null;
+      if (!current) {
+        showFeedback("Failed to find person");
+        return;
+      }
+
+      const nextIsActive = !current.isActive;
+
       try {
-        const res = await fetch(`/api/people/${personId}/toggle`, {
+        const res = await fetch(`/api/people/${personId}`, {
           method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: nextIsActive }),
         });
         if (!res.ok) throw new Error("Failed to toggle person");
         const updated = await res.json();
@@ -122,11 +149,19 @@ export function ChartCanvas({ isEditor }: Props) {
         push({
           description: `Toggle ${updated.name} active status`,
           undo: async () => {
-            await fetch(`/api/people/${personId}/toggle`, { method: "PATCH" });
+            await fetch(`/api/people/${personId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isActive: current.isActive }),
+            });
             await refetch();
           },
           redo: async () => {
-            await fetch(`/api/people/${personId}/toggle`, { method: "PATCH" });
+            await fetch(`/api/people/${personId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isActive: nextIsActive }),
+            });
             await refetch();
           },
         });
@@ -140,7 +175,7 @@ export function ChartCanvas({ isEditor }: Props) {
         showFeedback("Failed to toggle active status");
       }
     },
-    [push, refetch, showFeedback]
+    [data, push, refetch, showFeedback]
   );
 
   // Delete person with confirmation
@@ -166,6 +201,39 @@ export function ChartCanvas({ isEditor }: Props) {
     },
     [refetch, showFeedback]
   );
+
+  // Search select: highlight + zoom + open detail panel
+  const handleSearchSelect = useCallback(
+    (person: TreeNode) => {
+      setSelectedPerson(person);
+      setHighlightedNodeId(person.id);
+
+      // Zoom to node for ReactFlow views
+      if (view !== "grid") {
+        setTimeout(() => {
+          rfInstanceRef.current?.fitView({
+            nodes: [{ id: String(person.id) }],
+            duration: 500,
+            padding: 0.5,
+          });
+        }, 100);
+      } else {
+        // Scroll to person card in grid view
+        setTimeout(() => {
+          const el = document.getElementById(`person-card-${person.id}`);
+          el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
+    },
+    [view]
+  );
+
+  // Auto-clear highlight after 3 seconds
+  useEffect(() => {
+    if (highlightedNodeId === null) return;
+    const timer = setTimeout(() => setHighlightedNodeId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightedNodeId]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -234,12 +302,19 @@ export function ChartCanvas({ isEditor }: Props) {
         canUndo={canUndo}
         canRedo={canRedo}
         isEditor={isEditor}
+        searchSlot={
+          <ChartSearch
+            tree={data.tree}
+            departments={data.departments}
+            onSelect={handleSearchSelect}
+          />
+        }
       />
 
       {/* Action buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
         <ImportDialog onImportComplete={refetch} />
-        <ExportButtons />
+        <PrintButton />
       </div>
 
       {/* Feedback toast */}
@@ -255,6 +330,7 @@ export function ChartCanvas({ isEditor }: Props) {
           tree={data.tree}
           departments={data.departments}
           onNodeClick={handleNodeClick}
+          highlightedNodeId={highlightedNodeId}
         />
       )}
       {view === "top-down" && (
@@ -266,6 +342,7 @@ export function ChartCanvas({ isEditor }: Props) {
           onDrop={handleDrop}
           onToggle={handleToggle}
           onDelete={handleDelete}
+          highlightedNodeId={highlightedNodeId}
         />
       )}
       {view === "horizontal" && (
@@ -274,6 +351,7 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          highlightedNodeId={highlightedNodeId}
         />
       )}
       {view === "collapsible" && (
@@ -282,11 +360,12 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          highlightedNodeId={highlightedNodeId}
         />
       )}
 
       {/* Detail panel */}
-      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} />
+      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} />
     </div>
   );
 }

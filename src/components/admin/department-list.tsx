@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { DepartmentForm } from "./department-form";
+import { getDeptIcon } from "@/lib/dept-icons";
 import type { Department } from "@/types";
 
 export function DepartmentList() {
@@ -44,10 +45,17 @@ export function DepartmentList() {
         <DepartmentForm onSave={fetchDepartments} trigger={<Button size="sm" className="cursor-pointer transition-all duration-200"><Plus className="w-4 h-4 mr-2" />Add Department</Button>} />
       </div>
       <div className="space-y-2">
-        {departments.map((dept) => (
+        {departments.map((dept) => {
+          const DeptIcon = getDeptIcon(dept.name);
+          return (
           <div key={dept.id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:shadow-sm hover:border-primary/30 transition-all duration-200">
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: dept.color || "#666" }} />
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${dept.color || "#666"}20` }}
+              >
+                <DeptIcon className="w-3.5 h-3.5" style={{ color: dept.color || "#666" }} />
+              </div>
               <span className="font-medium">{dept.name}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -55,7 +63,8 @@ export function DepartmentList() {
               <Button variant="ghost" size="icon" className="cursor-pointer hover:bg-destructive/10 transition-all duration-200" onClick={() => handleDelete(dept.id)}><Trash2 className="w-4 h-4 text-red-400" /></Button>
             </div>
           </div>
-        ))}
+          );
+        })}
         {departments.length === 0 && <p className="text-muted-foreground text-sm">No departments yet. Add one to get started.</p>}
       </div>
     </div>

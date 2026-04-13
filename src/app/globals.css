@@ -177,3 +177,187 @@
     cursor: pointer;
   }
 }
+
+.print-chart-shell {
+  margin: 1.5rem auto 0;
+  width: min(100%, 1200px);
+}
+
+.print-chart-header,
+.print-chart-section,
+.print-person-card {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-chart-header {
+  border: 1px solid #dbe3ec;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 1.75rem;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+}
+
+.print-chart-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 1.5rem;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+}
+
+.print-orgchart {
+  overflow-x: auto;
+  padding: 0.5rem 0 0.75rem;
+}
+
+.print-orgchart-tree,
+.print-orgchart-children {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-orgchart-tree {
+  min-width: max-content;
+}
+
+.print-orgchart-children {
+  position: relative;
+  padding-top: 1.5rem;
+}
+
+.print-orgchart-children::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 1rem;
+  border-left: 2px solid #cbd5e1;
+}
+
+.print-orgchart-node {
+  position: relative;
+  display: flex;
+  min-width: 14rem;
+  max-width: 16rem;
+  flex-direction: column;
+  align-items: center;
+  text-align: left;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-orgchart-node:not(.print-orgchart-node--root) {
+  padding-top: 1rem;
+}
+
+.print-orgchart-node:not(.print-orgchart-node--root)::before,
+.print-orgchart-node:not(.print-orgchart-node--root)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 50%;
+  border-top: 2px solid #cbd5e1;
+}
+
+.print-orgchart-node:not(.print-orgchart-node--root)::before {
+  right: 50%;
+}
+
+.print-orgchart-node:not(.print-orgchart-node--root)::after {
+  left: 50%;
+  border-left: 2px solid #cbd5e1;
+}
+
+.print-orgchart-node:only-child::before,
+.print-orgchart-node:only-child::after {
+  display: none;
+}
+
+.print-orgchart-node:first-child::before {
+  display: none;
+}
+
+.print-orgchart-node:last-child::after {
+  border-left: 2px solid #cbd5e1;
+  border-right: 0;
+}
+
+.print-orgchart-node:last-child::before {
+  border-top: 2px solid #cbd5e1;
+}
+
+.print-orgchart-node:first-child::after {
+  border-top: 2px solid #cbd5e1;
+}
+
+.print-orgchart-node:last-child::after,
+.print-orgchart-node:only-child::after {
+  width: 0;
+}
+
+.print-orgchart-node:first-child::before,
+.print-orgchart-node:only-child::before {
+  width: 0;
+}
+
+.print-person-card {
+  border: 1px solid #dbe3ec;
+  border-left: 0.4rem solid var(--department-color, #0ea5e9);
+  border-radius: 1.25rem;
+  background: #ffffff;
+  padding: 1rem 1.125rem;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  width: 100%;
+  min-height: 7rem;
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-screen-controls {
+    display: none !important;
+  }
+
+  .print-chart-root {
+    min-height: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  .print-chart-shell {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .print-chart-header,
+  .print-chart-section,
+  .print-person-card {
+    box-shadow: none !important;
+  }
+
+  .print-chart-section {
+    overflow: visible !important;
+  }
+
+  .print-orgchart {
+    overflow: visible !important;
+  }
+}

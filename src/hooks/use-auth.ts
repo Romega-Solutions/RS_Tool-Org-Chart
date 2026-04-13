@@ -8,8 +8,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(getCurrentUser());
-    setLoading(false);
+    const frameId = window.requestAnimationFrame(() => {
+      setUser(getCurrentUser());
+      setLoading(false);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, []);
 
   const login = useCallback((username: string, password: string) => {

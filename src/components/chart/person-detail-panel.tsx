@@ -4,14 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getDeptIcon } from "@/lib/dept-icons";
 import type { TreeNode } from "@/types";
 
 interface Props {
   person: TreeNode | null;
   onClose: () => void;
+  onSelectPerson?: (person: TreeNode) => void;
 }
 
-export function PersonDetailPanel({ person, onClose }: Props) {
+export function PersonDetailPanel({ person, onClose, onSelectPerson }: Props) {
   return (
     <AnimatePresence>
       {person && (
@@ -63,13 +65,15 @@ export function PersonDetailPanel({ person, onClose }: Props) {
             <div className="border-t border-border" />
 
             {/* Department */}
-            {person.department && (
+            {person.department && (() => {
+              const DeptIcon = getDeptIcon(person.department.name);
+              return (
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                   Department
                 </p>
                 <Badge
-                  className="text-xs"
+                  className="text-xs gap-1"
                   style={{
                     backgroundColor: person.department.color
                       ? `${person.department.color}20`
@@ -80,10 +84,12 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                       : undefined,
                   }}
                 >
+                  <DeptIcon className="w-3 h-3" />
                   {person.department.name}
                 </Badge>
               </div>
-            )}
+              );
+            })()}
 
             {/* Employment type */}
             {person.employmentType && <div className="border-t border-border" />}
@@ -108,9 +114,11 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                 </p>
                 <div className="space-y-2">
                   {person.children.map((child) => (
-                    <div
+                    <button
                       key={child.id}
-                      className="flex items-center gap-2 p-2 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-all duration-200"
+                      type="button"
+                      onClick={() => onSelectPerson?.(child)}
+                      className="w-full flex items-center gap-2 p-2 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-all duration-200 text-left"
                     >
                       <Avatar className="w-7 h-7" size="sm">
                         {child.photoUrl && (
@@ -133,7 +141,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                           {child.title}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>

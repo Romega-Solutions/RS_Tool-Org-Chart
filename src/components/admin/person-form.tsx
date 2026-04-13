@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person, Department } from "@/types";
 
 interface PersonWithDept extends Person {
@@ -238,15 +239,18 @@ export function PersonForm({ person, onSave, trigger }: Props) {
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => (
+                {departments.map((d) => {
+                  const DeptIcon = getDeptIcon(d.name);
+                  return (
                   <SelectItem key={d.id} value={d.id}>
-                    <span
-                      className="mr-1.5 inline-block size-2.5 rounded-full"
-                      style={{ backgroundColor: d.color || "#888" }}
+                    <DeptIcon
+                      className="mr-1.5 inline-block size-3"
+                      style={{ color: d.color || "#888" }}
                     />
                     {d.name}
                   </SelectItem>
-                ))}
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>

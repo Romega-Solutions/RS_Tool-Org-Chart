@@ -2,6 +2,7 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
   const name = data.name as string;
@@ -9,6 +10,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
   const photoUrl = data.photoUrl as string | null;
   const departmentColor = data.departmentColor as string | null;
   const isRoot = data.isRoot as boolean;
+  const highlighted = data.highlighted as boolean | undefined;
 
   const initials = name
     .split(" ")
@@ -19,7 +21,10 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
 
   return (
     <div
-      className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+      className={cn(
+        "bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer",
+        highlighted && "ring-2 ring-rs-primary-500 shadow-xl shadow-rs-primary-500/25 scale-[1.05] border-rs-primary-400"
+      )}
       style={{
         borderLeftColor: departmentColor || undefined,
         borderLeftWidth: 3,

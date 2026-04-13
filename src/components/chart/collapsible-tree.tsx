@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { TreeNode } from "@/types";
 
@@ -33,6 +34,7 @@ interface CollapsibleNodeData extends Record<string, unknown> {
   childCount: number;
   onToggle: (nodeId: string) => void;
   nodeId: string;
+  highlighted?: boolean;
 }
 
 function CollapsiblePersonNodeComponent({
@@ -51,6 +53,7 @@ function CollapsiblePersonNodeComponent({
     childCount,
     onToggle,
     nodeId,
+    highlighted,
   } = data;
 
   const initials = name
@@ -63,7 +66,10 @@ function CollapsiblePersonNodeComponent({
   return (
     <div className="relative">
       <div
-        className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+        className={cn(
+          "bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:shadow-xl hover:border-rs-primary-400 hover:scale-[1.02] transition-all duration-200 cursor-pointer",
+          highlighted && "ring-2 ring-rs-primary-500 shadow-xl shadow-rs-primary-500/25 scale-[1.05] border-rs-primary-400"
+        )}
         style={{
           borderLeftColor: departmentColor || undefined,
           borderLeftWidth: 3,
@@ -218,11 +224,12 @@ interface Props {
   isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
+  highlightedNodeId?: number | null;
 }
 
 const nodeTypes = { person: CollapsiblePersonNode };
 
-export function CollapsibleTree({ tree, isEditor, onNodeClick, onInit }: Props) {
+export function CollapsibleTree({ tree, isEditor, onNodeClick, onInit, highlightedNodeId }: Props) {
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
   const handleToggle = useCallback((nodeId: string) => {
@@ -257,6 +264,19 @@ export function CollapsibleTree({ tree, isEditor, onNodeClick, onInit }: Props) 
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
+  // Update node highlight when highlightedNodeId changes
+  useEffect(() => {
+    setNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          highlighted: n.id === String(highlightedNodeId),
+        },
+      }))
+    );
+  }, [highlightedNodeId, setNodes]);
+
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       const person = personMap.get(node.id);
@@ -274,7 +294,7 @@ export function CollapsibleTree({ tree, isEditor, onNodeClick, onInit }: Props) 
       onNodeClick={handleNodeClick}
       onInit={onInit}
       nodeTypes={nodeTypes}
-      nodesDraggable={isEditor}
+      nodesDraggable={false}
       nodesConnectable={false}
       fitView
       fitViewOptions={{ padding: 0.2 }}

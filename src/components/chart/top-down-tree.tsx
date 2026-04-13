@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode } from "./person-node";
+import { NodeContextMenu } from "./node-context-menu";
 import type { TreeNode } from "@/types";
 
 const X_GAP = 200;
@@ -33,6 +34,7 @@ interface Props {
   onDrop?: (personId: number, targetId: number) => void;
   onToggle?: (personId: number) => void;
   onDelete?: (personId: number, personName: string) => void;
+  highlightedNodeId?: number | null;
 }
 
 /** Recursively compute subtree width (number of leaf-equivalent slots). */
@@ -112,16 +114,24 @@ export function TopDownTree({
   onDrop,
   onToggle,
   onDelete,
+  highlightedNodeId,
 }: Props) {
   const { nodes: initialNodes, edges: initialEdges, personMap } = useMemo(
     () => layoutTree(tree),
     [tree]
   );
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Sync nodes/edges when tree data changes (e.g. after undo/redo refetch)
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   // Close context menu on outside click
   useEffect(() => {
@@ -150,6 +160,19 @@ export function TopDownTree({
     }
   }, [contextMenu]);
 
+  // Update node highlight when highlightedNodeId changes
+  useEffect(() => {
+    setNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          highlighted: n.id === String(highlightedNodeId),
+        },
+      }))
+    );
+  }, [highlightedNodeId, setNodes]);
+
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       setContextMenu(null);
@@ -159,12 +182,30 @@ export function TopDownTree({
     [personMap, onNodeClick]
   );
 
+  // Save position when drag starts so we can snap back if needed
+  const handleNodeDragStart = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      dragStartPosRef.current = { ...node.position };
+    },
+    []
+  );
+
   // Drag-to-edit: when a node is dropped near another node, call onDrop
+  // Otherwise snap the node back to its original position
   const handleNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
-      if (!isEditor || !onDrop) return;
-
       const draggedId = draggedNode.id;
+
+      if (!isEditor || !onDrop) {
+        // Snap back — dragging not supported in this mode
+        if (dragStartPosRef.current) {
+          const pos = dragStartPosRef.current;
+          setNodes((prev) => prev.map((n) => n.id === draggedId ? { ...n, position: pos } : n));
+        }
+        dragStartPosRef.current = null;
+        return;
+      }
+
       const draggedPos = draggedNode.position;
 
       // Approximate center of the dragged node (node is ~160px wide, ~60px tall)
@@ -192,9 +233,16 @@ export function TopDownTree({
 
       if (closestId && closestDist <= DROP_RADIUS) {
         onDrop(Number(draggedId), Number(closestId));
+      } else {
+        // No valid drop target — snap back to original position
+        if (dragStartPosRef.current) {
+          const pos = dragStartPosRef.current;
+          setNodes((prev) => prev.map((n) => n.id === draggedId ? { ...n, position: pos } : n));
+        }
       }
+      dragStartPosRef.current = null;
     },
-    [isEditor, onDrop, nodes]
+    [isEditor, onDrop, nodes, setNodes]
   );
 
   // Right-click context menu
@@ -242,6 +290,7 @@ export function TopDownTree({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
         onNodeContextMenu={handleNodeContextMenu}
         onInit={onInit}

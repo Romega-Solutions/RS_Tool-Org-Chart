@@ -18,9 +18,9 @@ export default function LoginPage() {
             <NextImage
               src="/assets/romega-logo.svg"
               alt="Romega Solutions"
-              width={180}
-              height={48}
-              className="mx-auto mb-4 dark:invert"
+              width={280}
+              height={74}
+              className="mx-auto mb-4 dark:invert dark:brightness-[0.9] dark:saturate-[1.3]"
               priority
             />
             <h1

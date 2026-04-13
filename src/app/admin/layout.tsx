@@ -1,10 +1,12 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute requireEditor>
       <div className="flex min-h-screen"><AdminSidebar /><main className="flex-1 p-6">{children}</main></div>
+      <Toaster />
     </ProtectedRoute>
   );
 }

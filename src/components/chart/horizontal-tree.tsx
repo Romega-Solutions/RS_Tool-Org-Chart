@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   ReactFlow,
   useNodesState,
@@ -20,6 +20,7 @@ interface Props {
   isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
+  highlightedNodeId?: number | null;
 }
 
 const nodeTypes = { person: HorizontalPersonNode };
@@ -91,15 +92,34 @@ function layoutTree(roots: TreeNode[]) {
   return { nodes, edges, personMap };
 }
 
-export function HorizontalTree({ tree, isEditor, onNodeClick, onInit }: Props) {
+export function HorizontalTree({ tree, isEditor, onNodeClick, onInit, highlightedNodeId }: Props) {
   const {
     nodes: initialNodes,
     edges: initialEdges,
     personMap,
   } = useMemo(() => layoutTree(tree), [tree]);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Sync nodes/edges when tree data changes (e.g. after undo/redo refetch)
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  // Update node highlight when highlightedNodeId changes
+  useEffect(() => {
+    setNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          highlighted: n.id === String(highlightedNodeId),
+        },
+      }))
+    );
+  }, [highlightedNodeId, setNodes]);
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -118,7 +138,7 @@ export function HorizontalTree({ tree, isEditor, onNodeClick, onInit }: Props) {
       onNodeClick={handleNodeClick}
       onInit={onInit}
       nodeTypes={nodeTypes}
-      nodesDraggable={isEditor}
+      nodesDraggable={false}
       nodesConnectable={false}
       fitView
       fitViewOptions={{ padding: 0.2 }}

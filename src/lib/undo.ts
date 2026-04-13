@@ -8,6 +8,7 @@ export class UndoStack {
   private stack: UndoAction[] = [];
   private pointer = -1;
   private maxSize = 50;
+  private busy = false;
 
   push(action: UndoAction) {
     this.stack = this.stack.slice(0, this.pointer + 1);
@@ -20,24 +21,34 @@ export class UndoStack {
   }
 
   async undo(): Promise<boolean> {
-    if (this.pointer < 0) return false;
-    await this.stack[this.pointer].undo();
-    this.pointer--;
-    return true;
+    if (this.busy || this.pointer < 0) return false;
+    this.busy = true;
+    try {
+      await this.stack[this.pointer].undo();
+      this.pointer--;
+      return true;
+    } finally {
+      this.busy = false;
+    }
   }
 
   async redo(): Promise<boolean> {
-    if (this.pointer >= this.stack.length - 1) return false;
-    this.pointer++;
-    await this.stack[this.pointer].redo();
-    return true;
+    if (this.busy || this.pointer >= this.stack.length - 1) return false;
+    this.busy = true;
+    try {
+      this.pointer++;
+      await this.stack[this.pointer].redo();
+      return true;
+    } finally {
+      this.busy = false;
+    }
   }
 
   get canUndo() {
-    return this.pointer >= 0;
+    return !this.busy && this.pointer >= 0;
   }
 
   get canRedo() {
-    return this.pointer < this.stack.length - 1;
+    return !this.busy && this.pointer < this.stack.length - 1;
   }
 }
