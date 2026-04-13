@@ -152,7 +152,7 @@ export function CsvImport() {
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
               dragOver
                 ? "border-rs-primary-400 bg-rs-primary-500/5"
-                : "border-rs-neutral-700 hover:border-rs-neutral-500"
+                : "border-border hover:border-muted-foreground"
             }`}
           >
             <input

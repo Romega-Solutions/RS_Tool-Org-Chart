@@ -123,7 +123,7 @@ export function HorizontalTree({ tree, isEditor, onNodeClick, onInit }: Props) {
       fitView
       fitViewOptions={{ padding: 0.2 }}
       proOptions={{ hideAttribution: true }}
-      className="bg-rs-neutral-950"
+      className="bg-background"
     />
   );
 }

@@ -187,10 +187,10 @@ export function ChartCanvas({ isEditor }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-rs-neutral-950">
+      <div className="flex items-center justify-center h-full bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-rs-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-rs-neutral-400">Loading chart data...</p>
+          <p className="text-sm text-muted-foreground">Loading chart data...</p>
         </div>
       </div>
     );
@@ -198,10 +198,10 @@ export function ChartCanvas({ isEditor }: Props) {
 
   if (!data || data.tree.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-rs-neutral-950">
+      <div className="flex items-center justify-center h-full bg-background">
         <div className="text-center space-y-2">
-          <p className="text-rs-neutral-300">No chart data available.</p>
-          <p className="text-sm text-rs-neutral-500">
+          <p className="text-muted-foreground">No chart data available.</p>
+          <p className="text-sm text-muted-foreground">
             Import data or add people to get started.
           </p>
         </div>
@@ -210,7 +210,7 @@ export function ChartCanvas({ isEditor }: Props) {
   }
 
   return (
-    <div id="chart-container" className="relative h-full w-full overflow-hidden bg-rs-neutral-950">
+    <div id="chart-container" className="relative h-full w-full overflow-hidden bg-background">
       {/* Toolbar */}
       <ChartToolbar
         view={view}
@@ -226,13 +226,13 @@ export function ChartCanvas({ isEditor }: Props) {
       />
 
       {/* Export buttons */}
-      <div className="absolute top-4 right-4 z-10 bg-rs-neutral-900/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-rs-neutral-800">
+      <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-2 py-1 border border-border">
         <ExportButtons />
       </div>
 
       {/* Feedback toast */}
       {feedbackMsg && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-rs-neutral-800 border border-rs-neutral-700 text-rs-neutral-200 text-sm px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-muted border border-border text-foreground text-sm px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
           {feedbackMsg}
         </div>
       )}

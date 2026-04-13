@@ -20,18 +20,18 @@ export function PersonDetailPanel({ person, onClose }: Props) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 320, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute top-0 right-0 z-20 h-full w-80 bg-rs-neutral-900 border-l border-rs-neutral-800 shadow-2xl flex flex-col"
+          className="absolute top-0 right-0 z-20 h-full w-80 bg-card border-l border-border shadow-2xl flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-rs-neutral-800">
-            <h3 className="text-sm font-semibold text-rs-neutral-100">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground">
               Person Details
             </h3>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="text-rs-neutral-400 hover:text-rs-neutral-100"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -53,17 +53,17 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-lg font-semibold text-rs-neutral-100">
+                <p className="text-lg font-semibold text-foreground">
                   {person.name}
                 </p>
-                <p className="text-sm text-rs-neutral-400">{person.title}</p>
+                <p className="text-sm text-muted-foreground">{person.title}</p>
               </div>
             </div>
 
             {/* Department */}
             {person.department && (
               <div>
-                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                   Department
                 </p>
                 <Badge
@@ -86,10 +86,10 @@ export function PersonDetailPanel({ person, onClose }: Props) {
             {/* Employment type */}
             {person.employmentType && (
               <div>
-                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                   Employment Type
                 </p>
-                <p className="text-sm text-rs-neutral-200">
+                <p className="text-sm text-foreground">
                   {person.employmentType}
                 </p>
               </div>
@@ -98,7 +98,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
             {/* Direct reports */}
             {person.children.length > 0 && (
               <div>
-                <p className="text-xs text-rs-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
                   <Users className="w-3 h-3" />
                   Direct Reports ({person.children.length})
                 </p>
@@ -106,7 +106,7 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                   {person.children.map((child) => (
                     <div
                       key={child.id}
-                      className="flex items-center gap-2 p-2 rounded-md bg-rs-neutral-800/50"
+                      className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
                     >
                       <Avatar className="w-7 h-7" size="sm">
                         {child.photoUrl && (
@@ -122,10 +122,10 @@ export function PersonDetailPanel({ person, onClose }: Props) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-rs-neutral-200 truncate">
+                        <p className="text-xs font-medium text-foreground truncate">
                           {child.name}
                         </p>
-                        <p className="text-[10px] text-rs-neutral-500 truncate">
+                        <p className="text-[10px] text-muted-foreground truncate">
                           {child.title}
                         </p>
                       </div>

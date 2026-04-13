@@ -35,7 +35,7 @@ export function DepartmentList() {
     fetchDepartments();
   }
 
-  if (loading) return <p className="text-rs-neutral-400">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
     <div className="space-y-4">
@@ -45,7 +45,7 @@ export function DepartmentList() {
       </div>
       <div className="space-y-2">
         {departments.map((dept) => (
-          <div key={dept.id} className="flex items-center justify-between p-3 bg-rs-neutral-900 rounded-lg border border-rs-neutral-800">
+          <div key={dept.id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: dept.color || "#666" }} />
               <span className="font-medium">{dept.name}</span>
@@ -56,7 +56,7 @@ export function DepartmentList() {
             </div>
           </div>
         ))}
-        {departments.length === 0 && <p className="text-rs-neutral-400 text-sm">No departments yet. Add one to get started.</p>}
+        {departments.length === 0 && <p className="text-muted-foreground text-sm">No departments yet. Add one to get started.</p>}
       </div>
     </div>
   );

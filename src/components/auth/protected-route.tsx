@@ -17,7 +17,7 @@ export function ProtectedRoute({ children, requireEditor = false }: Props) {
     if (!loading && requireEditor && user?.role !== "editor") router.push("/chart");
   }, [user, loading, requireEditor, router]);
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-neutral-400">Loading...</p></div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Loading...</p></div>;
   if (!user) return null;
   if (requireEditor && user.role !== "editor") return null;
 

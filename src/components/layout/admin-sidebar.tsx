@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Building2, Upload, Settings, Network, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Building2, Upload, Settings, Network, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -17,12 +18,13 @@ const navItems = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { theme, toggle } = useTheme();
 
   return (
-    <aside className="w-60 bg-rs-neutral-900 border-r border-rs-neutral-800 flex flex-col h-screen sticky top-0">
-      <div className="p-4 border-b border-rs-neutral-800">
+    <aside className="w-60 bg-sidebar border-r border-border flex flex-col h-screen sticky top-0">
+      <div className="p-4 border-b border-border">
         <h2 className="text-sm font-bold text-rs-primary-400">Romega Solutions</h2>
-        <p className="text-xs text-rs-neutral-400">Org Chart</p>
+        <p className="text-xs text-muted-foreground">Org Chart</p>
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item) => {
@@ -30,15 +32,19 @@ export function AdminSidebar() {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${isActive ? "bg-rs-primary-500/10 text-rs-primary-400" : "text-rs-neutral-300 hover:bg-rs-neutral-800 hover:text-rs-neutral-100"}`}>
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${isActive ? "bg-rs-primary-500/10 text-rs-primary-400" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
               <Icon className="w-4 h-4" />{item.label}
             </Link>
           );
         })}
       </nav>
-      <div className="p-4 border-t border-rs-neutral-800">
-        <p className="text-xs text-rs-neutral-400 mb-2">{user?.name} ({user?.role})</p>
-        <Button variant="ghost" size="sm" className="w-full justify-start text-rs-neutral-400" onClick={logout}>
+      <div className="p-4 border-t border-border space-y-1">
+        <p className="text-xs text-muted-foreground mb-2">{user?.name} ({user?.role})</p>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={toggle}>
+          {theme === "dark" ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={logout}>
           <LogOut className="w-4 h-4 mr-2" />Sign Out
         </Button>
       </div>

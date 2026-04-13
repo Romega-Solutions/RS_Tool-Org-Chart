@@ -19,7 +19,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
 
   return (
     <div
-      className="bg-rs-neutral-900 border border-rs-neutral-700 rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
+      className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
       style={{
         borderLeftColor: departmentColor || undefined,
         borderLeftWidth: 3,
@@ -40,10 +40,10 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <p className="font-medium text-sm text-rs-neutral-100 truncate">
+          <p className="font-medium text-sm text-foreground truncate">
             {name}
           </p>
-          <p className="text-xs text-rs-neutral-400 truncate">{title}</p>
+          <p className="text-xs text-muted-foreground truncate">{title}</p>
         </div>
       </div>
       <Handle

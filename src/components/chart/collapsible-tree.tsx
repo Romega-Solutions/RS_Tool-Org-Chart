@@ -63,7 +63,7 @@ function CollapsiblePersonNodeComponent({
   return (
     <div className="relative">
       <div
-        className="bg-rs-neutral-900 border border-rs-neutral-700 rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
+        className="bg-card border border-border rounded-lg p-3 min-w-[160px] shadow-lg hover:border-rs-primary-400 transition-colors cursor-pointer"
         style={{
           borderLeftColor: departmentColor || undefined,
           borderLeftWidth: 3,
@@ -84,10 +84,10 @@ function CollapsiblePersonNodeComponent({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="font-medium text-sm text-rs-neutral-100 truncate">
+            <p className="font-medium text-sm text-foreground truncate">
               {name}
             </p>
-            <p className="text-xs text-rs-neutral-400 truncate">{title}</p>
+            <p className="text-xs text-muted-foreground truncate">{title}</p>
           </div>
         </div>
         {hasChildren && (
@@ -103,7 +103,7 @@ function CollapsiblePersonNodeComponent({
       {hasChildren && (
         <button
           type="button"
-          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-rs-neutral-800 border border-rs-neutral-600 hover:border-rs-primary-400 hover:bg-rs-neutral-700 transition-colors"
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-muted border border-border hover:border-rs-primary-400 hover:bg-secondary transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onToggle(nodeId);
@@ -115,9 +115,9 @@ function CollapsiblePersonNodeComponent({
           }
         >
           {isCollapsed ? (
-            <ChevronRight className="w-3.5 h-3.5 text-rs-neutral-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-3.5 h-3.5 text-rs-neutral-300" />
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
           )}
         </button>
       )}
@@ -279,7 +279,7 @@ export function CollapsibleTree({ tree, isEditor, onNodeClick, onInit }: Props) 
       fitView
       fitViewOptions={{ padding: 0.2 }}
       proOptions={{ hideAttribution: true }}
-      className="bg-rs-neutral-950"
+      className="bg-background"
     />
   );
 }

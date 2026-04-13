@@ -112,7 +112,7 @@ export function SettingsForm() {
   }
 
   if (loading) {
-    return <p className="text-rs-neutral-400">Loading settings...</p>;
+    return <p className="text-muted-foreground">Loading settings...</p>;
   }
 
   return (
@@ -251,7 +251,7 @@ export function SettingsForm() {
         </CardHeader>
         <CardContent>
           <div className="relative">
-            <pre className="bg-rs-neutral-900 border border-rs-neutral-800 rounded-lg p-4 text-xs text-rs-neutral-300 overflow-x-auto whitespace-pre-wrap">
+            <pre className="bg-card border border-border rounded-lg p-4 text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
               {getEmbedCode()}
             </pre>
             <Button

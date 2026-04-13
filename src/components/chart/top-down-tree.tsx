@@ -250,34 +250,34 @@ export function TopDownTree({
         fitView
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
-        className="bg-rs-neutral-950"
+        className="bg-background"
       />
 
       {/* Context Menu */}
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="fixed z-50 min-w-[160px] rounded-lg border border-rs-neutral-700 bg-rs-neutral-900 shadow-xl py-1 animate-in fade-in zoom-in-95"
+          className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-card shadow-xl py-1 animate-in fade-in zoom-in-95"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <div className="px-3 py-1.5 border-b border-rs-neutral-700">
-            <p className="text-xs text-rs-neutral-400 truncate">
+          <div className="px-3 py-1.5 border-b border-border">
+            <p className="text-xs text-muted-foreground truncate">
               {contextMenu.person.name}
             </p>
           </div>
           <button
             onClick={handleContextEdit}
-            className="w-full px-3 py-1.5 text-left text-sm text-rs-neutral-200 hover:bg-rs-neutral-800 transition-colors"
+            className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
           >
             Edit Details
           </button>
           <button
             onClick={handleContextToggle}
-            className="w-full px-3 py-1.5 text-left text-sm text-rs-neutral-200 hover:bg-rs-neutral-800 transition-colors"
+            className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
           >
             {contextMenu.person.isActive ? "Deactivate" : "Activate"}
           </button>
-          <div className="border-t border-rs-neutral-700 my-0.5" />
+          <div className="border-t border-border my-0.5" />
           <button
             onClick={handleContextDelete}
             className="w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"

@@ -69,18 +69,18 @@ export function DashboardStats() {
     <div className="space-y-8">
       {/* Page heading */}
       <div>
-        <h1 className="text-2xl font-bold text-rs-neutral-100">Dashboard</h1>
-        <p className="text-sm text-rs-neutral-400 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Overview of your organizational chart data.
         </p>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="bg-rs-neutral-900 border-rs-neutral-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-rs-neutral-400 text-sm font-medium">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
                 Active People
               </CardTitle>
               <Users className="w-5 h-5 text-rs-primary-400" />
@@ -88,19 +88,19 @@ export function DashboardStats() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-8 w-16 bg-rs-neutral-800 rounded animate-pulse" />
+              <div className="h-8 w-16 bg-muted rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-bold text-rs-neutral-100">
+              <p className="text-3xl font-bold text-foreground">
                 {stats.activeCount}
               </p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-rs-neutral-900 border-rs-neutral-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-rs-neutral-400 text-sm font-medium">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
                 Departments
               </CardTitle>
               <Building2 className="w-5 h-5 text-rs-primary-400" />
@@ -108,19 +108,19 @@ export function DashboardStats() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-8 w-16 bg-rs-neutral-800 rounded animate-pulse" />
+              <div className="h-8 w-16 bg-muted rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-bold text-rs-neutral-100">
+              <p className="text-3xl font-bold text-foreground">
                 {stats.departmentCount}
               </p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-rs-neutral-900 border-rs-neutral-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-rs-neutral-400 text-sm font-medium">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
                 Last Updated
               </CardTitle>
               <Clock className="w-5 h-5 text-rs-primary-400" />
@@ -128,9 +128,9 @@ export function DashboardStats() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-8 w-32 bg-rs-neutral-800 rounded animate-pulse" />
+              <div className="h-8 w-32 bg-muted rounded animate-pulse" />
             ) : (
-              <p className="text-lg font-semibold text-rs-neutral-100">
+              <p className="text-lg font-semibold text-foreground">
                 {formatDate(stats.lastUpdated)}
               </p>
             )}
@@ -140,46 +140,46 @@ export function DashboardStats() {
 
       {/* Quick links */}
       <div>
-        <h2 className="text-lg font-semibold text-rs-neutral-200 mb-3">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Link href="/admin/people">
             <Button
               variant="outline"
-              className="w-full justify-between border-rs-neutral-800 text-rs-neutral-200 hover:bg-rs-neutral-800"
+              className="w-full justify-between border-border text-foreground hover:bg-muted"
             >
               <span className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Add Person
               </span>
-              <ArrowRight className="w-4 h-4 text-rs-neutral-500" />
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
             </Button>
           </Link>
 
           <Link href="/admin/departments">
             <Button
               variant="outline"
-              className="w-full justify-between border-rs-neutral-800 text-rs-neutral-200 hover:bg-rs-neutral-800"
+              className="w-full justify-between border-border text-foreground hover:bg-muted"
             >
               <span className="flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
                 Manage Departments
               </span>
-              <ArrowRight className="w-4 h-4 text-rs-neutral-500" />
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
             </Button>
           </Link>
 
           <Link href="/chart">
             <Button
               variant="outline"
-              className="w-full justify-between border-rs-neutral-800 text-rs-neutral-200 hover:bg-rs-neutral-800"
+              className="w-full justify-between border-border text-foreground hover:bg-muted"
             >
               <span className="flex items-center gap-2">
                 <Network className="w-4 h-4" />
                 View Chart
               </span>
-              <ArrowRight className="w-4 h-4 text-rs-neutral-500" />
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
             </Button>
           </Link>
         </div>

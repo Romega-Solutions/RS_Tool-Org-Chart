@@ -41,16 +41,16 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
   }, [tree, departments]);
 
   return (
-    <div className="h-full overflow-y-auto p-6 bg-rs-neutral-950">
+    <div className="h-full overflow-y-auto p-6 bg-background">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {grouped.map(({ department, people }) => (
           <div
             key={department.id}
-            className="bg-rs-neutral-900 border border-rs-neutral-800 rounded-lg overflow-hidden"
+            className="bg-card border border-border rounded-lg overflow-hidden"
           >
             {/* Department header */}
             <div
-              className="px-4 py-3 border-b border-rs-neutral-800 flex items-center gap-2"
+              className="px-4 py-3 border-b border-border flex items-center gap-2"
               style={{
                 borderLeftWidth: 3,
                 borderLeftColor: department.color || "hsl(209,50%,25%)",
@@ -62,10 +62,10 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
                   backgroundColor: department.color || "hsl(209,50%,25%)",
                 }}
               />
-              <h3 className="text-sm font-semibold text-rs-neutral-100">
+              <h3 className="text-sm font-semibold text-foreground">
                 {department.name}
               </h3>
-              <span className="text-xs text-rs-neutral-500 ml-auto">
+              <span className="text-xs text-muted-foreground ml-auto">
                 {people.length}
               </span>
             </div>
@@ -84,7 +84,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
                   <button
                     key={person.id}
                     onClick={() => onNodeClick(person)}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-rs-neutral-800 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-muted transition-colors text-left"
                   >
                     <Avatar className="w-8 h-8">
                       {person.photoUrl && (
@@ -95,10 +95,10 @@ export function DepartmentGrid({ tree, departments, onNodeClick }: Props) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-rs-neutral-200 truncate">
+                      <p className="text-xs font-medium text-foreground truncate">
                         {person.name}
                       </p>
-                      <p className="text-[10px] text-rs-neutral-500 truncate">
+                      <p className="text-[10px] text-muted-foreground truncate">
                         {person.title}
                       </p>
                     </div>
