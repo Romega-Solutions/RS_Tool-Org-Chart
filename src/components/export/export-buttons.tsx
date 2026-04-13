@@ -4,11 +4,7 @@ import { jsPDF } from "jspdf";
 import { FileImage, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface Props {
-  settings?: Record<string, string>;
-}
-
-export function ExportButtons({ settings }: Props) {
+export function ExportButtons() {
   async function exportPng() {
     const el = document.getElementById("chart-container");
     if (!el) return;

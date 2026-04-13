@@ -1,16 +1,11 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { login as doLogin, logout as doLogout, getCurrentUser } from "@/lib/auth";
 import type { AuthUser } from "@/types";
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setUser(getCurrentUser());
-    setLoading(false);
-  }, []);
+  const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
+  const [loading] = useState(false);
 
   const login = useCallback((username: string, password: string) => {
     const result = doLogin(username, password);

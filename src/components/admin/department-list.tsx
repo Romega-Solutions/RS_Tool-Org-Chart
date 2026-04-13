@@ -15,7 +15,18 @@ export function DepartmentList() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchDepartments(); }, [fetchDepartments]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/departments")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) {
+          setDepartments(data);
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this department?")) return;

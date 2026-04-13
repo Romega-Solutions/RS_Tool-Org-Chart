@@ -5,7 +5,7 @@ interface Props { value: string; onChange: (value: string) => void; }
 
 export function ViewSwitcher({ value, onChange }: Props) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={(v) => { if (v !== null) onChange(v); }}>
       <SelectTrigger className="w-44 h-8 text-xs bg-transparent border-none">
         <SelectValue />
       </SelectTrigger>

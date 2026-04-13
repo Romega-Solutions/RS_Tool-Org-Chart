@@ -28,7 +28,7 @@ export function DepartmentForm({ department, onSave, trigger }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger as React.ReactElement}>{}</DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>{department ? "Edit Department" : "Add Department"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

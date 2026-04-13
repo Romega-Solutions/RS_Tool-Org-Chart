@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import NextImage from "next/image";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Save, Upload, Image, Copy, Check } from "lucide-react";
+import { Save, Upload, Image as ImageIcon, Copy, Check } from "lucide-react";
 
 interface ColorFieldProps {
   label: string;
@@ -173,14 +174,16 @@ export function SettingsForm() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             {form.logo_url ? (
-              <img
+              <NextImage
                 src={form.logo_url}
                 alt="Logo"
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-lg object-cover border border-input"
               />
             ) : (
               <div className="w-16 h-16 rounded-lg border border-dashed border-input flex items-center justify-center">
-                <Image className="w-6 h-6 text-muted-foreground" />
+                <ImageIcon className="w-6 h-6 text-muted-foreground" />
               </div>
             )}
             <div className="flex-1">

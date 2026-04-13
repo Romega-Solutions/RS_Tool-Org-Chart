@@ -4,7 +4,13 @@ import { UndoStack } from "@/lib/undo";
 
 export function useUndo() {
   const stackRef = useRef(new UndoStack());
-  const [, forceUpdate] = useState(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const syncFlags = useCallback(() => {
+    setCanUndo(stackRef.current.canUndo);
+    setCanRedo(stackRef.current.canRedo);
+  }, []);
 
   const push = useCallback(
     (action: {
@@ -13,26 +19,26 @@ export function useUndo() {
       redo: () => Promise<void>;
     }) => {
       stackRef.current.push(action);
-      forceUpdate((n) => n + 1);
+      syncFlags();
     },
-    []
+    [syncFlags]
   );
 
   const undo = useCallback(async () => {
     await stackRef.current.undo();
-    forceUpdate((n) => n + 1);
-  }, []);
+    syncFlags();
+  }, [syncFlags]);
 
   const redo = useCallback(async () => {
     await stackRef.current.redo();
-    forceUpdate((n) => n + 1);
-  }, []);
+    syncFlags();
+  }, [syncFlags]);
 
   return {
     push,
     undo,
     redo,
-    canUndo: stackRef.current.canUndo,
-    canRedo: stackRef.current.canRedo,
+    canUndo,
+    canRedo,
   };
 }

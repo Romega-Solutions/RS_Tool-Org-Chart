@@ -7,7 +7,6 @@ import {
   type Node,
   type Edge,
   type ReactFlowInstance,
-  type NodeDragHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode } from "./person-node";
@@ -161,8 +160,8 @@ export function TopDownTree({
   );
 
   // Drag-to-edit: when a node is dropped near another node, call onDrop
-  const handleNodeDragStop: NodeDragHandler = useCallback(
-    (_event, draggedNode) => {
+  const handleNodeDragStop = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
       if (!isEditor || !onDrop) return;
 
       const draggedId = draggedNode.id;

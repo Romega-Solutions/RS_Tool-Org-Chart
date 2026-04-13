@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import NextImage from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,7 +139,7 @@ export function PersonForm({ person, onSave, trigger }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger as React.ReactElement}>{}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{person ? "Edit Person" : "Add Person"}</DialogTitle>
@@ -149,9 +150,11 @@ export function PersonForm({ person, onSave, trigger }: Props) {
             <Label>Photo</Label>
             <div className="flex items-center gap-3">
               {photoPreview ? (
-                <img
+                <NextImage
                   src={photoPreview}
                   alt="Preview"
+                  width={48}
+                  height={48}
                   className="size-12 rounded-full object-cover border"
                 />
               ) : (
