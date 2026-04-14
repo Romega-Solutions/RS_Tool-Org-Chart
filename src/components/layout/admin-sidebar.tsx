@@ -16,7 +16,6 @@ import {
   UserPlus,
   FolderPlus,
   Upload,
-  FileDown,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -32,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ExportQuickAction } from "@/components/export/export-quick-action";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -205,18 +205,7 @@ export function AdminSidebar() {
             <Upload className="w-4 h-4 shrink-0" />
             {!collapsed && <span className="ml-2">Import CSV</span>}
           </Button>
-          <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "sm"}
-            className={`${
-              collapsed ? "w-full justify-center" : "w-full justify-start"
-            } text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-200`}
-            onClick={() => router.push("/chart")}
-            title={collapsed ? "Export Chart" : undefined}
-          >
-            <FileDown className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="ml-2">Export Chart</span>}
-          </Button>
+          <ExportQuickAction collapsed={collapsed} />
           </>}
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

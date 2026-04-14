@@ -1,14 +1,19 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
+import { NodeContextMenu } from "./node-context-menu";
 import type { TreeNode, Department } from "@/types";
 
 interface Props {
   tree: TreeNode[];
   departments: Department[];
+  isEditor?: boolean;
   onNodeClick: (person: TreeNode) => void;
+  onBackgroundContextMenu?: (x: number, y: number) => void;
+  onToggle?: (personId: number) => void;
+  onDelete?: (personId: number, personName: string) => void;
   highlightedNodeId?: number | null;
 }
 
@@ -23,7 +28,7 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return result;
 }
 
-export function DepartmentGrid({ tree, departments, onNodeClick, highlightedNodeId }: Props) {
+export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId }: Props) {
   const grouped = useMemo(() => {
     const all = flattenTree(tree);
     const map = new Map<number, { department: Department; people: TreeNode[] }>();
@@ -43,8 +48,31 @@ export function DepartmentGrid({ tree, departments, onNodeClick, highlightedNode
     return Array.from(map.values()).filter((g) => g.people.length > 0);
   }, [tree, departments]);
 
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; person: TreeNode } | null>(null);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, person: TreeNode) => {
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY, person });
+    },
+    []
+  );
+
+  const handleBackgroundContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest("[data-person-card='true']")) return;
+      e.preventDefault();
+      setContextMenu(null);
+      onBackgroundContextMenu?.(e.clientX, e.clientY);
+    },
+    [onBackgroundContextMenu]
+  );
+
   return (
-    <div className="h-full overflow-y-auto p-6 bg-background">
+    <div
+      className="h-full overflow-y-auto bg-background p-6"
+      onContextMenu={handleBackgroundContextMenu}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {grouped.map(({ department, people }) => {
           const DeptIcon = getDeptIcon(department.name);
@@ -94,7 +122,9 @@ export function DepartmentGrid({ tree, departments, onNodeClick, highlightedNode
                   <button
                     key={person.id}
                     id={`person-card-${person.id}`}
-                    onClick={() => onNodeClick(person)}
+                    data-person-card="true"
+                    onClick={() => { setContextMenu(null); onNodeClick(person); }}
+                    onContextMenu={(e) => handleContextMenu(e, person)}
                     className={cn(
                       "w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-muted cursor-pointer transition-all duration-200 text-left",
                       highlightedNodeId === person.id && "ring-2 ring-rs-primary-500 bg-rs-primary-500/10 shadow-sm"
@@ -124,6 +154,18 @@ export function DepartmentGrid({ tree, departments, onNodeClick, highlightedNode
           );
         })}
       </div>
+
+      {contextMenu && (
+        <NodeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          person={contextMenu.person}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
+          onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
+          onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
+        />
+      )}
     </div>
   );
 }

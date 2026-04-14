@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { createElement, useState, useEffect, useRef } from "react";
 import NextImage from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,11 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person, Department } from "@/types";
@@ -32,6 +34,15 @@ interface Props {
   trigger: React.ReactNode;
 }
 
+function getInitials(value: string) {
+  return value
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export function PersonForm({ person, onSave, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -45,7 +56,6 @@ export function PersonForm({ person, onSave, trigger }: Props) {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [allPeople, setAllPeople] = useState<PersonWithDept[]>([]);
-  const [reportsToSearch, setReportsToSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,15 +76,6 @@ export function PersonForm({ person, onSave, trigger }: Props) {
         .then(setAllPeople);
     }
   }, [open, person]);
-
-  const filteredPeople = allPeople
-    .filter((p) => (person ? p.id !== person.id : true))
-    .filter(
-      (p) =>
-        !reportsToSearch ||
-        p.name.toLowerCase().includes(reportsToSearch.toLowerCase()) ||
-        p.title.toLowerCase().includes(reportsToSearch.toLowerCase())
-    );
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -137,6 +138,26 @@ export function PersonForm({ person, onSave, trigger }: Props) {
   const reportsToLabel = reportsTo
     ? allPeople.find((p) => p.id === reportsTo)?.name ?? "Select manager"
     : "None (top-level)";
+  const managerGroups = allPeople
+    .filter((p) => (person ? p.id !== person.id : true))
+    .reduce((map, currentPerson) => {
+      const groupName = currentPerson.departmentName || "Other";
+      const existing = map.get(groupName) ?? [];
+      existing.push(currentPerson);
+      map.set(groupName, existing);
+      return map;
+    }, new Map<string, PersonWithDept[]>());
+
+  const sortedManagerGroups = Array.from(managerGroups.entries())
+    .sort(([groupA], [groupB]) => {
+      if (groupA === "Other") return 1;
+      if (groupB === "Other") return -1;
+      return groupA.localeCompare(groupB);
+    })
+    .map(([groupName, peopleInGroup]) => ({
+      groupName,
+      people: peopleInGroup.sort((a, b) => a.name.localeCompare(b.name)),
+    }));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -161,12 +182,7 @@ export function PersonForm({ person, onSave, trigger }: Props) {
               ) : (
                 <div className="flex size-12 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground">
                   {name
-                    ? name
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)
+                    ? getInitials(name)
                     : "?"}
                 </div>
               )}
@@ -229,28 +245,40 @@ export function PersonForm({ person, onSave, trigger }: Props) {
           </div>
 
           {/* Department */}
+          {/* Department */}
           <div className="space-y-2">
             <Label>Department</Label>
             <Select
-              value={departmentId ?? undefined}
-              onValueChange={(val) => setDepartmentId(val as number)}
+              value={departmentId != null ? String(departmentId) : ""}
+              onValueChange={(val) => setDepartmentId(Number(val))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select department" />
+                {departmentId != null ? (() => {
+                  const dept = departments.find((d) => d.id === departmentId);
+                  if (!dept) return <span className="text-muted-foreground">Select department</span>;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      {createElement(getDeptIcon(dept.name), {
+                        className: "size-3",
+                        style: { color: dept.color || "#888" },
+                      })}
+                      {dept.name}
+                    </span>
+                  );
+                })() : (
+                  <span className="text-muted-foreground">Select department</span>
+                )}
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => {
-                  const DeptIcon = getDeptIcon(d.name);
-                  return (
-                  <SelectItem key={d.id} value={d.id}>
-                    <DeptIcon
-                      className="mr-1.5 inline-block size-3"
-                      style={{ color: d.color || "#888" }}
-                    />
+                {departments.map((d) => (
+                  <SelectItem key={d.id} value={String(d.id)}>
+                    {createElement(getDeptIcon(d.name), {
+                      className: "mr-1.5 inline-block size-3",
+                      style: { color: d.color || "#888" },
+                    })}
                     {d.name}
                   </SelectItem>
-                  );
-                })}
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -258,49 +286,40 @@ export function PersonForm({ person, onSave, trigger }: Props) {
           {/* Reports To */}
           <div className="space-y-2">
             <Label>Reports To</Label>
-            <div className="space-y-1.5">
-              <Input
-                placeholder="Search by name or title..."
-                value={reportsToSearch}
-                onChange={(e) => setReportsToSearch(e.target.value)}
-              />
-              <div className="max-h-32 overflow-y-auto rounded-md border">
-                <button
-                  type="button"
-                  className={`flex w-full items-center px-2 py-1.5 text-sm hover:bg-muted ${
-                    reportsTo === null ? "bg-muted font-medium" : ""
-                  }`}
-                  onClick={() => setReportsTo(null)}
-                >
-                  None (top-level)
-                </button>
-                {filteredPeople.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted ${
-                      reportsTo === p.id ? "bg-muted font-medium" : ""
-                    }`}
-                    onClick={() => setReportsTo(p.id)}
-                  >
-                    <span className="truncate">{p.name}</span>
-                    <span className="text-muted-foreground text-xs truncate">
-                      {p.title}
-                    </span>
-                  </button>
+            <Select
+              value={reportsTo != null ? String(reportsTo) : "none"}
+              onValueChange={(value) =>
+                setReportsTo(value === "none" ? null : Number(value))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <span className={reportsTo == null ? "text-muted-foreground" : ""}>
+                  {reportsToLabel}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None (top-level)</SelectItem>
+                {sortedManagerGroups.length > 0 && <SelectSeparator />}
+                {sortedManagerGroups.map(({ groupName, people }) => (
+                  <SelectGroup key={groupName}>
+                    <SelectLabel>{groupName}</SelectLabel>
+                    {people.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate">{p.name}</span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {p.title}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
-                {filteredPeople.length === 0 && reportsToSearch && (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No matches
-                  </div>
-                )}
-              </div>
-              {reportsTo !== null && (
-                <p className="text-xs text-muted-foreground">
-                  Selected: {reportsToLabel}
-                </p>
-              )}
-            </div>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Leave this as <span className="font-medium">None</span> if this person should appear at the top level.
+            </p>
           </div>
 
           <Button

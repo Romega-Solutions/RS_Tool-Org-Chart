@@ -14,6 +14,7 @@ interface Props {
 
 export function NodeContextMenu({ x, y, person, onClose, onEdit, onToggle, onDelete }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const hasEditorActions = Boolean(onToggle || onDelete);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -43,7 +44,7 @@ export function NodeContextMenu({ x, y, person, onClose, onEdit, onToggle, onDel
         onClick={onEdit}
         className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
       >
-        Edit Details
+        {hasEditorActions ? "Open Details" : "View Details"}
       </button>
       {onToggle && (
         <button

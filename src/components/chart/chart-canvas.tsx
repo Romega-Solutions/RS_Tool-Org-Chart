@@ -1,13 +1,17 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useChartData } from "@/hooks/use-chart-data";
 import { useUndo } from "@/hooks/use-undo";
 import { ChartToolbar } from "@/components/layout/chart-toolbar";
-import { PrintButton } from "@/components/export/print-button";
+import { ExportMenu } from "@/components/export/export-menu";
 import { ImportDialog } from "@/components/admin/import-dialog";
 import { ChartSearch } from "./chart-search";
 import { PersonDetailPanel } from "./person-detail-panel";
+import { SelectionActionBar } from "./selection-action-bar";
+import { ChartContextMenu } from "./chart-context-menu";
+import type { ViewMode } from "./view-switcher";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
 import { CollapsibleTree } from "./collapsible-tree";
@@ -36,10 +40,13 @@ function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
 export function ChartCanvas({ isEditor }: Props) {
   const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
-  const [view, setView] = useState("top-down");
+  const [view, setView] = useState<ViewMode>("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [highlightedNodeId, setHighlightedNodeId] = useState<number | null>(null);
+  const [chartMenu, setChartMenu] = useState<{ x: number; y: number } | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   const showFeedback = useCallback((msg: string) => {
@@ -47,7 +54,52 @@ export function ChartCanvas({ isEditor }: Props) {
     setTimeout(() => setFeedbackMsg(null), 3000);
   }, []);
 
+  // Selection handlers
+  const handleSelectionChange = useCallback((nodeIds: number[]) => {
+    setSelectedNodeIds(nodeIds);
+  }, []);
+
+  const handleBulkActivate = useCallback(async () => {
+    if (bulkBusy || selectedNodeIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedNodeIds.map((id) =>
+        fetch(`/api/people/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: true }) })
+      ));
+      showFeedback(`Activated ${selectedNodeIds.length} people`);
+      setSelectedNodeIds([]);
+      await refetch();
+    } finally { setBulkBusy(false); }
+  }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
+
+  const handleBulkDeactivate = useCallback(async () => {
+    if (bulkBusy || selectedNodeIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedNodeIds.map((id) =>
+        fetch(`/api/people/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: false }) })
+      ));
+      showFeedback(`Deactivated ${selectedNodeIds.length} people`);
+      setSelectedNodeIds([]);
+      await refetch();
+    } finally { setBulkBusy(false); }
+  }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (bulkBusy || selectedNodeIds.length === 0) return;
+    const count = selectedNodeIds.length;
+    if (!window.confirm(`Delete ${count} ${count === 1 ? "person" : "people"}? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedNodeIds.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
+      showFeedback(`Deleted ${count} people`);
+      setSelectedNodeIds([]);
+      await refetch();
+    } finally { setBulkBusy(false); }
+  }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
+
   const handleNodeClick = useCallback((person: TreeNode) => {
+    setChartMenu(null);
     setSelectedPerson(person);
   }, []);
 
@@ -55,20 +107,33 @@ export function ChartCanvas({ isEditor }: Props) {
     setSelectedPerson(null);
   }, []);
 
+  const handleClearSelection = useCallback(() => {
+    setSelectedPerson(null);
+    setHighlightedNodeId(null);
+  }, []);
+
   const handleZoomIn = useCallback(() => {
-    rfInstanceRef.current?.zoomIn();
+    rfInstanceRef.current?.zoomIn({ duration: 220 });
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    rfInstanceRef.current?.zoomOut();
+    rfInstanceRef.current?.zoomOut({ duration: 220 });
   }, []);
 
   const handleFitView = useCallback(() => {
-    rfInstanceRef.current?.fitView({ padding: 0.2 });
+    rfInstanceRef.current?.fitView({
+      padding: 0.35,
+      duration: 300,
+      maxZoom: 1.5,
+    });
   }, []);
 
   const handleInit = useCallback((instance: ReactFlowInstance) => {
     rfInstanceRef.current = instance;
+  }, []);
+
+  const handleBackgroundContextMenu = useCallback((x: number, y: number) => {
+    setChartMenu({ x, y });
   }, []);
 
   // Drag-to-edit: reassign a person's reportsTo when dropped near another node
@@ -77,21 +142,22 @@ export function ChartCanvas({ isEditor }: Props) {
       // Prevent self-assignment
       if (personId === targetId) return;
 
+      const person = data ? findPersonById(data.tree, personId) : null;
+      if (!person) {
+        showFeedback("Failed to find person");
+        return;
+      }
+
+      const oldReportsTo = person.reportsTo;
+
+      // Skip if already reporting to target
+      if (oldReportsTo === targetId) return;
+
       try {
-        // Fetch current person to get old reportsTo for undo
-        const personRes = await fetch(`/api/people/${personId}`);
-        if (!personRes.ok) throw new Error("Failed to fetch person");
-        const person = await personRes.json();
-        const oldReportsTo = person.reportsTo;
-
-        // Skip if already reporting to target
-        if (oldReportsTo === targetId) return;
-
-        // Patch reportsTo
-        const patchRes = await fetch(`/api/people/${personId}`, {
+        const patchRes = await fetch("/api/people/reassign", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reportsTo: targetId }),
+          body: JSON.stringify({ personId, reportsTo: targetId }),
         });
         if (!patchRes.ok) throw new Error("Failed to update reporting line");
 
@@ -99,18 +165,18 @@ export function ChartCanvas({ isEditor }: Props) {
         push({
           description: `Move ${person.name} to report to #${targetId}`,
           undo: async () => {
-            await fetch(`/api/people/${personId}`, {
+            await fetch("/api/people/reassign", {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reportsTo: oldReportsTo }),
+              body: JSON.stringify({ personId, reportsTo: oldReportsTo }),
             });
             await refetch();
           },
           redo: async () => {
-            await fetch(`/api/people/${personId}`, {
+            await fetch("/api/people/reassign", {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reportsTo: targetId }),
+              body: JSON.stringify({ personId, reportsTo: targetId }),
             });
             await refetch();
           },
@@ -123,7 +189,7 @@ export function ChartCanvas({ isEditor }: Props) {
         showFeedback("Failed to reassign reporting line");
       }
     },
-    [push, refetch, showFeedback]
+    [data, push, refetch, showFeedback]
   );
 
   // Toggle active/inactive
@@ -314,7 +380,7 @@ export function ChartCanvas({ isEditor }: Props) {
       {/* Action buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
         <ImportDialog onImportComplete={refetch} />
-        <PrintButton />
+        <ExportMenu />
       </div>
 
       {/* Feedback toast */}
@@ -325,11 +391,24 @@ export function ChartCanvas({ isEditor }: Props) {
       )}
 
       {/* Active view */}
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={view}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="h-full w-full"
+      >
       {view === "grid" && (
         <DepartmentGrid
           tree={data.tree}
           departments={data.departments}
+          isEditor={isEditor}
           onNodeClick={handleNodeClick}
+          onBackgroundContextMenu={handleBackgroundContextMenu}
+          onToggle={isEditor ? handleToggle : undefined}
+          onDelete={isEditor ? handleDelete : undefined}
           highlightedNodeId={highlightedNodeId}
         />
       )}
@@ -339,9 +418,13 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          onBackgroundContextMenu={handleBackgroundContextMenu}
           onDrop={handleDrop}
-          onToggle={handleToggle}
-          onDelete={handleDelete}
+          onDragMiss={() => showFeedback("Drop onto another person to reassign reporting line")}
+          onToggle={isEditor ? handleToggle : undefined}
+          onDelete={isEditor ? handleDelete : undefined}
+          onSelectionChange={isEditor ? handleSelectionChange : undefined}
+          selectedNodeIds={selectedNodeIds}
           highlightedNodeId={highlightedNodeId}
         />
       )}
@@ -351,6 +434,11 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          onBackgroundContextMenu={handleBackgroundContextMenu}
+          onToggle={isEditor ? handleToggle : undefined}
+          onDelete={isEditor ? handleDelete : undefined}
+          onSelectionChange={isEditor ? handleSelectionChange : undefined}
+          selectedNodeIds={selectedNodeIds}
           highlightedNodeId={highlightedNodeId}
         />
       )}
@@ -360,12 +448,43 @@ export function ChartCanvas({ isEditor }: Props) {
           isEditor={isEditor}
           onNodeClick={handleNodeClick}
           onInit={handleInit}
+          onBackgroundContextMenu={handleBackgroundContextMenu}
+          onToggle={isEditor ? handleToggle : undefined}
+          onDelete={isEditor ? handleDelete : undefined}
+          onSelectionChange={isEditor ? handleSelectionChange : undefined}
+          selectedNodeIds={selectedNodeIds}
           highlightedNodeId={highlightedNodeId}
+        />
+      )}
+      </motion.div>
+      </AnimatePresence>
+
+      {chartMenu && (
+        <ChartContextMenu
+          x={chartMenu.x}
+          y={chartMenu.y}
+          onClose={() => setChartMenu(null)}
+          onFitView={handleFitView}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onClearSelection={selectedPerson || highlightedNodeId !== null ? handleClearSelection : undefined}
+        />
+      )}
+
+      {/* Selection action bar */}
+      {isEditor && (
+        <SelectionActionBar
+          count={selectedNodeIds.length}
+          onActivate={handleBulkActivate}
+          onDeactivate={handleBulkDeactivate}
+          onDelete={handleBulkDelete}
+          onClear={() => setSelectedNodeIds([])}
+          busy={bulkBusy}
         />
       )}
 
       {/* Detail panel */}
-      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} />
+      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} tree={data.tree} />
     </div>
   );
 }

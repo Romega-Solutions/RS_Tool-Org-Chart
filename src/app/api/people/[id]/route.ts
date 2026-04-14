@@ -3,6 +3,8 @@ import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const personId = Number(id);

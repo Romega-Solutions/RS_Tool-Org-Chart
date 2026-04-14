@@ -1,7 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
+  MiniMap,
   useNodesState,
   useEdgesState,
   type Node,
@@ -9,17 +10,31 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { cn } from "@/lib/utils";
+import { ChartBackgroundDecor } from "./chart-background-decor";
 import { HorizontalPersonNode } from "./horizontal-person-node";
+import { NodeContextMenu } from "./node-context-menu";
+import { usePathHighlight } from "@/hooks/use-path-highlight";
 import type { TreeNode } from "@/types";
 
 const X_GAP = 250;
 const Y_GAP = 100;
+const EDGE_STYLE = {
+  stroke: "var(--chart-edge-stroke)",
+  strokeWidth: 1.5,
+  opacity: 0.9,
+};
 
 interface Props {
   tree: TreeNode[];
   isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
+  onBackgroundContextMenu?: (x: number, y: number) => void;
+  onToggle?: (personId: number) => void;
+  onDelete?: (personId: number, personName: string) => void;
+  onSelectionChange?: (nodeIds: number[]) => void;
+  selectedNodeIds?: number[];
   highlightedNodeId?: number | null;
 }
 
@@ -75,7 +90,7 @@ function layoutTree(roots: TreeNode[]) {
         source: nodeId,
         target: String(child.id),
         type: "smoothstep",
-        style: { stroke: "hsl(209, 60%, 50%)", strokeWidth: 2 },
+        style: EDGE_STYLE,
       });
       traverse(child, depth + 1, childSlotStart, false);
       childSlotStart += getSubtreeHeight(child);
@@ -92,7 +107,7 @@ function layoutTree(roots: TreeNode[]) {
   return { nodes, edges, personMap };
 }
 
-export function HorizontalTree({ tree, isEditor, onNodeClick, onInit, highlightedNodeId }: Props) {
+export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextMenu, onToggle, onDelete, onSelectionChange, selectedNodeIds, highlightedNodeId }: Props) {
   const {
     nodes: initialNodes,
     edges: initialEdges,
@@ -101,11 +116,21 @@ export function HorizontalTree({ tree, isEditor, onNodeClick, onInit, highlighte
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [animating, setAnimating] = useState(false);
+  const mountedRef = useRef(false);
+  const { handleNodeMouseEnter, handleNodeMouseLeave, applyToNodes, applyToEdges } = usePathHighlight(tree, selectedNodeIds);
 
-  // Sync nodes/edges when tree data changes (e.g. after undo/redo refetch)
+  // Sync nodes/edges when tree data changes — animate after initial mount
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    setAnimating(true);
     setNodes(initialNodes);
     setEdges(initialEdges);
+    const timer = setTimeout(() => setAnimating(false), 400);
+    return () => clearTimeout(timer);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   // Update node highlight when highlightedNodeId changes
@@ -121,29 +146,98 @@ export function HorizontalTree({ tree, isEditor, onNodeClick, onInit, highlighte
     );
   }, [highlightedNodeId, setNodes]);
 
+  // Path highlighting on hover
+  useEffect(() => {
+    setNodes((prev) => applyToNodes(prev));
+    setEdges((prev) => applyToEdges(prev));
+  }, [applyToNodes, applyToEdges, setNodes, setEdges]);
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; person: TreeNode } | null>(null);
+
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
+      onSelectionChange?.(selectedNodes.map((n) => Number(n.id)));
+    },
+    [onSelectionChange]
+  );
+
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      setContextMenu(null);
       const person = personMap.get(node.id);
       if (person) onNodeClick(person);
     },
     [personMap, onNodeClick]
   );
 
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      const person = personMap.get(node.id);
+      if (!person) return;
+      setContextMenu({ x: event.clientX, y: event.clientY, person });
+    },
+    [personMap]
+  );
+
+  const handlePaneContextMenu = useCallback(
+    (event: MouseEvent | React.MouseEvent) => {
+      event.preventDefault();
+      setContextMenu(null);
+      onBackgroundContextMenu?.(event.clientX, event.clientY);
+    },
+    [onBackgroundContextMenu]
+  );
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={handleNodeClick}
-      onInit={onInit}
-      nodeTypes={nodeTypes}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      proOptions={{ hideAttribution: true }}
-      className="bg-background"
-    />
+    <div className="relative h-full w-full">
+      <ChartBackgroundDecor />
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
+        onNodeMouseEnter={handleNodeMouseEnter}
+        onNodeMouseLeave={handleNodeMouseLeave}
+        onNodeContextMenu={handleNodeContextMenu}
+        onPaneContextMenu={handlePaneContextMenu}
+        onSelectionChange={handleSelectionChange}
+        onInit={onInit}
+        nodeTypes={nodeTypes}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        selectionKeyCode="Shift"
+        fitView
+        fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
+        proOptions={{ hideAttribution: true }}
+        className={cn(
+          "relative z-10 bg-transparent",
+          animating && "[&_.react-flow__node]:transition-transform [&_.react-flow__node]:duration-300 [&_.react-flow__node]:ease-out"
+        )}
+      >
+        <MiniMap
+          pannable
+          zoomable
+          className="!bg-card/80 !border-border !rounded-lg !shadow-md"
+          maskColor="rgba(0,0,0,0.08)"
+          nodeColor={(n) => (n.data?.departmentColor as string) || "hsl(209, 60%, 50%)"}
+        />
+      </ReactFlow>
+
+      {contextMenu && (
+        <NodeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          person={contextMenu.person}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
+          onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
+          onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
+        />
+      )}
+    </div>
   );
 }

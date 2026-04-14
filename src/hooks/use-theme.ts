@@ -18,10 +18,10 @@ export function useTheme() {
     return () => window.cancelAnimationFrame(frameId);
   }, []);
 
-  const setTheme = useCallback((t: Theme) => {
-    setThemeState(t);
-    localStorage.setItem("orgchart_theme", t);
-    document.documentElement.classList.toggle("dark", t === "dark");
+  const setTheme = useCallback((nextTheme: Theme) => {
+    setThemeState(nextTheme);
+    localStorage.setItem("orgchart_theme", nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
   }, []);
 
   const toggle = useCallback(() => {

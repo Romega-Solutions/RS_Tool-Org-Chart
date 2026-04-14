@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, createElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonForm } from "@/components/admin/person-form";
-import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
 
@@ -12,6 +13,8 @@ interface PersonRow extends Person {
   departmentName: string | null;
   departmentColor: string | null;
 }
+
+type SortColumn = "person" | "title" | "department" | null;
 
 function DepartmentBadge({
   departmentName,
@@ -23,7 +26,6 @@ function DepartmentBadge({
   if (!departmentName) {
     return <span className="text-muted-foreground">--</span>;
   }
-  const DeptIcon = getDeptIcon(departmentName);
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -33,7 +35,7 @@ function DepartmentBadge({
         border: `1px solid ${departmentColor ? `${departmentColor}30` : "#88888830"}`,
       }}
     >
-      <DeptIcon className="size-3" />
+      {createElement(getDeptIcon(departmentName), { className: "size-3" })}
       {departmentName}
     </span>
   );
@@ -48,9 +50,134 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+function getFirstName(name: string): string {
+  return name.trim().split(/\s+/)[0]?.toLowerCase() || "";
+}
+
+function compareNames(a: string, b: string) {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+function getTitleRank(title: string): number {
+  const value = title.toLowerCase();
+
+  if (
+    value.includes("chief") ||
+    value.includes("ceo") ||
+    value.includes("coo") ||
+    value.includes("cto") ||
+    value.includes("cfo") ||
+    value.includes("cio") ||
+    value.includes("cmo") ||
+    value.includes("founder") ||
+    value.includes("president")
+  ) {
+    return 100;
+  }
+
+  if (
+    value.includes("vice president") ||
+    value.includes("vp") ||
+    value.includes("director") ||
+    value.includes("head")
+  ) {
+    return 80;
+  }
+
+  if (
+    value.includes("manager") ||
+    value.includes("lead") ||
+    value.includes("principal") ||
+    value.includes("supervisor")
+  ) {
+    return 60;
+  }
+
+  if (value.includes("senior")) {
+    return 50;
+  }
+
+  if (
+    value.includes("engineer") ||
+    value.includes("developer") ||
+    value.includes("designer") ||
+    value.includes("analyst") ||
+    value.includes("recruiter") ||
+    value.includes("specialist") ||
+    value.includes("consultant") ||
+    value.includes("coordinator") ||
+    value.includes("executive") ||
+    value.includes("associate")
+  ) {
+    return 35;
+  }
+
+  if (value.includes("assistant") || value.includes("staff")) {
+    return 20;
+  }
+
+  if (value.includes("intern") || value.includes("ojt") || value.includes("trainee")) {
+    return 0;
+  }
+
+  return 25;
+}
+
+function SmoothCheckbox({
+  checked,
+  indeterminate = false,
+  onChange,
+  ariaLabel,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <label
+      className="group relative inline-flex cursor-pointer items-center justify-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        aria-label={ariaLabel}
+        aria-checked={indeterminate ? "mixed" : checked}
+        ref={(el) => {
+          if (el) el.indeterminate = indeterminate;
+        }}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <span
+        className={cn(
+          "flex size-5 items-center justify-center rounded-md border bg-background text-primary-foreground shadow-sm transition-all duration-200 ease-out",
+          "border-border/80 group-hover:border-rs-primary-300 group-hover:bg-rs-primary-500/5",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-rs-primary-500/25 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background",
+          "peer-checked:border-rs-primary-500 peer-checked:bg-rs-primary-500 peer-checked:shadow-[0_8px_18px_-12px_rgba(0,112,224,0.9)]",
+          "peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+        )}
+      >
+        {indeterminate ? (
+          <Minus className="size-3.5 transition-all duration-200 ease-out" />
+        ) : (
+          <Check
+            className={cn(
+              "size-3.5 transition-all duration-200 ease-out",
+              checked ? "scale-100 opacity-100" : "scale-75 opacity-0"
+            )}
+          />
+        )}
+      </span>
+    </label>
+  );
+}
+
 export function PeopleTable() {
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [search, setSearch] = useState("");
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPeople = useCallback(async () => {
@@ -78,12 +205,65 @@ export function PeopleTable() {
     );
   });
 
+  const visibleRows = useMemo(() => {
+    const rows = [...filtered];
+
+    if (sortColumn === "person") {
+      rows.sort((a, b) => {
+        const firstNameCompare = compareNames(getFirstName(a.name), getFirstName(b.name));
+        if (firstNameCompare !== 0) return firstNameCompare;
+        return compareNames(a.name, b.name);
+      });
+      return rows;
+    }
+
+    if (sortColumn === "title") {
+      rows.sort((a, b) => {
+        const rankCompare = getTitleRank(b.title) - getTitleRank(a.title);
+        if (rankCompare !== 0) return rankCompare;
+        const titleCompare = compareNames(a.title, b.title);
+        if (titleCompare !== 0) return titleCompare;
+        return compareNames(a.name, b.name);
+      });
+      return rows;
+    }
+
+    if (sortColumn === "department") {
+      rows.sort((a, b) => {
+        const deptA = a.departmentName || "Other";
+        const deptB = b.departmentName || "Other";
+        const deptCompare = compareNames(deptA, deptB);
+        if (deptCompare !== 0) return deptCompare;
+
+        const rankCompare = getTitleRank(b.title) - getTitleRank(a.title);
+        if (rankCompare !== 0) return rankCompare;
+
+        return compareNames(a.name, b.name);
+      });
+    }
+
+    return rows;
+  }, [filtered, sortColumn]);
+
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
 
   // Clear selection when search changes
   useEffect(() => { setSelected(new Set()); }, [search]);
+
+  const toggleSortColumn = useCallback((column: Exclude<SortColumn, null>) => {
+    setSortColumn((prev) => (prev === column ? null : column));
+  }, []);
+
+  const sortLabel =
+    sortColumn === "person"
+      ? "Person A-Z"
+      : sortColumn === "title"
+        ? "Title high-low"
+        : sortColumn === "department"
+          ? "Department grouped"
+          : null;
 
   const toggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
@@ -95,10 +275,10 @@ export function PeopleTable() {
 
   const toggleSelectAll = useCallback(() => {
     setSelected((prev) => {
-      if (prev.size === filtered.length) return new Set();
-      return new Set(filtered.map((p) => p.id));
+      if (prev.size === visibleRows.length) return new Set();
+      return new Set(visibleRows.map((p) => p.id));
     });
-  }, [filtered]);
+  }, [visibleRows]);
 
   async function handleBulkActivate() {
     if (bulkBusy) return;
@@ -199,6 +379,7 @@ export function PeopleTable() {
   async function handleDelete(person: PersonRow) {
     if (!confirm(`Delete "${person.name}"? This action cannot be undone.`)) return;
     await fetch(`/api/people/${person.id}`, { method: "DELETE" });
+    setSelected((prev) => { const next = new Set(prev); next.delete(person.id); return next; });
     fetchPeople();
   }
 
@@ -233,6 +414,22 @@ export function PeopleTable() {
           className="pl-8"
         />
       </div>
+      {sortLabel && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>
+            Sorted by:
+            {" "}
+            <span className="font-medium text-foreground">{sortLabel}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSortColumn(null)}
+            className="rounded-md px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
@@ -289,7 +486,7 @@ export function PeopleTable() {
         <div className="py-8 text-center text-sm text-muted-foreground">
           Loading...
         </div>
-      ) : filtered.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
           {search ? "No people match your search." : "No people yet. Add one to get started."}
         </div>
@@ -299,34 +496,77 @@ export function PeopleTable() {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="w-10 px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={filtered.length > 0 && selected.size === filtered.length}
-                    ref={(el) => { if (el) el.indeterminate = selected.size > 0 && selected.size < filtered.length; }}
+                  <SmoothCheckbox
+                    checked={visibleRows.length > 0 && selected.size === visibleRows.length}
+                    indeterminate={selected.size > 0 && selected.size < visibleRows.length}
                     onChange={toggleSelectAll}
-                    className="size-4 rounded border-border accent-rs-primary-500 cursor-pointer"
+                    ariaLabel="Select all people"
                   />
                 </th>
-                <th className="px-3 py-2 text-left font-medium">Person</th>
-                <th className="px-3 py-2 text-left font-medium">Title</th>
-                <th className="px-3 py-2 text-left font-medium">Department</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  <button
+                    type="button"
+                    onClick={() => toggleSortColumn("person")}
+                    className={cn(
+                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
+                      sortColumn === "person" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                    )}
+                  >
+                    Person
+                    {sortColumn === "person" ? " · A-Z" : ""}
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  <button
+                    type="button"
+                    onClick={() => toggleSortColumn("title")}
+                    className={cn(
+                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
+                      sortColumn === "title" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                    )}
+                  >
+                    Title
+                    {sortColumn === "title" ? " · High-Low" : ""}
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  <button
+                    type="button"
+                    onClick={() => toggleSortColumn("department")}
+                    className={cn(
+                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
+                      sortColumn === "department" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                    )}
+                  >
+                    Department
+                    {sortColumn === "department" ? " · Grouped" : ""}
+                  </button>
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
                 <th className="px-3 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((person) => (
+              {visibleRows.map((person) => (
                 <tr
                   key={person.id}
-                  className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200"
+                  onClick={(e) => {
+                    // Don't toggle selection if clicking buttons, inputs, or links
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button, input, a, [role=menuitem]")) return;
+                    toggleSelect(person.id);
+                  }}
+                  className={cn(
+                    "border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200",
+                    selected.has(person.id) && "bg-rs-primary-500/5"
+                  )}
                 >
                   {/* Checkbox */}
                   <td className="w-10 px-3 py-2">
-                    <input
-                      type="checkbox"
+                    <SmoothCheckbox
                       checked={selected.has(person.id)}
                       onChange={() => toggleSelect(person.id)}
-                      className="size-4 rounded border-border accent-rs-primary-500 cursor-pointer"
+                      ariaLabel={`Select ${person.name}`}
                     />
                   </td>
 
@@ -406,7 +646,7 @@ export function PeopleTable() {
       {/* Count footer */}
       {!loading && (
         <p className="text-xs text-muted-foreground">
-          Showing {filtered.length} of {people.length} people
+          Showing {visibleRows.length} of {people.length} people
         </p>
       )}
     </div>

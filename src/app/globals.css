@@ -125,6 +125,7 @@
   --sidebar-accent-foreground: #171717;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: hsl(209, 100%, 45%);
+  --chart-edge-stroke: rgba(58, 116, 179, 0.34);
 }
 
 .dark {
@@ -160,9 +161,15 @@
   --sidebar-accent-foreground: #e2e8f0;
   --sidebar-border: #334155;
   --sidebar-ring: hsl(209, 100%, 60%);
+  --chart-edge-stroke: rgba(148, 163, 184, 0.26);
 }
 
 @layer base {
+  .react-flow,
+  .react-flow.dark {
+    --xy-background-color: transparent;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -178,186 +185,263 @@
   }
 }
 
-.print-chart-shell {
-  margin: 1.5rem auto 0;
-  width: min(100%, 1200px);
+/* ═══════════════════════════════════════════
+   Print / PDF — Romega-branded, compact portrait
+   Theme-aware: follows app dark/light mode
+   ═══════════════════════════════════════════ */
+
+/* ── Theme tokens (light) ── */
+.print-page {
+  --p-bg: #f8fafc;
+  --p-surface: #ffffff;
+  --p-card-bg: #ffffff;
+  --p-card-bg-soft: #f8fbff;
+  --p-glass: rgba(255, 255, 255, 0.72);
+  --p-glass-strong: rgba(255, 255, 255, 0.82);
+  --p-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  --p-shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --p-border: #e2e8f0;
+  --p-border-subtle: #f1f5f9;
+  --p-text: #0f172a;
+  --p-text-secondary: #64748b;
+  --p-text-muted: #94a3b8;
+  --p-accent: #0070e0;
+  --p-accent-hover: #005bb5;
+  --p-badge-bg: #f1f5f9;
+  --p-logo-filter: none;
 }
 
-.print-chart-header,
-.print-chart-section,
-.print-person-card {
-  break-inside: avoid;
-  page-break-inside: avoid;
+/* ── Theme tokens (dark) ── */
+.dark .print-page {
+  --p-bg: #0c1220;
+  --p-surface: #162032;
+  --p-card-bg: #19263d;
+  --p-card-bg-soft: #21304b;
+  --p-glass: rgba(22, 32, 50, 0.68);
+  --p-glass-strong: rgba(26, 40, 68, 0.82);
+  --p-shadow: 0 28px 70px rgba(2, 8, 20, 0.38);
+  --p-shadow-soft: 0 14px 36px rgba(2, 8, 20, 0.24);
+  --p-border: #1e3050;
+  --p-border-subtle: #1a2844;
+  --p-text: #e8edf4;
+  --p-text-secondary: #8ba3c0;
+  --p-text-muted: #5a7494;
+  --p-accent: #3b9eff;
+  --p-accent-hover: #2b8ae6;
+  --p-badge-bg: #1a2844;
+  --p-logo-filter: brightness(1.8) saturate(0.8);
 }
 
-.print-chart-header {
-  border: 1px solid #dbe3ec;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.98);
-  padding: 1.75rem;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+.print-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--p-accent) 16%, transparent) 0%, transparent 28%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--p-text-secondary) 18%, transparent) 0%, transparent 24%),
+    linear-gradient(180deg, color-mix(in srgb, var(--p-bg) 88%, white 12%) 0%, var(--p-bg) 100%);
+  padding: 1.25rem;
+  font-family: "Source Sans 3", "Source Sans Pro", system-ui, sans-serif;
+  color: var(--p-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.print-page-message {
+  max-width: 28rem; margin: 3rem auto; text-align: center;
+  padding: 2rem 1.5rem; background: var(--p-surface); border-radius: 0.375rem;
+  border: 1px solid var(--p-border);
+}
+.print-page-message p { color: var(--p-text-secondary); font-size: 0.8125rem; margin-top: 0.5rem; }
+.print-page-spinner {
+  width: 1.5rem; height: 1.5rem; margin: 0 auto 0.75rem;
+  border: 2px solid var(--p-accent); border-top-color: transparent;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
 }
 
-.print-chart-section {
-  border: 1px solid #e2e8f0;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.98);
-  padding: 1.5rem;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+/* ── Controls (screen only) ── */
+.print-controls {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  background: var(--p-glass-strong); border: 1px solid color-mix(in srgb, var(--p-border) 72%, white 28%);
+  border-radius: 1rem; padding: 0.75rem 1rem; margin-bottom: 1rem;
+  box-shadow: var(--p-shadow-soft);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+.print-controls-title { font-size: 0.875rem; font-weight: 700; color: var(--p-text); }
+.print-controls-subtitle { font-size: 0.75rem; color: var(--p-text-secondary); }
+.print-controls-btn {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.5rem 0.9rem; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 600; border: 1px solid transparent; cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+.print-controls-btn:hover { transform: translateY(-1px); }
+.print-controls-btn--primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--p-accent) 84%, white 16%) 0%, var(--p-accent) 100%);
+  color: #fff; border-color: color-mix(in srgb, var(--p-accent) 80%, black 20%);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--p-accent) 24%, transparent);
+}
+.print-controls-btn--primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--p-accent-hover) 84%, white 16%) 0%, var(--p-accent-hover) 100%); }
+.print-controls-btn--ghost {
+  background: color-mix(in srgb, var(--p-glass) 92%, transparent);
+  color: var(--p-text-secondary); border-color: color-mix(in srgb, var(--p-border) 72%, white 28%);
+}
+.print-controls-btn--ghost:hover { background: color-mix(in srgb, var(--p-badge-bg) 72%, white 28%); }
+
+/* ── Document shell ── */
+.pd { max-width: 84rem; margin: 0 auto; }
+
+/* ── Header ── */
+.pd-hdr {
+  background: var(--p-glass-strong); border: 1px solid color-mix(in srgb, var(--p-border) 74%, white 26%);
+  border-radius: 1.4rem; padding: 1.2rem 1.45rem; margin-bottom: 0.9rem;
+  box-shadow: var(--p-shadow);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+.pd-hdr-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+}
+.pd-logo { height: 2rem; width: auto; filter: var(--p-logo-filter); }
+.pd-hdr-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.pd-hdr-badge {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  background: color-mix(in srgb, var(--p-accent) 92%, white 8%); color: #fff; padding: 0.25rem 0.625rem; border-radius: 999px;
+}
+.pd-hdr-date { font-size: 0.8125rem; color: var(--p-text-secondary); }
+.pd-title {
+  font-family: "Merriweather", Georgia, serif;
+  font-size: 1.6rem; font-weight: 700; color: var(--p-accent); margin: 0;
+  border-top: 2px solid var(--p-accent); padding-top: 0.625rem;
+  text-wrap: balance;
+}
+.pd-subtitle {
+  margin: 0.375rem 0 0;
+  font-size: 0.95rem;
+  color: var(--p-text-secondary);
 }
 
-.print-orgchart {
-  overflow-x: auto;
-  padding: 0.5rem 0 0.75rem;
+/* ── Department section ── */
+.pd-dept {
+  background: var(--p-glass); border: 1px solid color-mix(in srgb, var(--p-border) 76%, white 24%);
+  border-radius: 1.2rem; padding: 1rem 1.05rem; margin-bottom: 0.7rem;
+  box-shadow: var(--p-shadow-soft);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+.pd-dept-hdr {
+  display: flex; align-items: center; gap: 0.375rem;
+  margin-bottom: 0.75rem; padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--p-border-subtle);
+  break-after: avoid; page-break-after: avoid;
+}
+.pd-dept-dot { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+.pd-dept-name { font-size: 1rem; font-weight: 700; color: var(--p-text); margin: 0; flex: 1; }
+.pd-dept-count {
+  font-size: 0.75rem; font-weight: 700; color: var(--p-text-secondary);
+  background: var(--p-badge-bg); padding: 0.2rem 0.5rem; border-radius: 999px;
 }
 
-.print-orgchart-tree,
-.print-orgchart-children {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* ── Responsive people grid ── */
+.pd-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 0.75rem;
 }
 
-.print-orgchart-tree {
-  min-width: max-content;
+/* ── Person card ── */
+.pd-card {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  border: 1px solid var(--p-border); border-left: 4px solid var(--c, var(--p-accent));
+  border-radius: 1rem; padding: 0.85rem 0.95rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c, var(--p-accent)) 10%, var(--p-card-bg-soft) 90%) 0%,
+    var(--p-card-bg) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(15, 23, 42, 0.06);
+  break-inside: avoid; page-break-inside: avoid;
+}
+.pd-avatar {
+  width: 2.75rem; height: 2.75rem; border-radius: 0.5rem;
+  object-fit: cover; flex-shrink: 0; border: 1px solid var(--p-border-subtle);
+}
+.pd-avatar-fb {
+  width: 2.75rem; height: 2.75rem; border-radius: 0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.875rem; font-weight: 700; flex-shrink: 0;
+}
+.pd-card-body { flex: 1; min-width: 0; line-height: 1.35; }
+.pd-name {
+  font-size: 1rem; font-weight: 700; color: var(--p-text); margin: 0 0 0.15rem;
+  white-space: normal; overflow: visible; text-overflow: initial;
+}
+.pd-role {
+  font-size: 0.875rem; color: var(--p-text-secondary); margin: 0;
+  white-space: normal; overflow: visible; text-overflow: initial;
+}
+.pd-mgr {
+  font-size: 0.78rem; color: var(--p-text-muted); margin: 0.3rem 0 0;
 }
 
-.print-orgchart-children {
-  position: relative;
-  padding-top: 1.5rem;
+/* ── Footer ── */
+.pd-footer {
+  text-align: center; padding: 0.75rem 0 0.25rem;
+  font-size: 0.78rem; color: var(--p-text-muted); letter-spacing: 0.02em;
 }
 
-.print-orgchart-children::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  height: 1rem;
-  border-left: 2px solid #cbd5e1;
-}
-
-.print-orgchart-node {
-  position: relative;
-  display: flex;
-  min-width: 14rem;
-  max-width: 16rem;
-  flex-direction: column;
-  align-items: center;
-  text-align: left;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.print-orgchart-node:not(.print-orgchart-node--root) {
-  padding-top: 1rem;
-}
-
-.print-orgchart-node:not(.print-orgchart-node--root)::before,
-.print-orgchart-node:not(.print-orgchart-node--root)::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 50%;
-  border-top: 2px solid #cbd5e1;
-}
-
-.print-orgchart-node:not(.print-orgchart-node--root)::before {
-  right: 50%;
-}
-
-.print-orgchart-node:not(.print-orgchart-node--root)::after {
-  left: 50%;
-  border-left: 2px solid #cbd5e1;
-}
-
-.print-orgchart-node:only-child::before,
-.print-orgchart-node:only-child::after {
-  display: none;
-}
-
-.print-orgchart-node:first-child::before {
-  display: none;
-}
-
-.print-orgchart-node:last-child::after {
-  border-left: 2px solid #cbd5e1;
-  border-right: 0;
-}
-
-.print-orgchart-node:last-child::before {
-  border-top: 2px solid #cbd5e1;
-}
-
-.print-orgchart-node:first-child::after {
-  border-top: 2px solid #cbd5e1;
-}
-
-.print-orgchart-node:last-child::after,
-.print-orgchart-node:only-child::after {
-  width: 0;
-}
-
-.print-orgchart-node:first-child::before,
-.print-orgchart-node:only-child::before {
-  width: 0;
-}
-
-.print-person-card {
-  border: 1px solid #dbe3ec;
-  border-left: 0.4rem solid var(--department-color, #0ea5e9);
-  border-radius: 1.25rem;
-  background: #ffffff;
-  padding: 1rem 1.125rem;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
-  width: 100%;
-  min-height: 7rem;
-}
-
+/* ═══════════════════════════════════════════
+   @media print — always light, max density
+   ═══════════════════════════════════════════ */
 @media print {
-  @page {
-    size: landscape;
-    margin: 12mm;
+  @page { size: landscape; margin: 10mm 12mm; }
+
+  /* Force light theme for print regardless of dark mode */
+  .print-page {
+    --p-bg: #fff;
+    --p-surface: #fff;
+    --p-card-bg: #fff;
+    --p-card-bg-soft: #f8fbff;
+    --p-glass: #fff;
+    --p-glass-strong: #fff;
+    --p-shadow: none;
+    --p-shadow-soft: none;
+    --p-border: #e2e8f0;
+    --p-border-subtle: #f1f5f9;
+    --p-text: #0f172a;
+    --p-text-secondary: #64748b;
+    --p-text-muted: #94a3b8;
+    --p-accent: #0070e0;
+    --p-badge-bg: #f1f5f9;
+    --p-logo-filter: none;
   }
 
-  html,
-  body {
-    background: #ffffff !important;
-  }
-
-  body {
+  html, body {
+    background: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 13px;
   }
 
-  .print-screen-controls {
-    display: none !important;
-  }
+  .print-controls { display: none !important; }
+  .print-page { min-height: auto !important; background: #fff !important; padding: 0 !important; }
+  .pd { max-width: 100%; }
 
-  .print-chart-root {
-    min-height: auto !important;
-    background: #ffffff !important;
-    padding: 0 !important;
+  .pd-hdr, .pd-dept { box-shadow: none; }
+  .pd-hdr { margin-bottom: 0.45rem; padding: 0.7rem 0.9rem; }
+  .pd-title { font-size: 1.2rem; }
+  .pd-subtitle { font-size: 0.78rem; }
+  .pd-hdr-badge, .pd-hdr-date { font-size: 0.68rem; }
+  .pd-dept {
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 0.35rem;
+    break-inside: auto;
+    page-break-inside: auto;
   }
-
-  .print-chart-shell {
-    width: 100%;
-    margin-top: 0;
-  }
-
-  .print-chart-header,
-  .print-chart-section,
-  .print-person-card {
-    box-shadow: none !important;
-  }
-
-  .print-chart-section {
-    overflow: visible !important;
-  }
-
-  .print-orgchart {
-    overflow: visible !important;
-  }
+  .pd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .pd-card { gap: 0.45rem; padding: 0.45rem 0.55rem; }
+  .pd-avatar, .pd-avatar-fb { width: 2rem; height: 2rem; }
+  .pd-avatar-fb { font-size: 0.7rem; }
+  .pd-name { font-size: 0.8rem; }
+  .pd-role { font-size: 0.7rem; }
+  .pd-mgr { font-size: 0.64rem; }
+  .pd-footer { padding: 0.3rem 0 0; font-size: 0.65rem; }
 }
