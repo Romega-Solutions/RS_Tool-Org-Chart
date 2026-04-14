@@ -2,7 +2,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
-  MiniMap,
+  SelectionMode,
   Handle,
   Position,
   useNodesState,
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { ChartBackgroundDecor } from "./chart-background-decor";
 import { usePathHighlight } from "@/hooks/use-path-highlight";
 import { NodeContextMenu } from "./node-context-menu";
+import { CollapsibleMinimap } from "./collapsible-minimap";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { TreeNode } from "@/types";
 
@@ -382,7 +383,7 @@ export function CollapsibleTree({ tree, onNodeClick, onInit, onBackgroundContext
         nodesDraggable={false}
         nodesConnectable={false}
         selectionOnDrag
-        selectionMode={"partial" as const}
+        selectionMode={SelectionMode.Partial}
         selectionKeyCode="Shift"
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
@@ -392,14 +393,9 @@ export function CollapsibleTree({ tree, onNodeClick, onInit, onBackgroundContext
           animating && "[&_.react-flow__node]:transition-transform [&_.react-flow__node]:duration-300 [&_.react-flow__node]:ease-out"
         )}
       >
-        <MiniMap
-          pannable
-          zoomable
-          className="!bg-card/80 !border-border !rounded-lg !shadow-md"
-          maskColor="rgba(0,0,0,0.08)"
-          nodeColor={(n) => (n.data?.departmentColor as string) || "hsl(209, 60%, 50%)"}
-        />
       </ReactFlow>
+
+      <CollapsibleMinimap />
 
       {contextMenu && (
         <NodeContextMenu

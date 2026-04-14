@@ -2,7 +2,6 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   ReactFlow,
-  MiniMap,
   SelectionMode,
   useNodesState,
   useEdgesState,
@@ -15,12 +14,14 @@ import { cn } from "@/lib/utils";
 import { PersonNode } from "./person-node";
 import { ChartBackgroundDecor } from "./chart-background-decor";
 import { NodeContextMenu } from "./node-context-menu";
+import { CollapsibleMinimap } from "./collapsible-minimap";
 import { usePathHighlight } from "@/hooks/use-path-highlight";
 import type { TreeNode } from "@/types";
 
 const X_GAP = 148;
-const Y_GAP = 110;
-const STACK_GAP = 78;
+const Y_GAP = 140;
+const GRID_X_GAP = 142;
+const GRID_Y_GAP = 136;
 const DROP_RADIUS = 130;
 const NODE_WIDTH = 128;
 const NODE_HEIGHT = 90;
@@ -54,19 +55,28 @@ interface Props {
   highlightedNodeId?: number | null;
 }
 
-/** True when a node has 2+ children and ALL are leaf nodes (no grandchildren). */
-function shouldStack(node: TreeNode): boolean {
-  return node.children.length > 1 && node.children.every((c) => c.children.length === 0);
+/** How many columns a leaf grid should use — ceil(sqrt(n)) for a compact rectangle. */
+function getLeafCols(leafCount: number): number {
+  if (leafCount <= 1) return 1;
+  return Math.ceil(Math.sqrt(leafCount));
 }
 
-/** Recursively compute subtree width (number of leaf-equivalent slots). */
+/** Recursively compute subtree width (number of leaf-equivalent slots).
+ *  Leaf children are arranged in a grid whose column count adapts to the group size. */
 function getSubtreeWidth(node: TreeNode): number {
   if (node.children.length === 0) return 1;
-  if (shouldStack(node)) return 1; // stacked vertically = 1 slot wide
-  return node.children.reduce(
-    (sum, child) => sum + getSubtreeWidth(child),
-    0
-  );
+
+  const leaves = node.children.filter((c) => c.children.length === 0);
+  const branches = node.children.filter((c) => c.children.length > 0);
+
+  // Grid layout when there are 2+ leaf children
+  if (leaves.length >= 2) {
+    const branchWidth = branches.reduce((sum, b) => sum + getSubtreeWidth(b), 0);
+    return branchWidth + getLeafCols(leaves.length);
+  }
+
+  // Otherwise every child gets its own horizontal slot
+  return node.children.reduce((sum, c) => sum + getSubtreeWidth(c), 0);
 }
 
 /** Flatten tree into React Flow nodes and edges with computed positions. */
@@ -77,7 +87,13 @@ function layoutTree(roots: TreeNode[]) {
   // Map from person id to TreeNode for click lookups
   const personMap = new Map<string, TreeNode>();
 
-  function traverse(node: TreeNode, x: number, y: number, isRoot: boolean) {
+  function pushPerson(
+    node: TreeNode,
+    x: number,
+    y: number,
+    isRoot: boolean,
+    parentId?: string
+  ) {
     const nodeId = String(node.id);
     personMap.set(nodeId, node);
 
@@ -94,59 +110,62 @@ function layoutTree(roots: TreeNode[]) {
       },
     });
 
+    if (parentId) {
+      edges.push({
+        id: `e-${parentId}-${node.id}`,
+        source: parentId,
+        target: nodeId,
+        type: "smoothstep",
+        style: EDGE_STYLE,
+      });
+    }
+  }
+
+  function traverse(node: TreeNode, x: number, y: number, isRoot: boolean, parentId?: string) {
+    pushPerson(node, x, y, isRoot, parentId);
+
     if (node.children.length === 0) return;
 
-    // Vertical stacking: when all children are leaf nodes, stack them
-    // in a column directly below the parent for a compact layout.
-    if (shouldStack(node)) {
-      for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
-        const childId = String(child.id);
-        personMap.set(childId, child);
+    const nodeId = String(node.id);
+    const leaves = node.children.filter((c) => c.children.length === 0);
+    const branches = node.children.filter((c) => c.children.length > 0);
+    const stackLeaves = leaves.length >= 2;
 
-        nodes.push({
-          id: childId,
-          type: "person",
-          position: { x, y: y + Y_GAP + i * STACK_GAP },
-          data: {
-            name: child.name,
-            title: child.title,
-            photoUrl: child.photoUrl,
-            departmentColor: child.department?.color || null,
-            isRoot: false,
-          },
-        });
+    if (!stackLeaves) {
+      // All children laid out horizontally (standard behaviour)
+      const totalWidth = getSubtreeWidth(node);
+      let offsetX = x - ((totalWidth - 1) * X_GAP) / 2;
 
-        edges.push({
-          id: `e-${node.id}-${child.id}`,
-          source: nodeId,
-          target: childId,
-          type: "smoothstep",
-          style: EDGE_STYLE,
-        });
+      for (const child of node.children) {
+        const childWidth = getSubtreeWidth(child);
+        const childX = offsetX + ((childWidth - 1) * X_GAP) / 2;
+        traverse(child, childX, y + Y_GAP, false, nodeId);
+        offsetX += childWidth * X_GAP;
       }
       return;
     }
 
-    // Standard horizontal spread for nodes with subtrees
+    // Hybrid layout: branches spread horizontally, leaves stacked vertically
     const totalWidth = getSubtreeWidth(node);
     let offsetX = x - ((totalWidth - 1) * X_GAP) / 2;
 
-    for (const child of node.children) {
-      const childWidth = getSubtreeWidth(child);
-      const childX = offsetX + ((childWidth - 1) * X_GAP) / 2;
-      const childY = y + Y_GAP;
+    // 1) Spread branches
+    for (const branch of branches) {
+      const bw = getSubtreeWidth(branch);
+      const bx = offsetX + ((bw - 1) * X_GAP) / 2;
+      traverse(branch, bx, y + Y_GAP, false, nodeId);
+      offsetX += bw * X_GAP;
+    }
 
-      edges.push({
-        id: `e-${node.id}-${child.id}`,
-        source: nodeId,
-        target: String(child.id),
-        type: "smoothstep",
-        style: EDGE_STYLE,
-      });
-
-      traverse(child, childX, childY, false);
-      offsetX += childWidth * X_GAP;
+    // 2) Arrange leaves in a compact grid
+    const cols = getLeafCols(leaves.length);
+    const leafBaseX = offsetX;
+    for (let i = 0; i < leaves.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const leafX = leafBaseX + col * GRID_X_GAP;
+      const leafY = y + Y_GAP + row * GRID_Y_GAP;
+      pushPerson(leaves[i], leafX, leafY, false, nodeId);
     }
   }
 
@@ -388,13 +407,7 @@ export function TopDownTree({
           animating && "[&_.react-flow__node]:transition-transform [&_.react-flow__node]:duration-300 [&_.react-flow__node]:ease-out"
         )}
       >
-        <MiniMap
-          pannable
-          zoomable
-          className="!bg-card/80 !border-border !rounded-lg !shadow-md"
-          maskColor="rgba(0,0,0,0.08)"
-          nodeColor={(n) => (n.data?.departmentColor as string) || "hsl(209, 60%, 50%)"}
-        />
+        <CollapsibleMinimap />
       </ReactFlow>
 
       {contextMenu && (
