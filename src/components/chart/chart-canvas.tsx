@@ -11,6 +11,7 @@ import { ChartSearch } from "./chart-search";
 import { PersonDetailPanel } from "./person-detail-panel";
 import { SelectionActionBar } from "./selection-action-bar";
 import { ChartContextMenu } from "./chart-context-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ViewMode } from "./view-switcher";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
@@ -47,6 +48,11 @@ export function ChartCanvas({ isEditor }: Props) {
   const [chartMenu, setChartMenu] = useState<{ x: number; y: number } | null>(null);
   const [selectedNodeIds, setSelectedNodeIds] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [deleteIntent, setDeleteIntent] = useState<{
+    ids: number[];
+    title: string;
+    description: string;
+  } | null>(null);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   const showFeedback = useCallback((msg: string) => {
@@ -88,23 +94,22 @@ export function ChartCanvas({ isEditor }: Props) {
   const handleBulkDelete = useCallback(async () => {
     if (bulkBusy || selectedNodeIds.length === 0) return;
     const count = selectedNodeIds.length;
-    if (!window.confirm(`Delete ${count} ${count === 1 ? "person" : "people"}? This cannot be undone.`)) return;
-    setBulkBusy(true);
-    try {
-      await Promise.all(selectedNodeIds.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
-      showFeedback(`Deleted ${count} people`);
-      setSelectedNodeIds([]);
-      await refetch();
-    } finally { setBulkBusy(false); }
-  }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
+    setDeleteIntent({
+      ids: selectedNodeIds,
+      title: `Delete ${count} ${count === 1 ? "person" : "people"}?`,
+      description: "This action permanently removes the selected people from the org chart.",
+    });
+  }, [bulkBusy, selectedNodeIds]);
 
   const handleNodeClick = useCallback((person: TreeNode) => {
     setChartMenu(null);
     setSelectedPerson(person);
+    setSelectedNodeIds([person.id]); // trigger path highlight
   }, []);
 
   const handleClosePanel = useCallback(() => {
     setSelectedPerson(null);
+    setSelectedNodeIds([]); // clear path highlight
   }, []);
 
   const handleClearSelection = useCallback(() => {
@@ -247,26 +252,32 @@ export function ChartCanvas({ isEditor }: Props) {
   // Delete person with confirmation
   const handleDelete = useCallback(
     async (personId: number, personName: string) => {
-      const confirmed = window.confirm(
-        `Are you sure you want to delete "${personName}"? This cannot be undone.`
-      );
-      if (!confirmed) return;
-
-      try {
-        const res = await fetch(`/api/people/${personId}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) throw new Error("Failed to delete person");
-
-        showFeedback(`Deleted ${personName}`);
-        await refetch();
-      } catch (err) {
-        console.error("Delete failed:", err);
-        showFeedback("Failed to delete person");
-      }
+      setDeleteIntent({
+        ids: [personId],
+        title: `Delete ${personName}?`,
+        description: "This action permanently removes the person from the org chart.",
+      });
     },
-    [refetch, showFeedback]
+    []
   );
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteIntent || bulkBusy) return;
+    const count = deleteIntent.ids.length;
+    setBulkBusy(true);
+    try {
+      await Promise.all(deleteIntent.ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
+      showFeedback(`Deleted ${count} ${count === 1 ? "person" : "people"}`);
+      setSelectedNodeIds((current) => current.filter((id) => !deleteIntent.ids.includes(id)));
+      setDeleteIntent(null);
+      await refetch();
+    } catch (err) {
+      console.error("Delete failed:", err);
+      showFeedback("Failed to delete person");
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [deleteIntent, bulkBusy, refetch, showFeedback]);
 
   // Search select: highlight + zoom + open detail panel
   const handleSearchSelect = useCallback(
@@ -385,7 +396,7 @@ export function ChartCanvas({ isEditor }: Props) {
 
       {/* Feedback toast */}
       {feedbackMsg && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-muted border border-border text-foreground text-sm px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
+        <div role="status" aria-live="polite" className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-muted border border-border text-foreground text-sm px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
           {feedbackMsg}
         </div>
       )}
@@ -485,6 +496,18 @@ export function ChartCanvas({ isEditor }: Props) {
 
       {/* Detail panel */}
       <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} tree={data.tree} />
+      <ConfirmDialog
+        open={Boolean(deleteIntent)}
+        title={deleteIntent?.title || "Confirm delete"}
+        description={deleteIntent?.description || ""}
+        confirmLabel="Delete"
+        destructive
+        busy={bulkBusy}
+        onConfirm={confirmDelete}
+        onOpenChange={(open) => {
+          if (!open && !bulkBusy) setDeleteIntent(null);
+        }}
+      />
     </div>
   );
 }

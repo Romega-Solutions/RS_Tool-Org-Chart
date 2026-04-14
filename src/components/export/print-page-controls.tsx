@@ -30,7 +30,6 @@ export function PrintPageControls({ ready }: Props) {
     const timeoutId = window.setTimeout(async () => {
       if ("fonts" in document) await document.fonts.ready;
       await waitForImages();
-      window.print();
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
@@ -41,15 +40,15 @@ export function PrintPageControls({ ready }: Props) {
       <div>
         <p className="print-controls-title">Print-ready org chart</p>
         <p className="print-controls-subtitle">
-          Use your browser&apos;s print dialog to print or save as PDF.
+          Review the layout, then choose Print when you are ready to print or save as PDF.
         </p>
       </div>
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <button onClick={() => window.print()} className="print-controls-btn print-controls-btn--primary">
+        <button type="button" onClick={() => window.print()} className="print-controls-btn print-controls-btn--primary">
           <Printer style={{ width: 16, height: 16 }} />
           Print
         </button>
-        <button onClick={() => window.close()} className="print-controls-btn print-controls-btn--ghost">
+        <button type="button" onClick={() => window.close()} className="print-controls-btn print-controls-btn--ghost">
           <X style={{ width: 16, height: 16 }} />
           Close
         </button>

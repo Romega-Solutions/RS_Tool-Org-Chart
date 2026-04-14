@@ -22,7 +22,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${sourceSans.variable} ${merriweather.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sourceSans.variable} ${merriweather.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Prevent FOUC: apply theme from localStorage before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("orgchart_theme");document.documentElement.classList.toggle("dark",t?t==="dark":true)}catch(e){document.documentElement.classList.add("dark")}` }} />
+      </head>
       <body className="antialiased" suppressHydrationWarning>{children}</body>
     </html>
   );

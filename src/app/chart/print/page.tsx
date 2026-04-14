@@ -4,9 +4,12 @@ import { useMemo } from "react";
 import { PrintChartDocument } from "@/components/export/print-chart-document";
 import { PrintPageControls } from "@/components/export/print-page-controls";
 import { useChartData } from "@/hooks/use-chart-data";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function ChartPrintPage() {
   const { data, loading } = useChartData();
+  // Syncs dark class on <html> from localStorage
+  useTheme();
 
   const generatedAt = useMemo(
     () =>

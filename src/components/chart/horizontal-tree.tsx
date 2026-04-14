@@ -16,6 +16,7 @@ import { HorizontalPersonNode } from "./horizontal-person-node";
 import { NodeContextMenu } from "./node-context-menu";
 import { CollapsibleMinimap } from "./collapsible-minimap";
 import { usePathHighlight } from "@/hooks/use-path-highlight";
+import { computeTranslateExtent } from "@/lib/chart-utils";
 import type { TreeNode } from "@/types";
 
 const X_GAP = 250;
@@ -115,6 +116,7 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
     personMap,
   } = useMemo(() => layoutTree(tree), [tree]);
 
+  const translateExtent = useMemo(() => computeTranslateExtent(initialNodes), [initialNodes]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [animating, setAnimating] = useState(false);
@@ -213,6 +215,7 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
         selectionKeyCode="Shift"
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
+        translateExtent={translateExtent}
         proOptions={{ hideAttribution: true }}
         className={cn(
           "relative z-10 bg-transparent",

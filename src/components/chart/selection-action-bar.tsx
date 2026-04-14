@@ -56,6 +56,7 @@ export function SelectionActionBar({ count, onActivate, onDeactivate, onDelete, 
         variant="ghost"
         size="icon-sm"
         onClick={onClear}
+        aria-label="Clear selection"
         title="Clear selection (Esc)"
         className="cursor-pointer"
       >

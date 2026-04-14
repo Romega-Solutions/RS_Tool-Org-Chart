@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = [
   { key: "primary_color", value: "#0070E0" },
   { key: "accent_color", value: "#C8850A" },
   { key: "neutral_color", value: "#607A99" },
+  { key: "support_email", value: "" },
 ];
 
 const DEPARTMENTS = [

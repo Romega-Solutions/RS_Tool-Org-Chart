@@ -8,6 +8,7 @@ import {
   Users,
   Settings,
   Network,
+  LifeBuoy,
   LogOut,
   Sun,
   Moon,
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/chart", label: "Chart", icon: Network },
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/accessibility", label: "Accessibility & Support", icon: LifeBuoy },
 ];
 
 export function AdminSidebar() {
@@ -90,6 +92,7 @@ export function AdminSidebar() {
         <Button
           variant="ghost"
           size="icon"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="shrink-0 w-8 h-8 cursor-pointer transition-all duration-200 text-muted-foreground hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -151,6 +154,7 @@ export function AdminSidebar() {
           ) : (
             <button
               onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              aria-label={quickActionsOpen ? "Hide quick actions" : "Show quick actions"}
               className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
               title={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"}
             >

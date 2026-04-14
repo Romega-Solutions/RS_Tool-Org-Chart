@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
-import type { CSSProperties } from "react";
+import { createElement, type CSSProperties } from "react";
+import { getDeptIcon } from "@/lib/dept-icons";
 import type { TreeNode } from "@/types";
 
 interface Props {
@@ -60,15 +61,28 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
         <p className="pd-subtitle">
           Department directory prepared for print and PDF export.
         </p>
+
+        {/* Department summary chips */}
+        <div className="pd-dept-chips">
+          {departments.map((dept) => (
+            <span key={dept.name} className="pd-dept-chip" style={{ "--c": dept.color } as CSSProperties}>
+              {createElement(getDeptIcon(dept.name), { className: "pd-dept-chip-icon", style: { color: dept.color } })}
+              <span>{dept.name}</span>
+              <span className="pd-dept-chip-count">{dept.people.length}</span>
+            </span>
+          ))}
+        </div>
       </header>
 
       {/* Departments */}
       {departments.map((dept) => (
         <section key={dept.name} className="pd-dept">
           <div className="pd-dept-hdr">
-            <span className="pd-dept-dot" style={{ background: dept.color }} />
+            <span className="pd-dept-icon-wrap" style={{ background: `${dept.color}18`, color: dept.color }}>
+              {createElement(getDeptIcon(dept.name), { className: "pd-dept-icon" })}
+            </span>
             <h2 className="pd-dept-name">{dept.name}</h2>
-            <span className="pd-dept-count">{dept.people.length}</span>
+            <span className="pd-dept-count">{dept.people.length} {dept.people.length === 1 ? "person" : "people"}</span>
           </div>
           <div className="pd-grid">
             {dept.people.map((person) => (
@@ -87,7 +101,11 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
                 <div className="pd-card-body">
                   <p className="pd-name">{person.name}</p>
                   <p className="pd-role">{person.title}</p>
-                  {person.managerName && <p className="pd-mgr">Reports to: {person.managerName}</p>}
+                  {person.managerName && (
+                    <p className="pd-mgr">
+                      <span className="pd-mgr-label">Reports to</span> {person.managerName}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -96,7 +114,11 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
       ))}
 
       <footer className="pd-footer">
-        Romega Solutions &middot; Org Chart &middot; {generatedAt}
+        <span className="pd-footer-brand">Romega Solutions</span>
+        <span className="pd-footer-sep">&middot;</span>
+        <span>Organizational Chart</span>
+        <span className="pd-footer-sep">&middot;</span>
+        <span>{generatedAt}</span>
       </footer>
     </div>
   );

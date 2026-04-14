@@ -18,7 +18,9 @@ export function LoginForm() {
     setError("");
     const result = login(username, password);
     if (result) {
-      router.push("/chart");
+      const next = new URLSearchParams(window.location.search).get("next");
+      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/chart";
+      router.replace(target);
     } else {
       setError("Invalid username or password");
     }
@@ -50,7 +52,7 @@ export function LoginForm() {
         />
       </div>
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+        <p role="alert" className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
           {error}
         </p>
       )}

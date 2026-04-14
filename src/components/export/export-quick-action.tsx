@@ -66,7 +66,7 @@ export function ExportQuickAction({ collapsed }: Props) {
             }}
           >
             <Printer className="w-4 h-4" />
-            Print / PDF
+            Open Print / PDF View
           </Button>
         </div>
       </DialogContent>

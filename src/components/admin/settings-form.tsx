@@ -183,7 +183,7 @@ export function SettingsForm() {
       typeof window !== "undefined"
         ? window.location.origin
         : "https://your-domain.com";
-    return `<iframe\n  src="${origin}/chart"\n  width="100%"\n  height="800"\n  style="border: none; border-radius: 8px;"\n  title="${form.chart_title || "Organization Chart"}"\n></iframe>`;
+    return `<iframe\n  src="${origin}/view"\n  width="100%"\n  height="800"\n  style="border: none; border-radius: 8px;"\n  title="${form.chart_title || "Organization Chart"}"\n></iframe>`;
   }
 
   async function handleCopyEmbed() {
@@ -264,6 +264,19 @@ export function SettingsForm() {
                 placeholder="Building the future together"
               />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="support_email">Support Email</Label>
+            <Input
+              id="support_email"
+              type="email"
+              value={form.support_email || ""}
+              onChange={(e) => setField("support_email", e.target.value)}
+              placeholder="support@example.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown on the accessibility and support page for reporting issues.
+            </p>
           </div>
         </CardContent>
       </Card>

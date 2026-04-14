@@ -13,8 +13,13 @@ export function ProtectedRoute({ children, requireEditor = false }: Props) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
-    if (!loading && requireEditor && user?.role !== "editor") router.push("/chart");
+    if (!loading && !user) {
+      const next = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
+    }
+    if (!loading && requireEditor && user?.role !== "editor") {
+      router.replace("/chart");
+    }
   }, [user, loading, requireEditor, router]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Loading...</p></div>;

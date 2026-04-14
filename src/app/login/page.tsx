@@ -30,7 +30,7 @@ export default function LoginPage() {
               Org Chart Generator
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Romega Solutions - Authorized Access Only
+              Internal org chart access for Romega Solutions staff.
             </p>
           </div>
           <LoginForm />
@@ -44,7 +44,7 @@ export default function LoginPage() {
           className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground"
         >
           <Shield className="w-3.5 h-3.5" />
-          <span>Protected by Romega Solutions. Authorized personnel only.</span>
+          <span>Need accessibility help? Use the support link on the sign-in form.</span>
         </motion.div>
       </motion.div>
     </div>

@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ChartBackgroundDecor } from "./chart-background-decor";
 import { usePathHighlight } from "@/hooks/use-path-highlight";
+import { computeTranslateExtent } from "@/lib/chart-utils";
 import { NodeContextMenu } from "./node-context-menu";
 import { CollapsibleMinimap } from "./collapsible-minimap";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -287,6 +288,7 @@ export function CollapsibleTree({ tree, onNodeClick, onInit, onBackgroundContext
     [tree, collapsed, handleToggle]
   );
 
+  const translateExtent = useMemo(() => computeTranslateExtent(layoutNodes), [layoutNodes]);
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
   const [animating, setAnimating] = useState(false);
@@ -387,6 +389,7 @@ export function CollapsibleTree({ tree, onNodeClick, onInit, onBackgroundContext
         selectionKeyCode="Shift"
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
+        translateExtent={translateExtent}
         proOptions={{ hideAttribution: true }}
         className={cn(
           "relative z-10 bg-transparent",
