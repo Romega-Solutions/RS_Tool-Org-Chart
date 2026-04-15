@@ -19,9 +19,10 @@ export default function LoginPage() {
               src="/assets/romega-logo.svg"
               alt="Romega Solutions"
               width={280}
-              height={74}
+              height={78}
               className="mx-auto mb-4 dark:invert dark:brightness-[0.9] dark:saturate-[1.3]"
               priority
+              style={{ width: "280px", height: "auto" }}
             />
             <h1
               className="text-2xl font-bold text-foreground"
@@ -44,7 +45,7 @@ export default function LoginPage() {
           className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground"
         >
           <Shield className="w-3.5 h-3.5" />
-          <span>Need accessibility help? Use the support link on the sign-in form.</span>
+          <span>Romega internal access portal.</span>
         </motion.div>
       </motion.div>
     </div>

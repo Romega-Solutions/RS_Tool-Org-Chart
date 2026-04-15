@@ -83,8 +83,10 @@ export function AdminSidebar() {
               src="/assets/romega-logo.svg"
               alt="Romega Solutions"
               width={180}
-              height={48}
+              height={50}
+              loading="eager"
               className="dark:invert dark:brightness-[0.9] dark:saturate-[1.3]"
+              style={{ width: "180px", height: "auto" }}
             />
             <p className="text-[10px] text-muted-foreground mt-0.5">Org Chart Generator</p>
           </div>
@@ -114,6 +116,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               title={collapsed ? item.label : undefined}
               className={`flex items-center ${
                 collapsed ? "justify-center px-2" : "gap-3 px-3"
@@ -137,6 +140,8 @@ export function AdminSidebar() {
           {!collapsed ? (
             <button
               onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              aria-expanded={quickActionsOpen}
+              aria-controls="sidebar-quick-actions"
               className="flex items-center justify-between w-full text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1 hover:text-foreground cursor-pointer transition-colors duration-200"
             >
               <span>Quick Actions</span>
@@ -155,6 +160,8 @@ export function AdminSidebar() {
             <button
               onClick={() => setQuickActionsOpen(!quickActionsOpen)}
               aria-label={quickActionsOpen ? "Hide quick actions" : "Show quick actions"}
+              aria-expanded={quickActionsOpen}
+              aria-controls="sidebar-quick-actions"
               className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
               title={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"}
             >
@@ -165,7 +172,7 @@ export function AdminSidebar() {
               )}
             </button>
           )}
-          {quickActionsOpen && <><PersonForm
+          {quickActionsOpen && <div id="sidebar-quick-actions" className="space-y-1"><PersonForm
             onSave={() => router.refresh()}
             trigger={
               <Button
@@ -210,7 +217,7 @@ export function AdminSidebar() {
             {!collapsed && <span className="ml-2">Import CSV</span>}
           </Button>
           <ExportQuickAction collapsed={collapsed} />
-          </>}
+          </div>}
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>

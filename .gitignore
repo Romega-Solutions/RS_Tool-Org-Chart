@@ -48,3 +48,7 @@ public/uploads/
 
 # Drizzle
 drizzle/
+
+# Dev/tool logs
+*.log
+.codex-*.log

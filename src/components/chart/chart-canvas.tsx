@@ -4,6 +4,7 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useChartData } from "@/hooks/use-chart-data";
 import { useUndo } from "@/hooks/use-undo";
+import { useKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { ChartToolbar } from "@/components/layout/chart-toolbar";
 import { ExportMenu } from "@/components/export/export-menu";
 import { ImportDialog } from "@/components/admin/import-dialog";
@@ -54,6 +55,24 @@ export function ChartCanvas({ isEditor }: Props) {
     description: string;
   } | null>(null);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+
+  // Auto-switch to grid view on mobile screens
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+
+    function handleChange(e: MediaQueryListEvent | MediaQueryList) {
+      if (e.matches) {
+        setView("grid");
+      }
+    }
+
+    // Check on mount
+    handleChange(mql);
+
+    // Listen for changes
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
 
   const showFeedback = useCallback((msg: string) => {
     setFeedbackMsg(msg);
@@ -116,6 +135,27 @@ export function ChartCanvas({ isEditor }: Props) {
     setSelectedPerson(null);
     setHighlightedNodeId(null);
   }, []);
+
+  // Keyboard navigation: arrow keys traverse tree, Enter opens detail
+  const handleZoomToNode = useCallback((nodeId: number) => {
+    if (view !== "grid") {
+      rfInstanceRef.current?.fitView({
+        nodes: [{ id: String(nodeId) }],
+        duration: 300,
+        padding: 0.5,
+      });
+    } else {
+      const el = document.getElementById(`person-card-${nodeId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setHighlightedNodeId(nodeId);
+  }, [view]);
+
+  const { focusedNodeId } = useKeyboardNav(
+    data?.tree ?? [],
+    handleNodeClick,
+    handleZoomToNode
+  );
 
   const handleZoomIn = useCallback(() => {
     rfInstanceRef.current?.zoomIn({ duration: 220 });

@@ -28,7 +28,7 @@ export function CollapsibleMinimap() {
   const zoomPct = Math.round(zoom * 100);
 
   return (
-    <>
+    <div data-export-ignore="true">
       {/* MiniMap panel — animated in/out */}
       <AnimatePresence>
         {open && (
@@ -131,6 +131,6 @@ export function CollapsibleMinimap() {
           )}
         </motion.button>
       </Panel>
-    </>
+    </div>
   );
 }

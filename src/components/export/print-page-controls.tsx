@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Printer, X } from "lucide-react";
+import { Printer, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 interface Props {
   ready: boolean;
@@ -22,6 +23,7 @@ async function waitForImages() {
 
 export function PrintPageControls({ ready }: Props) {
   const hasAutoPrintedRef = useRef(false);
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     if (!ready || hasAutoPrintedRef.current) return;
@@ -43,7 +45,20 @@ export function PrintPageControls({ ready }: Props) {
           Review the layout, then choose Print when you are ready to print or save as PDF.
         </p>
       </div>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <button
+          type="button"
+          onClick={toggle}
+          className="print-controls-btn print-controls-btn--ghost"
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? (
+            <Sun style={{ width: 16, height: 16 }} />
+          ) : (
+            <Moon style={{ width: 16, height: 16 }} />
+          )}
+          {theme === "dark" ? "Light" : "Dark"}
+        </button>
         <button type="button" onClick={() => window.print()} className="print-controls-btn print-controls-btn--primary">
           <Printer style={{ width: 16, height: 16 }} />
           Print

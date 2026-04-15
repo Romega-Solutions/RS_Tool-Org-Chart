@@ -19,9 +19,9 @@ import { usePathHighlight } from "@/hooks/use-path-highlight";
 import { computeTranslateExtent } from "@/lib/chart-utils";
 import type { TreeNode } from "@/types";
 
-const Y_GAP = 140;
+const Y_GAP = 160;
 const GRID_X_GAP = 142;
-const GRID_ROW_GAP = 112;
+const GRID_ROW_GAP = 128;
 const NODE_GAP = 22;
 const DROP_RADIUS = 130;
 const NODE_WIDTH = 128;
@@ -394,58 +394,24 @@ export function TopDownTree({
     []
   );
 
-  // Move all descendants along with the dragged node
-  const handleNodeDrag = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
-      const startPos = dragStartRef.current;
-      if (!startPos) return;
-
-      const descendants = descendantsMap.get(draggedNode.id);
-      if (!descendants || descendants.length === 0) return;
-
-      const dx = draggedNode.position.x - startPos.x;
-      const dy = draggedNode.position.y - startPos.y;
-      const ddx = dx - lastDeltaRef.current.x;
-      const ddy = dy - lastDeltaRef.current.y;
-
-      if (ddx === 0 && ddy === 0) return;
-      lastDeltaRef.current = { x: dx, y: dy };
-
-      const descSet = new Set(descendants);
-      setNodes((prev) =>
-        prev.map((n) =>
-          descSet.has(n.id)
-            ? { ...n, position: { x: n.position.x + ddx, y: n.position.y + ddy } }
-            : n
-        )
-      );
-    },
-    [descendantsMap, setNodes]
-  );
-
-  // Drag-to-edit: when a node is dropped near another node, reassign reporting line
-  const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
-      dragStartRef.current = null;
-      lastDeltaRef.current = { x: 0, y: 0 };
-
-      if (!isEditor || !onDrop) return;
-
+  // Find the closest drop target for a dragged node
+  const findDropTarget = useCallback(
+    (draggedNode: Node): string | null => {
+      if (!isEditor) return null;
       const draggedId = draggedNode.id;
       const descendants = descendantsMap.get(draggedId) || [];
       const excludeSet = new Set([draggedId, ...descendants]);
 
-      const draggedCenterX = draggedNode.position.x + NODE_WIDTH / 2;
-      const draggedCenterY = draggedNode.position.y + NODE_HEIGHT / 2;
+      const cx = draggedNode.position.x + NODE_WIDTH / 2;
+      const cy = draggedNode.position.y + NODE_HEIGHT / 2;
 
       let closestId: string | null = null;
       let closestDist = Infinity;
 
       for (const node of nodes) {
-        // Skip self and own descendants
         if (excludeSet.has(node.id)) continue;
-        const dx = draggedCenterX - (node.position.x + NODE_WIDTH / 2);
-        const dy = draggedCenterY - (node.position.y + NODE_HEIGHT / 2);
+        const dx = cx - (node.position.x + NODE_WIDTH / 2);
+        const dy = cy - (node.position.y + NODE_HEIGHT / 2);
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < closestDist) {
           closestDist = dist;
@@ -453,13 +419,78 @@ export function TopDownTree({
         }
       }
 
-      if (closestId && closestDist <= DROP_RADIUS) {
-        onDrop(Number(draggedId), Number(closestId));
+      return closestId && closestDist <= DROP_RADIUS ? closestId : null;
+    },
+    [isEditor, descendantsMap, nodes]
+  );
+
+  // Move all descendants along with the dragged node + show drop target preview
+  const handleNodeDrag = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      const startPos = dragStartRef.current;
+      if (!startPos) return;
+
+      const descendants = descendantsMap.get(draggedNode.id);
+
+      const dx = draggedNode.position.x - startPos.x;
+      const dy = draggedNode.position.y - startPos.y;
+      const ddx = dx - lastDeltaRef.current.x;
+      const ddy = dy - lastDeltaRef.current.y;
+      lastDeltaRef.current = { x: dx, y: dy };
+
+      // Find nearest drop target for live preview
+      const targetId = findDropTarget(draggedNode);
+
+      setNodes((prev) => {
+        const descSet = new Set(descendants || []);
+        return prev.map((n) => {
+          // Move descendants
+          if (descSet.has(n.id) && (ddx !== 0 || ddy !== 0)) {
+            return {
+              ...n,
+              position: { x: n.position.x + ddx, y: n.position.y + ddy },
+              data: { ...n.data, dropTarget: false },
+            };
+          }
+          // Mark/unmark drop target
+          const isTarget = n.id === targetId;
+          if (n.data.dropTarget !== isTarget) {
+            return { ...n, data: { ...n.data, dropTarget: isTarget } };
+          }
+          return n;
+        });
+      });
+    },
+    [descendantsMap, setNodes, findDropTarget]
+  );
+
+  // Clear all drop target previews
+  const clearDropTargets = useCallback(() => {
+    setNodes((prev) =>
+      prev.map((n) =>
+        n.data.dropTarget ? { ...n, data: { ...n.data, dropTarget: false } } : n
+      )
+    );
+  }, [setNodes]);
+
+  // Drag-to-edit: execute the drop and clear preview
+  const handleNodeDragStop = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node) => {
+      dragStartRef.current = null;
+      lastDeltaRef.current = { x: 0, y: 0 };
+      clearDropTargets();
+
+      if (!isEditor || !onDrop) return;
+
+      const targetId = findDropTarget(draggedNode);
+
+      if (targetId) {
+        onDrop(Number(draggedNode.id), Number(targetId));
       } else {
         onDragMiss?.();
       }
     },
-    [isEditor, onDrop, onDragMiss, descendantsMap, nodes]
+    [isEditor, onDrop, onDragMiss, findDropTarget, clearDropTargets]
   );
 
   // Right-click context menu

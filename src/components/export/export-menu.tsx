@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileSpreadsheet, Printer } from "lucide-react";
+import { Download, FileSpreadsheet, Image, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
 import { useChartExport } from "./use-chart-export";
 
 export function ExportMenu() {
-  const { exporting, handleExcel, handlePrint } = useChartExport();
+  const { exporting, handleExcel, handleExportPng, handlePrint } = useChartExport();
 
   return (
     <DropdownMenu>
@@ -29,6 +29,10 @@ export function ExportMenu() {
         {exporting ? "Exporting..." : "Export"}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
+        <DropdownMenuItem disabled={exporting} onClick={() => void handleExportPng()}>
+          <Image className="w-3.5 h-3.5" />
+          PNG Image
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={exporting} onClick={() => void handleExcel()}>
           <FileSpreadsheet className="w-3.5 h-3.5" />
           Export Excel

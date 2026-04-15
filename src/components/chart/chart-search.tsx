@@ -74,6 +74,7 @@ export function ChartSearch({ tree, departments, onSelect }: Props) {
         size="icon"
         onClick={() => setOpen(true)}
         title="Search (Ctrl+K)"
+        aria-label="Search people"
         className="cursor-pointer transition-all duration-200"
       >
         <Search className="w-4 h-4" />

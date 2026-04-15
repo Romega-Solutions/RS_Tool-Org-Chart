@@ -284,10 +284,10 @@
 }
 .print-controls-btn--primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--p-accent-hover) 84%, white 16%) 0%, var(--p-accent-hover) 100%); }
 .print-controls-btn--ghost {
-  background: color-mix(in srgb, var(--p-glass) 92%, transparent);
-  color: var(--p-text-secondary); border-color: color-mix(in srgb, var(--p-border) 72%, white 28%);
+  background: var(--p-badge-bg);
+  color: var(--p-text-secondary); border-color: var(--p-border);
 }
-.print-controls-btn--ghost:hover { background: color-mix(in srgb, var(--p-badge-bg) 72%, white 28%); }
+.print-controls-btn--ghost:hover { background: var(--p-border-subtle); }
 
 /* ── Document shell ── */
 .pd { max-width: 84rem; margin: 0 auto; }
