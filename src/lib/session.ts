@@ -7,6 +7,12 @@ export interface SessionPayload {
   role: UserRole;
 }
 
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
+  console.error(
+    "[orgchart] WARNING: SESSION_SECRET is not set. Using the insecure dev fallback key in production is a security risk. Set SESSION_SECRET to at least 32 random characters. Generate one with: openssl rand -base64 32"
+  );
+}
+
 const SECRET_KEY = new TextEncoder().encode(
   process.env.SESSION_SECRET ?? "orgchart-internal-secret-key-2026!!"
 );
