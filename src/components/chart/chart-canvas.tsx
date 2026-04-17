@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useChartData } from "@/hooks/use-chart-data";
@@ -20,6 +20,7 @@ import { HorizontalTree } from "./horizontal-tree";
 import { CollapsibleTree } from "./collapsible-tree";
 import { DepartmentGrid } from "./department-grid";
 import type { TreeNode } from "@/types";
+import { getTreeStats } from "@/lib/tree";
 
 interface Props {
   isEditor: boolean;
@@ -60,6 +61,7 @@ export function ChartCanvas({ isEditor }: Props) {
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState<ViewMode>("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
+  const [density, setDensity] = useState<"compact" | "comfortable">("comfortable");
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [highlightedNodeId, setHighlightedNodeId] = useState<number | null>(null);
   const [chartMenu, setChartMenu] = useState<{ x: number; y: number } | null>(null);
@@ -95,6 +97,11 @@ export function ChartCanvas({ isEditor }: Props) {
     setFeedbackMsg(msg);
     setTimeout(() => setFeedbackMsg(null), 3000);
   }, []);
+
+  const treeStats = useMemo(
+    () => (data ? getTreeStats(data.tree) : null),
+    [data]
+  );
 
   // Selection handlers
   const handleSelectionChange = useCallback((nodeIds: number[]) => {
@@ -587,6 +594,9 @@ export function ChartCanvas({ isEditor }: Props) {
             onSelect={handleSearchSelect}
           />
         }
+        treeStats={treeStats ?? undefined}
+        density={density}
+        onDensityChange={setDensity}
       />
 
       {/* Action buttons */}
@@ -622,6 +632,7 @@ export function ChartCanvas({ isEditor }: Props) {
           onToggle={isEditor ? handleToggle : undefined}
           onDelete={isEditor ? handleDelete : undefined}
           highlightedNodeId={highlightedNodeId}
+          density={density}
         />
       )}
       {view === "top-down" && (

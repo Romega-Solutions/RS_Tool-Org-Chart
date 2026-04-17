@@ -15,6 +15,7 @@ interface Props {
   onToggle?: (personId: number) => void;
   onDelete?: (personId: number, personName: string) => void;
   highlightedNodeId?: number | null;
+  density?: "compact" | "comfortable";
 }
 
 /** Flatten all tree nodes into a flat list. */
@@ -28,7 +29,7 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return result;
 }
 
-export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId }: Props) {
+export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId, density = "comfortable" }: Props) {
   const grouped = useMemo(() => {
     const all = flattenTree(tree);
     const map = new Map<number, { department: Department; people: TreeNode[] }>();
@@ -79,7 +80,12 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
       className="h-full overflow-y-auto bg-background p-6"
       onContextMenu={handleBackgroundContextMenu}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className={cn(
+        "grid gap-4",
+        density === "compact"
+          ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          : "grid-cols-1 md:grid-cols-2"
+      )}>
         {grouped.map(({ department, people }) => {
           const DeptIcon = getDeptIcon(department.name);
           return (
