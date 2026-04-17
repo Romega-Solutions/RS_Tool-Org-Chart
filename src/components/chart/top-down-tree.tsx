@@ -534,6 +534,16 @@ export function TopDownTree({
       const result = findDropTarget(draggedNode);
 
       if (!result) {
+        // Snap all nodes back to their computed layout positions (no valid drop target)
+        const posMap = new Map(initialNodes.map((n) => [n.id, n.position]));
+        setNodes((prev) =>
+          prev.map((n) => {
+            const pos = posMap.get(n.id);
+            return pos && (n.position.x !== pos.x || n.position.y !== pos.y)
+              ? { ...n, position: pos }
+              : n;
+          })
+        );
         onDragMiss?.();
         return;
       }
@@ -546,7 +556,7 @@ export function TopDownTree({
         onReorder?.(Number(draggedNode.id), Number(result.id), position);
       }
     },
-    [isEditor, onDrop, onDragMiss, onReorder, findDropTarget, clearDropTargets]
+    [isEditor, onDrop, onDragMiss, onReorder, findDropTarget, clearDropTargets, initialNodes, setNodes]
   );
 
   // Right-click context menu
