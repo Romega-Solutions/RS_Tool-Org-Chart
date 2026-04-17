@@ -519,7 +519,6 @@ export function ChartCanvas({ isEditor }: Props) {
           </div>
           {isEditor && (
             <div className="flex items-center justify-center gap-3">
-              <ImportDialog onImportComplete={refetch} />
               <a href="/admin/team" className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200">
                 Add People
               </a>
