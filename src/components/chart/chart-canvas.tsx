@@ -40,15 +40,6 @@ function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
   return null;
 }
 
-function findParent(tree: TreeNode[], childId: number): TreeNode | null {
-  for (const node of tree) {
-    if (node.children.some((c) => c.id === childId)) return node;
-    const found = findParent(node.children, childId);
-    if (found) return found;
-  }
-  return null;
-}
-
 export function ChartCanvas({ isEditor }: Props) {
   const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
@@ -279,6 +270,13 @@ export function ChartCanvas({ isEditor }: Props) {
         person.reportsTo !== null
           ? findPersonById(data.tree, person.reportsTo)
           : null;
+
+      // Guard: if reportsTo is set but parent isn't in the active tree, bail out
+      if (person.reportsTo !== null && parent === null) {
+        showFeedback("Could not reorder: manager not found");
+        return;
+      }
+
       const siblings: TreeNode[] = parent ? [...parent.children] : [...data.tree];
 
       // Snapshot original displayOrders for undo
