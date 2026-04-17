@@ -56,7 +56,7 @@ function isDescendant(tree: TreeNode[], ancestorId: number, nodeId: number): boo
 }
 
 export function ChartCanvas({ isEditor }: Props) {
-  const { data, loading, refetch } = useChartData();
+  const { data, loading, error, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState<ViewMode>("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
@@ -523,6 +523,22 @@ export function ChartCanvas({ isEditor }: Props) {
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-rs-primary-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">Loading chart data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full bg-background">
+        <div className="text-center space-y-4 max-w-sm">
+          <p className="text-muted-foreground">{error}</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
