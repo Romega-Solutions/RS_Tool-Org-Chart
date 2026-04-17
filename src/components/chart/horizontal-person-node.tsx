@@ -71,10 +71,10 @@ function HorizontalPersonNodeComponent({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="font-medium text-sm text-foreground truncate">
+            <p className="font-medium text-sm text-foreground truncate" title={name}>
               {name}
             </p>
-            <p className="text-xs text-muted-foreground truncate">{title}</p>
+            <p className="text-xs text-muted-foreground truncate" title={title}>{title}</p>
           </div>
         </div>
         <Handle

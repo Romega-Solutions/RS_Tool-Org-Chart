@@ -51,7 +51,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
       />
       <div
         className={cn(
-          "relative w-[128px] bg-card/98 backdrop-blur-[2px] border border-white/70 rounded-lg px-3 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.10),0_2px_0_rgba(255,255,255,0.65)_inset] hover:shadow-[0_24px_55px_rgba(15,23,42,0.14),0_2px_0_rgba(255,255,255,0.75)_inset] hover:border-rs-primary-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer dark:border-border dark:shadow-[0_20px_45px_rgba(0,0,0,0.34)] dark:hover:shadow-[0_24px_55px_rgba(0,0,0,0.42)]",
+          "relative w-[160px] bg-card/98 backdrop-blur-[2px] border border-white/70 rounded-lg px-3 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.10),0_2px_0_rgba(255,255,255,0.65)_inset] hover:shadow-[0_24px_55px_rgba(15,23,42,0.14),0_2px_0_rgba(255,255,255,0.75)_inset] hover:border-rs-primary-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer dark:border-border dark:shadow-[0_20px_45px_rgba(0,0,0,0.34)] dark:hover:shadow-[0_24px_55px_rgba(0,0,0,0.42)]",
           highlighted &&
             "ring-2 ring-rs-primary-500 shadow-[0_26px_60px_rgba(0,112,224,0.18),0_2px_0_rgba(255,255,255,0.8)_inset] border-rs-primary-300 -translate-y-0.5 dark:shadow-[0_28px_60px_rgba(14,165,233,0.18)]",
           pathHighlighted &&
@@ -82,10 +82,10 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 w-full">
-            <p className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
+            <p className="line-clamp-2 text-sm font-semibold leading-tight text-foreground" title={name}>
               {name}
             </p>
-            <p className="mt-1 line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground" title={title}>
               {title}
             </p>
           </div>

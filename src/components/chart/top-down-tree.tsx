@@ -25,7 +25,7 @@ const GRID_X_GAP = 142;
 const GRID_ROW_GAP = 128;
 const NODE_GAP = 22;
 const DROP_RADIUS = 130;
-const NODE_WIDTH = 128;
+const NODE_WIDTH = 160;
 const NODE_HEIGHT = 90;
 
 type DropResult = {
