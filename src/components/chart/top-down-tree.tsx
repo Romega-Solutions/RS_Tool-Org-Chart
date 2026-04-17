@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   SelectionMode,
   useNodesState,
   useEdgesState,
@@ -520,51 +521,53 @@ export function TopDownTree({
   );
 
   return (
-    <div className="relative h-full w-full">
-      <ChartBackgroundDecor />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
-        onNodeMouseEnter={handleNodeMouseEnter}
-        onNodeMouseLeave={handleNodeMouseLeave}
-        onNodeDragStart={handleNodeDragStart}
-        onNodeDrag={handleNodeDrag}
-        onNodeDragStop={handleNodeDragStop}
-        onNodeContextMenu={handleNodeContextMenu}
-        onPaneContextMenu={handlePaneContextMenu}
-        onSelectionChange={handleSelectionChange}
-        onInit={onInit}
-        nodeTypes={nodeTypes}
-        nodesDraggable={isEditor}
-        selectionOnDrag
-        selectionMode={SelectionMode.Partial}
-        selectionKeyCode="Shift"
-        fitView
-        fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
-        translateExtent={translateExtent}
-        proOptions={{ hideAttribution: true }}
-        className={cn(
-          "relative z-10 bg-transparent",
-          animating && "[&_.react-flow__node]:transition-transform [&_.react-flow__node]:duration-300 [&_.react-flow__node]:ease-out"
-        )}
-      >
-        <CollapsibleMinimap />
-      </ReactFlow>
+    <ReactFlowProvider>
+      <div className="relative h-full w-full">
+        <ChartBackgroundDecor />
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          onNodeMouseEnter={handleNodeMouseEnter}
+          onNodeMouseLeave={handleNodeMouseLeave}
+          onNodeDragStart={handleNodeDragStart}
+          onNodeDrag={handleNodeDrag}
+          onNodeDragStop={handleNodeDragStop}
+          onNodeContextMenu={handleNodeContextMenu}
+          onPaneContextMenu={handlePaneContextMenu}
+          onSelectionChange={handleSelectionChange}
+          onInit={onInit}
+          nodeTypes={nodeTypes}
+          nodesDraggable={isEditor}
+          selectionOnDrag
+          selectionMode={SelectionMode.Partial}
+          selectionKeyCode="Shift"
+          fitView
+          fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
+          translateExtent={translateExtent}
+          proOptions={{ hideAttribution: true }}
+          className={cn(
+            "relative z-10 bg-transparent",
+            animating && "[&_.react-flow__node]:transition-transform [&_.react-flow__node]:duration-300 [&_.react-flow__node]:ease-out"
+          )}
+        >
+          <CollapsibleMinimap />
+        </ReactFlow>
 
-      {contextMenu && (
-        <NodeContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          person={contextMenu.person}
-          onClose={() => setContextMenu(null)}
-          onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
-          onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
-          onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
-        />
-      )}
-    </div>
+        {contextMenu && (
+          <NodeContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            person={contextMenu.person}
+            onClose={() => setContextMenu(null)}
+            onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
+            onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
+            onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
+          />
+        )}
+      </div>
+    </ReactFlowProvider>
   );
 }
