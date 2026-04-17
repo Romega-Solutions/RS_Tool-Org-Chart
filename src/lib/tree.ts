@@ -42,3 +42,19 @@ export function buildTree(people: Person[], departments: Department[]): TreeNode
 
   return roots;
 }
+
+export function getTreeStats(tree: TreeNode[]): { people: number; depth: number } {
+  function countPeople(nodes: TreeNode[]): number {
+    return nodes.reduce((sum, n) => sum + 1 + countPeople(n.children), 0);
+  }
+
+  function maxDepth(nodes: TreeNode[], level: number): number {
+    if (nodes.length === 0) return level;
+    return Math.max(...nodes.map((n) => maxDepth(n.children, level + 1)));
+  }
+
+  return {
+    people: countPeople(tree),
+    depth: tree.length === 0 ? 0 : maxDepth(tree, 1),
+  };
+}
