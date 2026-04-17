@@ -53,6 +53,8 @@ export function PersonForm({ person, onSave, trigger }: Props) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [allPeople, setAllPeople] = useState<PersonWithDept[]>([]);
@@ -66,14 +68,18 @@ export function PersonForm({ person, onSave, trigger }: Props) {
       setReportsTo(person?.reportsTo ?? null);
       setPhotoUrl(person?.photoUrl ?? null);
       setPhotoPreview(person?.photoUrl ?? null);
+      setSaveError(null);
+      setLoadError(false);
 
-      fetch("/api/departments")
-        .then((r) => r.json())
-        .then(setDepartments);
-
-      fetch("/api/people")
-        .then((r) => r.json())
-        .then(setAllPeople);
+      Promise.all([
+        fetch("/api/departments").then((r) => r.json()),
+        fetch("/api/people").then((r) => r.json()),
+      ])
+        .then(([depts, persons]) => {
+          setDepartments(depts);
+          setAllPeople(persons);
+        })
+        .catch(() => setLoadError(true));
     }
   }, [open, person]);
 
@@ -103,24 +109,41 @@ export function PersonForm({ person, onSave, trigger }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !title.trim()) return;
+    if (departmentId === null) {
+      setSaveError("Department is required.");
+      return;
+    }
+    setSaveError(null);
     setSaving(true);
 
     const url = person ? `/api/people/${person.id}` : "/api/people";
     const method = person ? "PATCH" : "POST";
 
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name.trim(),
-        title: title.trim(),
-        departmentId,
-        reportsTo,
-        photoUrl,
-      }),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          title: title.trim(),
+          departmentId,
+          reportsTo,
+          photoUrl,
+        }),
+      });
 
-    setSaving(false);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setSaveError(body.error || `Failed to save (${res.status}). Please try again.`);
+        return;
+      }
+    } catch {
+      setSaveError("Network error. Please check your connection and try again.");
+      return;
+    } finally {
+      setSaving(false);
+    }
+
     setOpen(false);
 
     if (!person) {
@@ -167,6 +190,11 @@ export function PersonForm({ person, onSave, trigger }: Props) {
           <DialogTitle>{person ? "Edit Person" : "Add Person"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {loadError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
+              Failed to load form data. Please close and try again.
+            </p>
+          )}
           {/* Photo */}
           <div className="space-y-2">
             <Label>Photo</Label>
@@ -250,7 +278,7 @@ export function PersonForm({ person, onSave, trigger }: Props) {
             <Label>Department</Label>
             <Select
               value={departmentId != null ? String(departmentId) : ""}
-              onValueChange={(val) => setDepartmentId(Number(val))}
+              onValueChange={(val) => setDepartmentId(val === "" ? null : Number(val))}
             >
               <SelectTrigger className="w-full">
                 {departmentId != null ? (() => {
@@ -270,6 +298,11 @@ export function PersonForm({ person, onSave, trigger }: Props) {
                 )}
               </SelectTrigger>
               <SelectContent>
+                {person && (
+                  <SelectItem value="">
+                    <span className="text-muted-foreground">None (unassigned)</span>
+                  </SelectItem>
+                )}
                 {departments.map((d) => (
                   <SelectItem key={d.id} value={String(d.id)}>
                     {createElement(getDeptIcon(d.name), {
@@ -329,6 +362,9 @@ export function PersonForm({ person, onSave, trigger }: Props) {
           >
             {saving ? "Saving..." : "Save"}
           </Button>
+          {saveError && (
+            <p className="text-sm text-destructive text-center">{saveError}</p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

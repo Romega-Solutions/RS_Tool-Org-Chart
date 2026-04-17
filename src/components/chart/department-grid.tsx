@@ -15,6 +15,7 @@ interface Props {
   onToggle?: (personId: number) => void;
   onDelete?: (personId: number, personName: string) => void;
   highlightedNodeId?: number | null;
+  density?: "compact" | "comfortable";
 }
 
 /** Flatten all tree nodes into a flat list. */
@@ -28,7 +29,7 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return result;
 }
 
-export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId }: Props) {
+export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId, density = "comfortable" }: Props) {
   const grouped = useMemo(() => {
     const all = flattenTree(tree);
     const map = new Map<number, { department: Department; people: TreeNode[] }>();
@@ -47,6 +48,12 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
     // Return only departments that have people
     return Array.from(map.values()).filter((g) => g.people.length > 0);
   }, [tree, departments]);
+
+  const nameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const node of flattenTree(tree)) map.set(node.id, node.name);
+    return map;
+  }, [tree]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; person: TreeNode } | null>(null);
 
@@ -73,7 +80,12 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
       className="h-full overflow-y-auto bg-background p-6"
       onContextMenu={handleBackgroundContextMenu}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className={cn(
+        "grid gap-4",
+        density === "compact"
+          ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          : "grid-cols-1 md:grid-cols-2"
+      )}>
         {grouped.map(({ department, people }) => {
           const DeptIcon = getDeptIcon(department.name);
           return (
@@ -138,13 +150,23 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-foreground truncate">
                         {person.name}
                       </p>
                       <p className="text-[10px] text-muted-foreground truncate">
                         {person.title}
                       </p>
+                      {person.reportsTo != null && (
+                        <p className="text-[9px] text-muted-foreground/60 truncate mt-0.5">
+                          Reports to: {nameById.get(person.reportsTo) ?? "—"}
+                        </p>
+                      )}
+                      {person.children.length > 0 && (
+                        <span className="mt-0.5 inline-flex items-center rounded-full bg-muted px-1.5 py-px text-[9px] font-medium text-muted-foreground">
+                          {person.children.length} {person.children.length === 1 ? "report" : "reports"}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );

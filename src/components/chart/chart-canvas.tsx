@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useChartData } from "@/hooks/use-chart-data";
@@ -20,6 +20,7 @@ import { HorizontalTree } from "./horizontal-tree";
 import { CollapsibleTree } from "./collapsible-tree";
 import { DepartmentGrid } from "./department-grid";
 import type { TreeNode } from "@/types";
+import { getTreeStats } from "@/lib/tree";
 
 interface Props {
   isEditor: boolean;
@@ -40,11 +41,27 @@ function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
   return null;
 }
 
+/** Returns true if `nodeId` is a descendant of `ancestorId` in the tree. */
+function isDescendant(tree: TreeNode[], ancestorId: number, nodeId: number): boolean {
+  function walk(node: TreeNode): boolean {
+    if (node.id === ancestorId) {
+      function hasNode(n: TreeNode): boolean {
+        if (n.id === nodeId) return true;
+        return n.children.some(hasNode);
+      }
+      return node.children.some(hasNode);
+    }
+    return node.children.some(walk);
+  }
+  return tree.some(walk);
+}
+
 export function ChartCanvas({ isEditor }: Props) {
-  const { data, loading, refetch } = useChartData();
+  const { data, loading, error, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState<ViewMode>("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
+  const [density, setDensity] = useState<"compact" | "comfortable">("comfortable");
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [highlightedNodeId, setHighlightedNodeId] = useState<number | null>(null);
   const [chartMenu, setChartMenu] = useState<{ x: number; y: number } | null>(null);
@@ -81,6 +98,11 @@ export function ChartCanvas({ isEditor }: Props) {
     setTimeout(() => setFeedbackMsg(null), 3000);
   }, []);
 
+  const treeStats = useMemo(
+    () => (data ? getTreeStats(data.tree) : null),
+    [data]
+  );
+
   // Selection handlers
   const handleSelectionChange = useCallback((nodeIds: number[]) => {
     setSelectedNodeIds(nodeIds);
@@ -96,6 +118,8 @@ export function ChartCanvas({ isEditor }: Props) {
       showFeedback(`Activated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
       await refetch();
+    } catch {
+      showFeedback("Failed to activate selected people");
     } finally { setBulkBusy(false); }
   }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
 
@@ -109,6 +133,8 @@ export function ChartCanvas({ isEditor }: Props) {
       showFeedback(`Deactivated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
       await refetch();
+    } catch {
+      showFeedback("Failed to deactivate selected people");
     } finally { setBulkBusy(false); }
   }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
 
@@ -207,6 +233,12 @@ export function ChartCanvas({ isEditor }: Props) {
     async (personId: number, targetId: number) => {
       // Prevent self-assignment
       if (personId === targetId) return;
+
+      // Prevent moving a person under their own descendant (would create a cycle)
+      if (data && isDescendant(data.tree, personId, targetId)) {
+        showFeedback("Can't move a person to report to one of their own reports");
+        return;
+      }
 
       const person = data ? findPersonById(data.tree, personId) : null;
       if (!person) {
@@ -408,13 +440,18 @@ export function ChartCanvas({ isEditor }: Props) {
   // Delete person with confirmation
   const handleDelete = useCallback(
     async (personId: number, personName: string) => {
+      const person = data ? findPersonById(data.tree, personId) : null;
+      const directReports = person?.children.length ?? 0;
+      const cascadeNote = directReports > 0
+        ? ` This person has ${directReports} direct report${directReports === 1 ? "" : "s"} who will be moved to the top level.`
+        : "";
       setDeleteIntent({
         ids: [personId],
         title: `Delete ${personName}?`,
-        description: "This action permanently removes the person from the org chart.",
+        description: `This action permanently removes the person from the org chart.${cascadeNote}`,
       });
     },
-    []
+    [data]
   );
 
   const confirmDelete = useCallback(async () => {
@@ -498,6 +535,22 @@ export function ChartCanvas({ isEditor }: Props) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full bg-background">
+        <div className="text-center space-y-4 max-w-sm">
+          <p className="text-muted-foreground">{error}</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!data || data.tree.length === 0) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
@@ -510,7 +563,6 @@ export function ChartCanvas({ isEditor }: Props) {
           </div>
           {isEditor && (
             <div className="flex items-center justify-center gap-3">
-              <ImportDialog onImportComplete={refetch} />
               <a href="/admin/team" className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200">
                 Add People
               </a>
@@ -542,11 +594,14 @@ export function ChartCanvas({ isEditor }: Props) {
             onSelect={handleSearchSelect}
           />
         }
+        treeStats={treeStats ?? undefined}
+        density={density}
+        onDensityChange={setDensity}
       />
 
       {/* Action buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
-        <ImportDialog onImportComplete={refetch} />
+        {isEditor && <ImportDialog onImportComplete={refetch} />}
         <ExportMenu />
       </div>
 
@@ -577,6 +632,7 @@ export function ChartCanvas({ isEditor }: Props) {
           onToggle={isEditor ? handleToggle : undefined}
           onDelete={isEditor ? handleDelete : undefined}
           highlightedNodeId={highlightedNodeId}
+          density={density}
         />
       )}
       {view === "top-down" && (

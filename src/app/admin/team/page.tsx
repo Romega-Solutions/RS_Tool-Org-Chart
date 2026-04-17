@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Building2 } from "lucide-react";
 import { PeopleTable } from "@/components/admin/people-table";
@@ -7,6 +8,8 @@ import { DepartmentList } from "@/components/admin/department-list";
 import { ImportDialog } from "@/components/admin/import-dialog";
 
 export default function TeamPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -18,7 +21,7 @@ export default function TeamPage() {
             Manage people and departments in your organization.
           </p>
         </div>
-        <ImportDialog />
+        <ImportDialog onImportComplete={() => setRefreshKey((k) => k + 1)} />
       </div>
 
       <Tabs defaultValue="people" className="w-full">
@@ -33,7 +36,7 @@ export default function TeamPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="people" className="mt-4">
-          <PeopleTable />
+          <PeopleTable key={refreshKey} />
         </TabsContent>
         <TabsContent value="departments" className="mt-4">
           <DepartmentList />

@@ -5,11 +5,12 @@ import type { ChartData } from "@/types";
 export function useChartData() {
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
-    // Only show loading spinner on initial load — refetches update in place
     if (!initialLoadDone.current) setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/chart-data", { signal });
       if (!res.ok) {
@@ -24,6 +25,9 @@ export function useChartData() {
         return;
       }
       console.error("Failed to fetch chart data:", err);
+      if (!signal?.aborted) {
+        setError("Failed to load chart data. Check your connection and try again.");
+      }
     } finally {
       if (signal?.aborted) return;
       setLoading(false);
@@ -36,5 +40,5 @@ export function useChartData() {
     return () => controller.abort();
   }, [fetchData]);
 
-  return { data, loading, refetch: fetchData };
+  return { data, loading, error, refetch: fetchData };
 }
