@@ -40,6 +40,21 @@ function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
   return null;
 }
 
+/** Returns true if `nodeId` is a descendant of `ancestorId` in the tree. */
+function isDescendant(tree: TreeNode[], ancestorId: number, nodeId: number): boolean {
+  function walk(node: TreeNode): boolean {
+    if (node.id === ancestorId) {
+      function hasNode(n: TreeNode): boolean {
+        if (n.id === nodeId) return true;
+        return n.children.some(hasNode);
+      }
+      return node.children.some(hasNode);
+    }
+    return node.children.some(walk);
+  }
+  return tree.some(walk);
+}
+
 export function ChartCanvas({ isEditor }: Props) {
   const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
@@ -211,6 +226,12 @@ export function ChartCanvas({ isEditor }: Props) {
     async (personId: number, targetId: number) => {
       // Prevent self-assignment
       if (personId === targetId) return;
+
+      // Prevent moving a person under their own descendant (would create a cycle)
+      if (data && isDescendant(data.tree, personId, targetId)) {
+        showFeedback("Can't move a person to report to one of their own reports");
+        return;
+      }
 
       const person = data ? findPersonById(data.tree, personId) : null;
       if (!person) {
