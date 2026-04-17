@@ -8,6 +8,7 @@ import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus } 
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface PersonRow extends Person {
   departmentName: string | null;
@@ -248,6 +249,11 @@ export function PeopleTable() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
+  const [deleteIntent, setDeleteIntent] = useState<{
+    ids: number[];
+    title: string;
+    description: string;
+  } | null>(null);
 
   // Clear selection when search changes
   useEffect(() => { setSelected(new Set()); }, [search]);
@@ -322,19 +328,14 @@ export function PeopleTable() {
     }
   }
 
-  async function handleBulkDelete() {
+  function handleBulkDelete() {
     if (bulkBusy) return;
     const count = selected.size;
-    if (!confirm(`Delete ${count} ${count === 1 ? "person" : "people"}? This cannot be undone.`)) return;
-    setBulkBusy(true);
-    const ids = [...selected];
-    try {
-      await Promise.all(ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
-      setSelected(new Set());
-      await fetchPeople();
-    } finally {
-      setBulkBusy(false);
-    }
+    setDeleteIntent({
+      ids: [...selected],
+      title: `Delete ${count} ${count === 1 ? "person" : "people"}?`,
+      description: "This action permanently removes the selected people and cannot be undone.",
+    });
   }
 
   async function handleToggle(id: number) {
@@ -376,11 +377,29 @@ export function PeopleTable() {
     }
   }
 
-  async function handleDelete(person: PersonRow) {
-    if (!confirm(`Delete "${person.name}"? This action cannot be undone.`)) return;
-    await fetch(`/api/people/${person.id}`, { method: "DELETE" });
-    setSelected((prev) => { const next = new Set(prev); next.delete(person.id); return next; });
-    fetchPeople();
+  function handleDelete(person: PersonRow) {
+    setDeleteIntent({
+      ids: [person.id],
+      title: `Delete ${person.name}?`,
+      description: "This action permanently removes this person and cannot be undone.",
+    });
+  }
+
+  async function confirmDelete() {
+    if (!deleteIntent || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(deleteIntent.ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const id of deleteIntent.ids) next.delete(id);
+        return next;
+      });
+      setDeleteIntent(null);
+      await fetchPeople();
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   return (
@@ -649,6 +668,19 @@ export function PeopleTable() {
           Showing {visibleRows.length} of {people.length} people
         </p>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteIntent)}
+        title={deleteIntent?.title || "Confirm delete"}
+        description={deleteIntent?.description || ""}
+        confirmLabel="Delete"
+        destructive
+        busy={bulkBusy}
+        onConfirm={confirmDelete}
+        onOpenChange={(open) => {
+          if (!open && !bulkBusy) setDeleteIntent(null);
+        }}
+      />
     </div>
   );
 }
