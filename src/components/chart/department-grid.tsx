@@ -48,6 +48,12 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
     return Array.from(map.values()).filter((g) => g.people.length > 0);
   }, [tree, departments]);
 
+  const nameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const node of flattenTree(tree)) map.set(node.id, node.name);
+    return map;
+  }, [tree]);
+
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; person: TreeNode } | null>(null);
 
   const handleContextMenu = useCallback(
@@ -138,13 +144,23 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-foreground truncate">
                         {person.name}
                       </p>
                       <p className="text-[10px] text-muted-foreground truncate">
                         {person.title}
                       </p>
+                      {person.reportsTo != null && (
+                        <p className="text-[9px] text-muted-foreground/60 truncate mt-0.5">
+                          Reports to: {nameById.get(person.reportsTo) ?? "—"}
+                        </p>
+                      )}
+                      {person.children.length > 0 && (
+                        <span className="mt-0.5 inline-flex items-center rounded-full bg-muted px-1.5 py-px text-[9px] font-medium text-muted-foreground">
+                          {person.children.length} {person.children.length === 1 ? "report" : "reports"}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
