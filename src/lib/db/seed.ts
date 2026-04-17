@@ -1,6 +1,7 @@
 import { db } from "./client";
-import { settings, departments, people } from "./schema";
+import { settings, departments, people, users } from "./schema";
 import { count, eq } from "drizzle-orm";
+import { hashSync } from "bcryptjs";
 
 const DEFAULT_SETTINGS = [
   { key: "org_name", value: "Romega Solutions" },
@@ -11,6 +12,8 @@ const DEFAULT_SETTINGS = [
   { key: "accent_color", value: "#C8850A" },
   { key: "neutral_color", value: "#607A99" },
   { key: "support_email", value: "" },
+  { key: "sheets_url", value: "" },
+  { key: "last_sync_at", value: "" },
 ];
 
 const DEPARTMENTS = [
@@ -63,9 +66,28 @@ const PEOPLE: [string, string, number, string | null, number][] = [
   ["Ryied Bose", "Account Executive Intern", 5, "Rich Salvador", 5],
 ];
 
+const DEFAULT_USERS = [
+  { username: "admin", name: "Admin", password: "admin123", role: "editor" as const },
+  { username: "editor", name: "Editor", password: "editor123", role: "editor" as const },
+  { username: "viewer", name: "Viewer", password: "viewer123", role: "viewer" as const },
+];
+
 export function seedSettings() {
   for (const setting of DEFAULT_SETTINGS) {
     db.insert(settings).values(setting).onConflictDoNothing().run();
+  }
+}
+
+export function seedUsers() {
+  const existing = db.select({ count: count() }).from(users).get();
+  if (existing && existing.count > 0) return;
+  for (const u of DEFAULT_USERS) {
+    db.insert(users).values({
+      username: u.username,
+      name: u.name,
+      passwordHash: hashSync(u.password, 10),
+      role: u.role,
+    }).run();
   }
 }
 
@@ -113,4 +135,5 @@ export function seedOrgData() {
 }
 
 seedSettings();
+seedUsers();
 seedOrgData();

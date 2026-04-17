@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { logChange } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   db.update(people).set(updateValues).where(eq(people.id, personId)).run();
   const result = db.select().from(people).where(eq(people.id, personId)).get();
   if (!result) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+  logChange("updated", "person", personId, result.name, null, updateValues);
   return NextResponse.json(result);
 }
 
@@ -50,6 +52,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Invalid person id" }, { status: 400 });
   }
 
+  const person = db.select().from(people).where(eq(people.id, personId)).get();
+  const personName = person?.name ?? `ID ${personId}`;
   db.delete(people).where(eq(people.id, personId)).run();
+  logChange("deleted", "person", personId, personName, null);
   return NextResponse.json({ success: true });
 }

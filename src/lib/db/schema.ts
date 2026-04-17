@@ -1,6 +1,26 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role", { enum: ["editor", "viewer"] }).notNull().default("viewer"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const auditLog = sqliteTable("audit_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  timestamp: text("timestamp").notNull().default(sql`CURRENT_TIMESTAMP`),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id"),
+  entityName: text("entity_name"),
+  actor: text("actor"),
+  changes: text("changes"),
+});
+
 export const people = sqliteTable("people", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { logChange } from "@/lib/audit";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -26,5 +27,6 @@ export async function POST(request: Request) {
   const { name, title, departmentId, reportsTo, photoUrl, displayOrder } = body;
   if (!name || !title || !departmentId) return NextResponse.json({ error: "name, title, and departmentId are required" }, { status: 400 });
   const result = db.insert(people).values({ name, title, departmentId, reportsTo: reportsTo || null, photoUrl: photoUrl || null, displayOrder: displayOrder ?? 0 }).returning().get();
+  logChange("created", "person", result.id, result.name, null);
   return NextResponse.json(result, { status: 201 });
 }

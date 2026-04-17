@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { login as doLogin, logout as doLogout, getCurrentUser } from "@/lib/auth";
 import type { AuthUser } from "@/types";
 
 export function useAuth() {
@@ -8,22 +7,29 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setUser(getCurrentUser());
-      setLoading(false);
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        setUser(data ?? null);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const login = useCallback(async (username: string, password: string): Promise<AuthUser | null> => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
-
-    return () => window.cancelAnimationFrame(frameId);
+    if (!res.ok) return null;
+    const userData: AuthUser = await res.json();
+    setUser(userData);
+    return userData;
   }, []);
 
-  const login = useCallback((username: string, password: string) => {
-    const result = doLogin(username, password);
-    if (result) setUser(result);
-    return result;
-  }, []);
-
-  const logout = useCallback(() => {
-    doLogout();
+  const logout = useCallback(async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
   }, []);
 

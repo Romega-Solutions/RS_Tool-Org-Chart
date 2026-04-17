@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { logChange } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,13 @@ export async function PATCH(_request: Request, { params }: { params: Promise<{ i
     .where(eq(people.id, personId))
     .run();
 
+  logChange(
+    !person.isActive ? "activated" : "deactivated",
+    "person",
+    personId,
+    person.name,
+    null
+  );
   const updated = db.select().from(people).where(eq(people.id, personId)).get();
   return NextResponse.json(updated);
 }

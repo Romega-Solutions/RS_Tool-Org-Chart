@@ -26,6 +26,8 @@ import {
   X,
   Loader2,
   Settings,
+  Link2,
+  RefreshCw,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -111,6 +113,7 @@ export function SettingsForm() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -193,9 +196,31 @@ export function SettingsForm() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleSync() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      const { summary } = data;
+      toast.success(`Sync complete: ${summary.created} created, ${summary.updated} updated, ${summary.errors} errors`);
+      // Refresh settings to get updated last_sync_at
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (loading) {
     return <SettingsSkeleton />;
   }
+
+  const lastSyncAt = settings.last_sync_at;
+  const lastSyncDisplay = lastSyncAt
+    ? new Date(lastSyncAt).toLocaleString()
+    : "Never synced";
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-3xl mx-auto pb-20">
@@ -468,6 +493,61 @@ export function SettingsForm() {
               ) : (
                 <Copy className="w-4 h-4" />
               )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Google Sheets Sync */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <Link2 className="w-4.5 h-4.5 text-emerald-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Google Sheets Sync</CardTitle>
+              <CardDescription>
+                Automatically sync people from a published Google Sheet.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="sheets_url">Google Sheet CSV URL</Label>
+            <Input
+              id="sheets_url"
+              value={form.sheets_url || ""}
+              onChange={(e) => setField("sheets_url", e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv"
+            />
+            <p className="text-xs text-muted-foreground">
+              In Google Sheets: <strong>File → Share → Publish to web → CSV</strong>. Paste the link here.
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {lastSyncDisplay !== "Never synced" ? (
+                <>Last synced: <span className="font-medium text-foreground">{lastSyncDisplay}</span></>
+              ) : (
+                <span className="text-muted-foreground">Never synced</span>
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={syncing || !form.sheets_url}
+              onClick={handleSync}
+              className="cursor-pointer transition-all duration-200"
+            >
+              {syncing ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              {syncing ? "Syncing..." : "Sync Now"}
             </Button>
           </div>
         </CardContent>

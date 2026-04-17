@@ -19,6 +19,7 @@ import {
   Upload,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/chart", label: "Chart", icon: Network },
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/accessibility", label: "Accessibility & Support", icon: LifeBuoy },
 ];
 

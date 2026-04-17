@@ -13,10 +13,10 @@ export function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const result = login(username, password);
+    const result = await login(username, password);
     if (result) {
       const next = new URLSearchParams(window.location.search).get("next");
       const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/chart";
