@@ -27,6 +27,12 @@ const NODE_GAP = 22;
 const DROP_RADIUS = 130;
 const NODE_WIDTH = 128;
 const NODE_HEIGHT = 90;
+
+type DropResult = {
+  id: string;
+  intent: "reassign" | "reorder-before" | "reorder-after";
+} | null;
+
 const EDGE_STYLE = {
   stroke: "var(--chart-edge-stroke)",
   strokeWidth: 1.5,
@@ -55,6 +61,8 @@ interface Props {
   onSelectionChange?: (nodeIds: number[]) => void;
   selectedNodeIds?: number[];
   highlightedNodeId?: number | null;
+  onCanvasDoubleClick?: () => void;
+  onReorder?: (personId: number, siblingId: number, position: "before" | "after") => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +314,8 @@ export function TopDownTree({
   onSelectionChange,
   selectedNodeIds,
   highlightedNodeId,
+  onCanvasDoubleClick,
+  onReorder,
 }: Props) {
   const { nodes: initialNodes, edges: initialEdges, personMap } = useMemo(
     () => layoutTree(tree),
@@ -397,7 +407,7 @@ export function TopDownTree({
 
   // Find the closest drop target for a dragged node
   const findDropTarget = useCallback(
-    (draggedNode: Node): string | null => {
+    (draggedNode: Node): DropResult => {
       if (!isEditor) return null;
       const draggedId = draggedNode.id;
       const descendants = descendantsMap.get(draggedId) || [];
@@ -406,7 +416,7 @@ export function TopDownTree({
       const cx = draggedNode.position.x + NODE_WIDTH / 2;
       const cy = draggedNode.position.y + NODE_HEIGHT / 2;
 
-      let closestId: string | null = null;
+      let closestNode: Node | null = null;
       let closestDist = Infinity;
 
       for (const node of nodes) {
@@ -416,13 +426,32 @@ export function TopDownTree({
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < closestDist) {
           closestDist = dist;
-          closestId = node.id;
+          closestNode = node;
         }
       }
 
-      return closestId && closestDist <= DROP_RADIUS ? closestId : null;
+      if (!closestNode || closestDist > DROP_RADIUS) return null;
+
+      // Check sibling relationship (same reportsTo = same parent)
+      const draggedPerson = personMap.get(draggedId);
+      const targetPerson = personMap.get(closestNode.id);
+
+      // null === null: root-level nodes are intentionally treated as siblings
+      if (
+        draggedPerson &&
+        targetPerson &&
+        draggedPerson.reportsTo === targetPerson.reportsTo
+      ) {
+        const draggedCX = draggedNode.position.x + NODE_WIDTH / 2;
+        const targetCX = closestNode.position.x + NODE_WIDTH / 2;
+        const intent =
+          draggedCX < targetCX ? "reorder-before" : "reorder-after";
+        return { id: closestNode.id, intent };
+      }
+
+      return { id: closestNode.id, intent: "reassign" };
     },
-    [isEditor, descendantsMap, nodes]
+    [isEditor, descendantsMap, nodes, personMap]
   );
 
   // Move all descendants along with the dragged node + show drop target preview
@@ -439,13 +468,17 @@ export function TopDownTree({
       const ddy = dy - lastDeltaRef.current.y;
       lastDeltaRef.current = { x: dx, y: dy };
 
-      // Find nearest drop target for live preview
-      const targetId = findDropTarget(draggedNode);
+      const result = findDropTarget(draggedNode);
+      const targetId = result?.id ?? null;
+      const targetDropValue: string | boolean = result
+        ? result.intent === "reassign"
+          ? true
+          : result.intent
+        : false;
 
       setNodes((prev) => {
         const descSet = new Set(descendants || []);
         return prev.map((n) => {
-          // Move descendants
           if (descSet.has(n.id) && (ddx !== 0 || ddy !== 0)) {
             return {
               ...n,
@@ -453,10 +486,10 @@ export function TopDownTree({
               data: { ...n.data, dropTarget: false },
             };
           }
-          // Mark/unmark drop target
           const isTarget = n.id === targetId;
-          if (n.data.dropTarget !== isTarget) {
-            return { ...n, data: { ...n.data, dropTarget: isTarget } };
+          const newDropValue = isTarget ? targetDropValue : false;
+          if (n.data.dropTarget !== newDropValue) {
+            return { ...n, data: { ...n.data, dropTarget: newDropValue } };
           }
           return n;
         });
@@ -474,6 +507,21 @@ export function TopDownTree({
     );
   }, [setNodes]);
 
+  const handlePaneDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isEditor || !onCanvasDoubleClick) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(".react-flow__node") ||
+        target.closest(".react-flow__edge") ||
+        target.closest(".react-flow__minimap") ||
+        target.closest(".react-flow__controls")
+      ) return;
+      onCanvasDoubleClick();
+    },
+    [isEditor, onCanvasDoubleClick]
+  );
+
   // Drag-to-edit: execute the drop and clear preview
   const handleNodeDragStop = useCallback(
     (_event: React.MouseEvent, draggedNode: Node) => {
@@ -481,17 +529,24 @@ export function TopDownTree({
       lastDeltaRef.current = { x: 0, y: 0 };
       clearDropTargets();
 
-      if (!isEditor || !onDrop) return;
+      if (!isEditor) return;
 
-      const targetId = findDropTarget(draggedNode);
+      const result = findDropTarget(draggedNode);
 
-      if (targetId) {
-        onDrop(Number(draggedNode.id), Number(targetId));
-      } else {
+      if (!result) {
         onDragMiss?.();
+        return;
+      }
+
+      if (result.intent === "reassign") {
+        onDrop?.(Number(draggedNode.id), Number(result.id));
+      } else {
+        const position =
+          result.intent === "reorder-before" ? "before" : "after";
+        onReorder?.(Number(draggedNode.id), Number(result.id), position);
       }
     },
-    [isEditor, onDrop, onDragMiss, findDropTarget, clearDropTargets]
+    [isEditor, onDrop, onDragMiss, onReorder, findDropTarget, clearDropTargets]
   );
 
   // Right-click context menu
@@ -522,7 +577,7 @@ export function TopDownTree({
 
   return (
     <ReactFlowProvider>
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full" onDoubleClick={handlePaneDoubleClick}>
         <ChartBackgroundDecor />
         <ReactFlow
           nodes={nodes}
@@ -545,6 +600,7 @@ export function TopDownTree({
           selectionMode={SelectionMode.Partial}
           selectionKeyCode="Shift"
           fitView
+          zoomOnDoubleClick={false}
           fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
           translateExtent={translateExtent}
           proOptions={{ hideAttribution: true }}

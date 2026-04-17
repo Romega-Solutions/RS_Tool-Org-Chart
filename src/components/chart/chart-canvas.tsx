@@ -13,6 +13,7 @@ import { PersonDetailPanel } from "./person-detail-panel";
 import { SelectionActionBar } from "./selection-action-bar";
 import { ChartContextMenu } from "./chart-context-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { QuickAddDialog } from "./quick-add-dialog";
 import type { ViewMode } from "./view-switcher";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
@@ -39,6 +40,15 @@ function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
   return null;
 }
 
+function findParent(tree: TreeNode[], childId: number): TreeNode | null {
+  for (const node of tree) {
+    if (node.children.some((c) => c.id === childId)) return node;
+    const found = findParent(node.children, childId);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function ChartCanvas({ isEditor }: Props) {
   const { data, loading, refetch } = useChartData();
   const { push, undo, redo, canUndo, canRedo } = useUndo();
@@ -54,6 +64,7 @@ export function ChartCanvas({ isEditor }: Props) {
     title: string;
     description: string;
   } | null>(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   // Auto-switch to grid view on mobile screens
@@ -135,6 +146,25 @@ export function ChartCanvas({ isEditor }: Props) {
     setSelectedPerson(null);
     setHighlightedNodeId(null);
   }, []);
+
+  const handleCanvasDoubleClick = useCallback(() => {
+    setQuickAddOpen(true);
+  }, []);
+
+  const handleQuickAddSaved = useCallback(
+    async (newPersonId: number) => {
+      await refetch();
+      showFeedback("Person added");
+      setTimeout(() => {
+        rfInstanceRef.current?.fitView({
+          nodes: [{ id: String(newPersonId) }],
+          duration: 400,
+          padding: 0.5,
+        });
+      }, 150);
+    },
+    [refetch, showFeedback]
+  );
 
   // Keyboard navigation: arrow keys traverse tree, Enter opens detail
   const handleZoomToNode = useCallback((nodeId: number) => {
@@ -232,6 +262,94 @@ export function ChartCanvas({ isEditor }: Props) {
       } catch (err) {
         console.error("Drag-to-edit failed:", err);
         showFeedback("Failed to reassign reporting line");
+      }
+    },
+    [data, push, refetch, showFeedback]
+  );
+
+  const handleReorder = useCallback(
+    async (personId: number, siblingId: number, position: "before" | "after") => {
+      if (!data) return;
+
+      const person = findPersonById(data.tree, personId);
+      if (!person) { showFeedback("Failed to find person"); return; }
+
+      // Get all siblings (nodes sharing the same parent)
+      const parent =
+        person.reportsTo !== null
+          ? findPersonById(data.tree, person.reportsTo)
+          : null;
+      const siblings: TreeNode[] = parent ? [...parent.children] : [...data.tree];
+
+      // Snapshot original displayOrders for undo
+      const originalOrders = siblings.map((s) => ({
+        id: s.id,
+        displayOrder: s.displayOrder,
+      }));
+
+      // Build new order: remove dragged, insert before/after sibling
+      const withoutDragged = siblings.filter((s) => s.id !== personId);
+      const targetIdx = withoutDragged.findIndex((s) => s.id === siblingId);
+      if (targetIdx === -1) { showFeedback("Could not reorder"); return; }
+
+      const insertIdx = position === "before" ? targetIdx : targetIdx + 1;
+      withoutDragged.splice(insertIdx, 0, person);
+      const newOrder = withoutDragged;
+
+      // Only PATCH nodes whose displayOrder actually changed
+      const updates = newOrder
+        .map((s, i) => ({ id: s.id, displayOrder: i }))
+        .filter((u) => {
+          const orig = originalOrders.find((o) => o.id === u.id);
+          return orig !== undefined && orig.displayOrder !== u.displayOrder;
+        });
+
+      if (updates.length === 0) return;
+
+      try {
+        await Promise.all(
+          updates.map((u) =>
+            fetch(`/api/people/${u.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ displayOrder: u.displayOrder }),
+            })
+          )
+        );
+
+        push({
+          description: `Reorder ${person.name} among siblings`,
+          undo: async () => {
+            await Promise.all(
+              originalOrders.map((u) =>
+                fetch(`/api/people/${u.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ displayOrder: u.displayOrder }),
+                })
+              )
+            );
+            await refetch();
+          },
+          redo: async () => {
+            await Promise.all(
+              updates.map((u) =>
+                fetch(`/api/people/${u.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ displayOrder: u.displayOrder }),
+                })
+              )
+            );
+            await refetch();
+          },
+        });
+
+        showFeedback(`Moved ${person.name} in sibling order`);
+        await refetch();
+      } catch (err) {
+        console.error("Reorder failed:", err);
+        showFeedback("Failed to reorder");
       }
     },
     [data, push, refetch, showFeedback]
@@ -477,6 +595,8 @@ export function ChartCanvas({ isEditor }: Props) {
           onSelectionChange={isEditor ? handleSelectionChange : undefined}
           selectedNodeIds={selectedNodeIds}
           highlightedNodeId={highlightedNodeId}
+          onCanvasDoubleClick={isEditor ? handleCanvasDoubleClick : undefined}
+          onReorder={isEditor ? handleReorder : undefined}
         />
       )}
       {view === "horizontal" && (
@@ -548,6 +668,13 @@ export function ChartCanvas({ isEditor }: Props) {
           if (!open && !bulkBusy) setDeleteIntent(null);
         }}
       />
+      {isEditor && (
+        <QuickAddDialog
+          open={quickAddOpen}
+          onOpenChange={setQuickAddOpen}
+          onSaved={handleQuickAddSaved}
+        />
+      )}
     </div>
   );
 }
