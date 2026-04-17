@@ -96,6 +96,8 @@ export function ChartCanvas({ isEditor }: Props) {
       showFeedback(`Activated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
       await refetch();
+    } catch {
+      showFeedback("Failed to activate selected people");
     } finally { setBulkBusy(false); }
   }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
 
@@ -109,6 +111,8 @@ export function ChartCanvas({ isEditor }: Props) {
       showFeedback(`Deactivated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
       await refetch();
+    } catch {
+      showFeedback("Failed to deactivate selected people");
     } finally { setBulkBusy(false); }
   }, [bulkBusy, selectedNodeIds, refetch, showFeedback]);
 
@@ -408,13 +412,18 @@ export function ChartCanvas({ isEditor }: Props) {
   // Delete person with confirmation
   const handleDelete = useCallback(
     async (personId: number, personName: string) => {
+      const person = data ? findPersonById(data.tree, personId) : null;
+      const directReports = person?.children.length ?? 0;
+      const cascadeNote = directReports > 0
+        ? ` This person has ${directReports} direct report${directReports === 1 ? "" : "s"} who will be moved to the top level.`
+        : "";
       setDeleteIntent({
         ids: [personId],
         title: `Delete ${personName}?`,
-        description: "This action permanently removes the person from the org chart.",
+        description: `This action permanently removes the person from the org chart.${cascadeNote}`,
       });
     },
-    []
+    [data]
   );
 
   const confirmDelete = useCallback(async () => {
@@ -546,7 +555,7 @@ export function ChartCanvas({ isEditor }: Props) {
 
       {/* Action buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
-        <ImportDialog onImportComplete={refetch} />
+        {isEditor && <ImportDialog onImportComplete={refetch} />}
         <ExportMenu />
       </div>
 
