@@ -1,5 +1,3 @@
-// TODO: Add scheduled sync from external data source (e.g. Google Sheets API)
-// to fulfill the "automatic" part of G.4 — currently import is manual CSV upload only.
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";

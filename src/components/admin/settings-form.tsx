@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardHeader,
@@ -524,6 +530,35 @@ export function SettingsForm() {
             />
             <p className="text-xs text-muted-foreground">
               In Google Sheets: <strong>File → Share → Publish to web → CSV</strong>. Paste the link here.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Auto-Sync Interval</Label>
+            <Select
+              value={form.sync_interval || "off"}
+              onValueChange={(v) => setField("sync_interval", v ?? "off")}
+            >
+              <SelectTrigger className="w-full">
+                {
+                  {
+                    off: "Off — manual only",
+                    "1h": "Every hour",
+                    "6h": "Every 6 hours",
+                    "12h": "Every 12 hours",
+                    "24h": "Every 24 hours",
+                  }[form.sync_interval || "off"] ?? "Off — manual only"
+                }
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Off — manual only</SelectItem>
+                <SelectItem value="1h">Every hour</SelectItem>
+                <SelectItem value="6h">Every 6 hours</SelectItem>
+                <SelectItem value="12h">Every 12 hours</SelectItem>
+                <SelectItem value="24h">Every 24 hours</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Requires <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">CRON_SECRET</code> env var and a cron job hitting <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">GET /api/sync/cron</code>.
             </p>
           </div>
           <div className="flex items-center justify-between">

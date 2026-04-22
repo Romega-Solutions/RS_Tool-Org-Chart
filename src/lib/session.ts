@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { UserRole } from "@/types";
 
-export interface SessionPayload {
+export interface SessionPayload extends Record<string, unknown> {
   username: string;
   name: string;
   role: UserRole;
