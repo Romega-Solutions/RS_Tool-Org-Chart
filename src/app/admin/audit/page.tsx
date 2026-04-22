@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, ClipboardList } from "lucide-react";
+import { RefreshCw, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 
 type AuditEntry = {
   id: number;
@@ -59,19 +59,34 @@ function formatTimestamp(ts: string): string {
   }
 }
 
+const PAGE_SIZE = 50;
+
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  async function fetchAuditLog() {
+  async function fetchAuditLog(p = page) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/audit?limit=200");
+      const res = await fetch(`/api/audit?limit=${PAGE_SIZE}&page=${p}`);
       if (!res.ok) throw new Error(`Failed to fetch audit log (${res.status})`);
       const data = await res.json();
-      setEntries(data);
+      // Support both paginated and legacy response formats
+      if (Array.isArray(data)) {
+        setEntries(data);
+        setTotalPages(1);
+        setTotal(data.length);
+      } else {
+        setEntries(data.entries);
+        setTotalPages(data.totalPages);
+        setTotal(data.total);
+        setPage(data.page);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -80,8 +95,8 @@ export default function AuditLogPage() {
   }
 
   useEffect(() => {
-    fetchAuditLog();
-  }, []);
+    fetchAuditLog(page);
+  }, [page]);
 
   return (
     <div className="space-y-6">
@@ -116,7 +131,7 @@ export default function AuditLogPage() {
             <CardTitle className="text-base">Change History</CardTitle>
           </div>
           <CardDescription>
-            Showing the most recent {entries.length} entries.
+            Showing {entries.length} of {total} entries{totalPages > 1 ? ` (page ${page} of ${totalPages})` : ""}.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -180,6 +195,35 @@ export default function AuditLogPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="gap-1 cursor-pointer"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
