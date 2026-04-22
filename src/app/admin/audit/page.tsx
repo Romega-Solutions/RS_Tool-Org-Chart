@@ -115,7 +115,7 @@ export default function AuditLogPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={fetchAuditLog}
+          onClick={() => fetchAuditLog()}
           disabled={loading}
           className="gap-2 cursor-pointer"
         >
