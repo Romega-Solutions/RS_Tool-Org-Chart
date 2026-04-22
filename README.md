@@ -43,7 +43,7 @@ Next.js 16, React 19, TypeScript 5, Tailwind 4, shadcn/ui, Drizzle ORM, SQLite, 
 
 - 4 chart views: top-down, horizontal, collapsible, department grid
 - Full CRUD admin: people, departments, CSV import, branding settings
-- Google Sheets sync: configure a published sheet URL → sync on demand or via cron hitting `POST /api/sync`
+- Google Sheets sync: configure a published sheet URL in Settings → "Sync Now" in admin or `POST /api/sync`
 - Audit log: every create/update/delete/toggle tracked at `/admin/audit`
 - Role-based auth: editor (full access) vs. viewer (read-only chart)
 - JWT sessions via HTTP-only cookies (bcrypt passwords stored in DB)

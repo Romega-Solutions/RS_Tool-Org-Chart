@@ -7,7 +7,7 @@ const SECRET_KEY = new TextEncoder().encode(
 );
 const SESSION_COOKIE = "orgchart_token";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
 
   if (!token) {
