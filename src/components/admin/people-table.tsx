@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonForm } from "@/components/admin/person-form";
-import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, Filter, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
@@ -15,7 +15,31 @@ interface PersonRow extends Person {
   departmentColor: string | null;
 }
 
-type SortColumn = "person" | "title" | "department" | null;
+type SortColumn = "person" | "person-desc" | "title" | "title-desc" | "department" | "department-desc" | null;
+type StatusFilter = "active" | "inactive" | "all";
+
+interface SavedView {
+  id: string;
+  name: string;
+  sort: SortColumn;
+  status: StatusFilter;
+}
+
+const SAVED_VIEWS_KEY = "orgchart-people-saved-views";
+
+function loadSavedViews(): SavedView[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(SAVED_VIEWS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedViews(views: SavedView[]) {
+  localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views));
+}
 
 function DepartmentBadge({
   departmentName,
@@ -62,6 +86,10 @@ function compareNames(a: string, b: string) {
 function getTitleRank(title: string): number {
   const value = title.toLowerCase();
 
+  if (value.includes("founder") || value.includes("owner") || value.includes("president")) {
+    return 120;
+  }
+
   if (
     value.includes("chief") ||
     value.includes("ceo") ||
@@ -69,9 +97,7 @@ function getTitleRank(title: string): number {
     value.includes("cto") ||
     value.includes("cfo") ||
     value.includes("cio") ||
-    value.includes("cmo") ||
-    value.includes("founder") ||
-    value.includes("president")
+    value.includes("cmo")
   ) {
     return 100;
   }
@@ -179,6 +205,8 @@ export function PeopleTable() {
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
   const [loading, setLoading] = useState(true);
 
   const fetchPeople = useCallback(async () => {
@@ -197,6 +225,10 @@ export function PeopleTable() {
   }, [fetchPeople]);
 
   const filtered = people.filter((p) => {
+    // Status filter
+    if (statusFilter === "active" && !p.isActive) return false;
+    if (statusFilter === "inactive" && p.isActive) return false;
+
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -209,31 +241,34 @@ export function PeopleTable() {
   const visibleRows = useMemo(() => {
     const rows = [...filtered];
 
-    if (sortColumn === "person") {
+    if (sortColumn === "person" || sortColumn === "person-desc") {
+      const dir = sortColumn === "person" ? 1 : -1;
       rows.sort((a, b) => {
         const firstNameCompare = compareNames(getFirstName(a.name), getFirstName(b.name));
-        if (firstNameCompare !== 0) return firstNameCompare;
-        return compareNames(a.name, b.name);
+        if (firstNameCompare !== 0) return firstNameCompare * dir;
+        return compareNames(a.name, b.name) * dir;
       });
       return rows;
     }
 
-    if (sortColumn === "title") {
+    if (sortColumn === "title" || sortColumn === "title-desc") {
+      const dir = sortColumn === "title" ? 1 : -1;
       rows.sort((a, b) => {
-        const rankCompare = getTitleRank(b.title) - getTitleRank(a.title);
+        const rankCompare = (getTitleRank(b.title) - getTitleRank(a.title)) * dir;
         if (rankCompare !== 0) return rankCompare;
-        const titleCompare = compareNames(a.title, b.title);
+        const titleCompare = compareNames(a.title, b.title) * dir;
         if (titleCompare !== 0) return titleCompare;
         return compareNames(a.name, b.name);
       });
       return rows;
     }
 
-    if (sortColumn === "department") {
+    if (sortColumn === "department" || sortColumn === "department-desc") {
+      const dir = sortColumn === "department" ? 1 : -1;
       rows.sort((a, b) => {
         const deptA = a.departmentName || "Other";
         const deptB = b.departmentName || "Other";
-        const deptCompare = compareNames(deptA, deptB);
+        const deptCompare = compareNames(deptA, deptB) * dir;
         if (deptCompare !== 0) return deptCompare;
 
         const rankCompare = getTitleRank(b.title) - getTitleRank(a.title);
@@ -258,18 +293,79 @@ export function PeopleTable() {
   // Clear selection when search changes
   useEffect(() => { setSelected(new Set()); }, [search]);
 
-  const toggleSortColumn = useCallback((column: Exclude<SortColumn, null>) => {
-    setSortColumn((prev) => (prev === column ? null : column));
+  const toggleSortColumn = useCallback((column: "person" | "title" | "department") => {
+    setSortColumn((prev) => {
+      if (column === "person") {
+        if (prev === "person") return "person-desc";
+        if (prev === "person-desc") return null;
+        return "person";
+      }
+      if (column === "title") {
+        if (prev === "title") return "title-desc";
+        if (prev === "title-desc") return null;
+        return "title";
+      }
+      if (column === "department") {
+        if (prev === "department") return "department-desc";
+        if (prev === "department-desc") return null;
+        return "department";
+      }
+      return prev === column ? null : column;
+    });
   }, []);
 
   const sortLabel =
-    sortColumn === "person"
-      ? "Person A-Z"
-      : sortColumn === "title"
-        ? "Title high-low"
-        : sortColumn === "department"
-          ? "Department grouped"
-          : null;
+    sortColumn === "person" ? "Person A-Z"
+    : sortColumn === "person-desc" ? "Person Z-A"
+    : sortColumn === "title" ? "Title · Senior first"
+    : sortColumn === "title-desc" ? "Title · Junior first"
+    : sortColumn === "department" ? "Department A-Z"
+    : sortColumn === "department-desc" ? "Department Z-A"
+    : null;
+
+  const hasActiveFilters = sortColumn !== null || statusFilter !== "all";
+
+  // Check if current filters already match a saved view
+  const currentViewMatch = savedViews.find(
+    (v) => v.sort === sortColumn && v.status === statusFilter
+  );
+
+  function buildViewName(sort: SortColumn, status: StatusFilter): string {
+    const parts: string[] = [];
+    if (sort === "person") parts.push("Name A-Z");
+    else if (sort === "person-desc") parts.push("Name Z-A");
+    else if (sort === "title") parts.push("Senior first");
+    else if (sort === "title-desc") parts.push("Junior first");
+    else if (sort === "department") parts.push("Dept A-Z");
+    else if (sort === "department-desc") parts.push("Dept Z-A");
+    if (status === "active") parts.push("Active");
+    else if (status === "inactive") parts.push("Inactive");
+    return parts.join(" + ") || "All";
+  }
+
+  function handleSaveView() {
+    if (currentViewMatch) return;
+    const view: SavedView = {
+      id: Date.now().toString(36),
+      name: buildViewName(sortColumn, statusFilter),
+      sort: sortColumn,
+      status: statusFilter,
+    };
+    const next = [...savedViews, view];
+    setSavedViews(next);
+    persistSavedViews(next);
+  }
+
+  function handleApplyView(view: SavedView) {
+    setSortColumn(view.sort);
+    setStatusFilter(view.status);
+  }
+
+  function handleDeleteView(id: string) {
+    const next = savedViews.filter((v) => v.id !== id);
+    setSavedViews(next);
+    persistSavedViews(next);
+  }
 
   const toggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
@@ -433,20 +529,181 @@ export function PeopleTable() {
           className="pl-8"
         />
       </div>
-      {sortLabel && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>
-            Sorted by:
-            {" "}
-            <span className="font-medium text-foreground">{sortLabel}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setSortColumn(null)}
-            className="rounded-md px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Clear
-          </button>
+      {/* Filters & suggestions */}
+      {!search && people.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs">
+          {/* Active filter chips */}
+          {sortLabel && (
+            <span className="inline-flex items-center gap-1 rounded-full border bg-muted/60 pl-2.5 pr-0.5 py-0.5 text-foreground animate-in fade-in slide-in-from-left-1 duration-200">
+              <button
+                type="button"
+                onClick={() => {
+                  if (sortColumn === "person") setSortColumn("person-desc");
+                  else if (sortColumn === "person-desc") setSortColumn("person");
+                  else if (sortColumn === "title") setSortColumn("title-desc");
+                  else if (sortColumn === "title-desc") setSortColumn("title");
+                  else if (sortColumn === "department") setSortColumn("department-desc");
+                  else if (sortColumn === "department-desc") setSortColumn("department");
+                }}
+                className="inline-flex items-center gap-1.5 cursor-pointer transition-colors hover:text-rs-primary-600 dark:hover:text-rs-primary-400"
+              >
+                {(sortColumn === "person") && <ArrowUpAZ className="size-3 text-muted-foreground" />}
+                {(sortColumn === "person-desc") && <ArrowDownZA className="size-3 text-muted-foreground" />}
+                {(sortColumn === "title") && <ArrowDownUp className="size-3 text-muted-foreground" />}
+                {(sortColumn === "title-desc") && <ArrowUpDown className="size-3 text-muted-foreground" />}
+                {(sortColumn === "department") && <ArrowUpAZ className="size-3 text-muted-foreground" />}
+                {(sortColumn === "department-desc") && <ArrowDownZA className="size-3 text-muted-foreground" />}
+                <span className="font-medium">{sortLabel}</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Remove sort filter"
+                onClick={() => setSortColumn(null)}
+                className="ml-0.5 rounded-full p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+          {statusFilter !== "all" && (
+            <span className={cn(
+              "inline-flex items-center gap-1 rounded-full border pl-2.5 pr-0.5 py-0.5 animate-in fade-in slide-in-from-left-1 duration-200",
+              statusFilter === "active"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "border-border bg-muted/60 text-muted-foreground"
+            )}>
+              <button
+                type="button"
+                onClick={() => setStatusFilter((prev) => prev === "active" ? "inactive" : "active")}
+                className="inline-flex items-center gap-1.5 cursor-pointer transition-colors hover:opacity-80"
+              >
+                {statusFilter === "active"
+                  ? <CircleDot className="size-3" />
+                  : <CircleOff className="size-3" />}
+                <span className="font-medium">
+                  {statusFilter === "active" ? "Active" : "Inactive"}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label="Remove status filter"
+                onClick={() => setStatusFilter("all")}
+                className="ml-0.5 rounded-full p-1 transition-colors hover:bg-background/60 hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+
+          {/* Save view button */}
+          {hasActiveFilters && !currentViewMatch && (
+            <button
+              type="button"
+              onClick={handleSaveView}
+              title="Save current filter as a view"
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-rs-primary-500/30 px-2.5 py-1 text-rs-primary-600 transition-colors hover:border-rs-primary-500/50 hover:bg-rs-primary-500/5 dark:text-rs-primary-400 cursor-pointer"
+            >
+              <Bookmark className="size-3" />
+              Save view
+            </button>
+          )}
+          {hasActiveFilters && currentViewMatch && (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground" title="This view is saved">
+              <BookmarkCheck className="size-3" />
+              Saved
+            </span>
+          )}
+
+          {/* Separator between active chips and suggestions */}
+          {(sortLabel || statusFilter !== "all") && <div className="w-px h-4 bg-border mx-1" />}
+
+          {/* Suggested filters — only show what's not already active */}
+          {!sortColumn && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSortColumn("person")}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+              >
+                <ArrowUpAZ className="size-3" />
+                Name A-Z
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortColumn("title")}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+              >
+                <ArrowDownUp className="size-3" />
+                By rank
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortColumn("department")}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+              >
+                <Group className="size-3" />
+                By department
+              </button>
+            </>
+          )}
+          {statusFilter === "all" && people.some((p) => !p.isActive) && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter("inactive")}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+            >
+              <CircleOff className="size-3" />
+              Inactive
+            </button>
+          )}
+          {statusFilter === "all" && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter("active")}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+            >
+              <CircleDot className="size-3" />
+              Active
+            </button>
+          )}
+
+          {/* Saved views */}
+          {savedViews.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-border mx-1" />
+              {savedViews.map((view) => {
+                const isActive = view.sort === sortColumn && view.status === statusFilter;
+                return (
+                  <span
+                    key={view.id}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border pl-2.5 pr-0.5 py-0.5 transition-colors",
+                      isActive
+                        ? "border-rs-primary-500/30 bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-400"
+                        : "border-border bg-background text-muted-foreground"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleApplyView(view)}
+                      className="inline-flex items-center gap-1.5 cursor-pointer transition-colors hover:text-foreground"
+                    >
+                      <BookmarkCheck className="size-3" />
+                      <span className="font-medium">{view.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Remove saved view: ${view.name}`}
+                      onClick={() => handleDeleteView(view.id)}
+                      className="ml-0.5 rounded-full p-1 transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
 
@@ -502,12 +759,64 @@ export function PeopleTable() {
 
       {/* Table */}
       {loading ? (
-        <div className="py-8 text-center text-sm text-muted-foreground">
-          Loading...
+        <div className="rounded-lg border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="w-10 px-3 py-2"><div className="size-5 rounded-md bg-muted animate-pulse" /></th>
+                <th className="px-3 py-2 text-left"><div className="h-4 w-16 rounded bg-muted animate-pulse" /></th>
+                <th className="px-3 py-2 text-left"><div className="h-4 w-12 rounded bg-muted animate-pulse" /></th>
+                <th className="px-3 py-2 text-left"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></th>
+                <th className="px-3 py-2 text-left"><div className="h-4 w-14 rounded bg-muted animate-pulse" /></th>
+                <th className="px-3 py-2 text-right"><div className="h-4 w-16 rounded bg-muted animate-pulse ml-auto" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 2, 3, 4].map((i) => (
+                <tr key={i} className="border-b last:border-b-0">
+                  <td className="w-10 px-3 py-2"><div className="size-5 rounded-md bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-8 rounded-full bg-muted animate-pulse shrink-0" />
+                      <div className="h-4 w-28 rounded bg-muted animate-pulse" />
+                    </div>
+                  </td>
+                  <td className="px-3 py-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-2"><div className="h-5 w-20 rounded-full bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-2"><div className="h-5 w-14 rounded-full bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-2"><div className="flex justify-end gap-1"><div className="size-7 rounded-md bg-muted animate-pulse" /><div className="size-7 rounded-md bg-muted animate-pulse" /></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : visibleRows.length === 0 ? (
-        <div className="py-8 text-center text-sm text-muted-foreground">
-          {search ? "No people match your search." : "No people yet. Add one to get started."}
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+            <Users className="size-6 text-muted-foreground" />
+          </div>
+          {search ? (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">No results found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting your search or filters.</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">No people yet</p>
+              <p className="text-sm text-muted-foreground">Add your first team member to get started.</p>
+            </div>
+          )}
+          {!search && (
+            <PersonForm
+              onSave={fetchPeople}
+              trigger={
+                <Button variant="outline" size="sm" className="mt-1 cursor-pointer">
+                  <Plus className="size-4" />
+                  Add Person
+                </Button>
+              }
+            />
+          )}
         </div>
       ) : (
         <div className="rounded-lg border">
@@ -522,46 +831,85 @@ export function PeopleTable() {
                     ariaLabel="Select all people"
                   />
                 </th>
-                <th className="px-3 py-2 text-left font-medium">
+                <th
+                  className="px-3 py-2 text-left font-medium"
+                  aria-sort={sortColumn === "person" ? "ascending" : sortColumn === "person-desc" ? "descending" : "none"}
+                >
                   <button
                     type="button"
                     onClick={() => toggleSortColumn("person")}
                     className={cn(
-                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
-                      sortColumn === "person" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                      "inline-flex items-center gap-1 rounded-md px-1.5 py-1 cursor-pointer transition-colors hover:bg-muted",
+                      (sortColumn === "person" || sortColumn === "person-desc") && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
                     )}
                   >
                     Person
-                    {sortColumn === "person" ? " · A-Z" : ""}
+                    {sortColumn === "person"
+                      ? <ArrowUpAZ className="size-3.5" />
+                      : sortColumn === "person-desc"
+                        ? <ArrowDownZA className="size-3.5" />
+                        : null}
                   </button>
                 </th>
-                <th className="px-3 py-2 text-left font-medium">
+                <th
+                  className="px-3 py-2 text-left font-medium"
+                  aria-sort={sortColumn === "title" ? "ascending" : sortColumn === "title-desc" ? "descending" : "none"}
+                >
                   <button
                     type="button"
                     onClick={() => toggleSortColumn("title")}
                     className={cn(
-                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
-                      sortColumn === "title" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                      "inline-flex items-center gap-1 rounded-md px-1.5 py-1 cursor-pointer transition-colors hover:bg-muted",
+                      (sortColumn === "title" || sortColumn === "title-desc") && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
                     )}
                   >
                     Title
-                    {sortColumn === "title" ? " · High-Low" : ""}
+                    {sortColumn === "title"
+                      ? <ArrowDownUp className="size-3.5" />
+                      : sortColumn === "title-desc"
+                        ? <ArrowUpDown className="size-3.5" />
+                        : null}
+                  </button>
+                </th>
+                <th
+                  className="px-3 py-2 text-left font-medium"
+                  aria-sort={sortColumn === "department" ? "ascending" : sortColumn === "department-desc" ? "descending" : "none"}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleSortColumn("department")}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md px-1.5 py-1 cursor-pointer transition-colors hover:bg-muted",
+                      (sortColumn === "department" || sortColumn === "department-desc") && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                    )}
+                  >
+                    Department
+                    {sortColumn === "department"
+                      ? <ArrowUpAZ className="size-3.5" />
+                      : sortColumn === "department-desc"
+                        ? <ArrowDownZA className="size-3.5" />
+                        : null}
                   </button>
                 </th>
                 <th className="px-3 py-2 text-left font-medium">
                   <button
                     type="button"
-                    onClick={() => toggleSortColumn("department")}
+                    onClick={() => setStatusFilter((prev) =>
+                      prev === "active" ? "inactive" : prev === "inactive" ? "all" : "active"
+                    )}
                     className={cn(
-                      "rounded-md px-1.5 py-1 transition-colors hover:bg-muted",
-                      sortColumn === "department" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
+                      "inline-flex items-center gap-1 rounded-md px-1.5 py-1 cursor-pointer transition-colors hover:bg-muted",
+                      statusFilter !== "all" && "bg-rs-primary-500/10 text-rs-primary-600 dark:text-rs-primary-300"
                     )}
                   >
-                    Department
-                    {sortColumn === "department" ? " · Grouped" : ""}
+                    Status
+                    {statusFilter === "active"
+                      ? <CircleDot className="size-3.5 text-emerald-500" />
+                      : statusFilter === "inactive"
+                        ? <CircleOff className="size-3.5" />
+                        : <ListFilter className="size-3.5 opacity-40" />}
                   </button>
                 </th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
                 <th className="px-3 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -577,7 +925,8 @@ export function PeopleTable() {
                   }}
                   className={cn(
                     "border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200",
-                    selected.has(person.id) && "bg-rs-primary-500/5"
+                    selected.has(person.id) && "bg-rs-primary-500/5",
+                    !person.isActive && "opacity-50"
                   )}
                 >
                   {/* Checkbox */}
@@ -618,7 +967,7 @@ export function PeopleTable() {
                     <button
                       onClick={() => handleToggle(person.id)}
                       disabled={togglingIds.has(person.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-all duration-200 border disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-all duration-200 border disabled:opacity-75 disabled:cursor-not-allowed ${
                         person.isActive
                           ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-400/20"
                           : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
@@ -664,7 +1013,7 @@ export function PeopleTable() {
 
       {/* Count footer */}
       {!loading && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground tabular-nums">
           Showing {visibleRows.length} of {people.length} people
         </p>
       )}

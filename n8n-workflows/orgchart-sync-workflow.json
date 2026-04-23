@@ -101,14 +101,20 @@
       "parameters": {
         "sendTo": "mark@romega-solutions.com",
         "subject": "=Org Chart: {{ $json.totalChanges }} change(s) detected - Review needed",
-        "emailType": "text",
-        "message": "={{ $json.summary }}\n\n---\nThis is an automated check from the RS Org Chart system.\nThe Google Sheet has been updated but the org chart has NOT been changed yet.\n\nTo apply these changes:\n1. Review the changes above\n2. Log into the Org Chart admin\n3. Click Settings > Google Sheets Sync > Sync Now\n\n- RS Automation (n8n)"
+        "message": "={{ $json.summary }}\n\n---\nThis is an automated check from the RS Org Chart system.\nThe Google Sheet has been updated but the org chart has NOT been changed yet.\n\nTo apply these changes:\n1. Review the changes above\n2. Log into the Org Chart admin\n3. Click Settings > Google Sheets Sync > Sync Now\n\n- RS Automation (n8n)",
+        "options": {}
       },
       "id": "send-email",
-      "name": "Email Mark for Review",
-      "type": "n8n-nodes-base.emailSend",
+      "name": "Gmail - Email Mark for Review",
+      "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1200, 0]
+      "position": [1200, 0],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail OAuth2 - Romega"
+        }
+      }
     },
     {
       "parameters": {},
@@ -151,7 +157,7 @@
     "Any Changes?": {
       "main": [
         [
-          { "node": "Email Mark for Review", "type": "main", "index": 0 }
+          { "node": "Gmail - Email Mark for Review", "type": "main", "index": 0 }
         ],
         [
           { "node": "No Changes - Skip", "type": "main", "index": 0 }
