@@ -17,7 +17,6 @@ import { QuickAddDialog } from "./quick-add-dialog";
 import type { ViewMode } from "./view-switcher";
 import { TopDownTree } from "./top-down-tree";
 import { HorizontalTree } from "./horizontal-tree";
-import { CollapsibleTree } from "./collapsible-tree";
 import { DepartmentGrid } from "./department-grid";
 import type { TreeNode } from "@/types";
 import { getTreeStats } from "@/lib/tree";
@@ -655,20 +654,6 @@ export function ChartCanvas({ isEditor }: Props) {
       )}
       {view === "horizontal" && (
         <HorizontalTree
-          tree={data.tree}
-          isEditor={isEditor}
-          onNodeClick={handleNodeClick}
-          onInit={handleInit}
-          onBackgroundContextMenu={handleBackgroundContextMenu}
-          onToggle={isEditor ? handleToggle : undefined}
-          onDelete={isEditor ? handleDelete : undefined}
-          onSelectionChange={isEditor ? handleSelectionChange : undefined}
-          selectedNodeIds={selectedNodeIds}
-          highlightedNodeId={highlightedNodeId}
-        />
-      )}
-      {view === "collapsible" && (
-        <CollapsibleTree
           tree={data.tree}
           isEditor={isEditor}
           onNodeClick={handleNodeClick}

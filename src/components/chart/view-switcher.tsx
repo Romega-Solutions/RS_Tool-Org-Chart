@@ -2,7 +2,6 @@
 
 import {
   ArrowRightLeft,
-  ChevronsUpDown,
   LayoutGrid,
   Network,
   type LucideIcon,
@@ -15,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type ViewMode = "top-down" | "horizontal" | "grid" | "collapsible";
+export type ViewMode = "top-down" | "horizontal" | "grid";
 
 interface ViewOption {
   value: ViewMode;
@@ -46,13 +45,6 @@ export const VIEW_OPTIONS: ViewOption[] = [
     shortLabel: "Grid",
     description: "Department-first cards with faster scanning",
     icon: LayoutGrid,
-  },
-  {
-    value: "collapsible",
-    label: "Collapsible Tree",
-    shortLabel: "Collapsible",
-    description: "Expandable branches for dense org charts",
-    icon: ChevronsUpDown,
   },
 ];
 
