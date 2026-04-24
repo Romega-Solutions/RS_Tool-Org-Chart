@@ -43,12 +43,17 @@ setInterval(() => {
 }, 5 * 60_000);
 
 export async function proxy(request: NextRequest) {
-  // Rate limit all matched routes
-  const rateLimitResponse = rateLimit(request);
-  if (rateLimitResponse) return rateLimitResponse;
+  const path = request.nextUrl.pathname;
+
+  // Skip rate limiting for auth endpoints (they have their own brute-force protection)
+  // and for Next.js internals / static assets
+  if (!path.startsWith("/api/auth/") && !path.startsWith("/_next/")) {
+    const rateLimitResponse = rateLimit(request);
+    if (rateLimitResponse) return rateLimitResponse;
+  }
 
   // API routes handle their own auth — only rate limit them here
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+  if (path.startsWith("/api/")) {
     return NextResponse.next();
   }
 
@@ -72,5 +77,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/chart/:path*", "/admin/:path*", "/api/:path*"],
+  matcher: ["/chart/:path*", "/admin/:path*", "/account/:path*", "/api/:path*"],
 };

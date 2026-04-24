@@ -28,7 +28,10 @@ async function loginAsViewer(page: import("@playwright/test").Page) {
   const res = await page.request.post("/api/auth/login", {
     data: { username: "viewer", password: "viewer123" },
   });
-  expect(res.ok()).toBeTruthy();
+  if (!res.ok()) {
+    const body = await res.text();
+    throw new Error(`Viewer login failed (${res.status()}): ${body}`);
+  }
   const setCookie = res.headers()["set-cookie"];
   if (setCookie) {
     const match = setCookie.match(/orgchart_token=([^;]+)/);

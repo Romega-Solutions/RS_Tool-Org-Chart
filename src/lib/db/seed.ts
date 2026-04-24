@@ -12,58 +12,55 @@ const DEFAULT_SETTINGS = [
   { key: "accent_color", value: "#C8850A" },
   { key: "neutral_color", value: "#607A99" },
   { key: "support_email", value: "" },
-  { key: "sheets_url", value: "" },
+  { key: "sheets_url", value: "https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/edit?usp=sharing" },
   { key: "last_sync_at", value: "" },
 ];
 
 const DEPARTMENTS = [
-  { name: "Executive", color: "#1a5276", displayOrder: 0 },
-  { name: "Market Intelligence", color: "#2e86c1", displayOrder: 1 },
-  { name: "Technical", color: "#148f77", displayOrder: 2 },
-  { name: "Recruitment & Onboarding", color: "#6c3483", displayOrder: 3 },
-  { name: "Marketing", color: "#d68910", displayOrder: 4 },
-  { name: "Sales", color: "#cb4335", displayOrder: 5 },
+  { name: "Executive", color: "#6366f1", displayOrder: 0 },
+  { name: "HR/Finance", color: "#ec4899", displayOrder: 1 },
+  { name: "Marketing", color: "#f59e0b", displayOrder: 2 },
+  { name: "Marketing Intelligence", color: "#8b5cf6", displayOrder: 3 },
+  { name: "Sales", color: "#10b981", displayOrder: 4 },
+  { name: "Tech", color: "#3b82f6", displayOrder: 5 },
 ];
 
 // People: [name, title, departmentIndex, reportsToName, displayOrder]
 const PEOPLE: [string, string, number, string | null, number][] = [
   // Executive
-  ["Robbie Galoso", "Founder", 0, null, 0],
-  ["Cherry Ann Reyes", "Chief of Staff", 0, "Robbie Galoso", 1],
-  ["Eliza Mae Perez", "Bookkeeper", 0, "Robbie Galoso", 2],
-  ["Ryce Daniotvniex", "Virtual Assistant", 0, "Robbie Galoso", 3],
-  ["Jyrra Arcales", "Project Manager", 0, "Robbie Galoso", 4],
+  ["Robbie Tan", "CEO", 0, null, 0],
+  ["Jyrra Mae Tan", "COO", 0, "Robbie Tan", 1],
 
-  // Market Intelligence (reports to Cherry Ann)
-  ["Ro Ann Rivero", "Market Analyst Intern", 1, "Cherry Ann Reyes", 0],
-  ["Edmayelle Alforia", "Market Analyst Intern", 1, "Cherry Ann Reyes", 1],
-  ["Sarah Busto", "Market Analyst Intern", 1, "Cherry Ann Reyes", 2],
-  ["Jill San Luis", "Market Analyst Intern", 1, "Cherry Ann Reyes", 3],
+  // HR/Finance (reports to Jyrra)
+  ["Rica Mae Pedemonte", "Executive Assistant", 1, "Robbie Tan", 0],
+  ["Eliza Mae F. Perez", "Bookkeeping", 1, "Jyrra Mae Tan", 1],
+  ["Erich Belle F. Macabuhay", "Human Resources Business Partner (HRBP) - Onboarding Lead", 1, "Jyrra Mae Tan", 2],
+  ["Christine Valencia", "Recruitment Lead", 1, "Jyrra Mae Tan", 3],
+  ["Duane Vargas", "AI Lead/Recruiter", 1, "Jyrra Mae Tan", 4],
 
-  // Technical (reports to Robbie)
-  ["Mark Siazon", "Product Designer", 2, "Robbie Galoso", 0],
-  ["Ken Garcia", "Full Stack Developer", 2, "Robbie Galoso", 1],
-  ["Mich Dayday", "Graphic Designer", 2, "Robbie Galoso", 2],
+  // Marketing (reports to Jyrra via Aaron)
+  ["Aaron Garcia", "Social Media Coordinator", 2, "Jyrra Mae Tan", 0],
+  ["Leighannah Bobis", "Marketing and Brand Content Intern", 2, "Aaron Garcia", 1],
+  ["Jorven J. Ledesma", "Marketing and Brand Content Intern", 2, "Aaron Garcia", 2],
+  ["Rhenalyn Inot", "Social Media Coordinator", 2, "Aaron Garcia", 3],
+  ["Maribeth Alyssa Go", "Marketing and Sales Intern", 2, "Toni Apostol", 4],
 
-  // Recruitment & Onboarding (reports to Jyrra)
-  ["Christine Valencia", "Sourcing Lead", 3, "Jyrra Arcales", 0],
-  ["Duane Vargas", "HR Business Partner", 3, "Jyrra Arcales", 1],
-  ["Erich Macabuhay", "HR Intern", 3, "Jyrra Arcales", 2],
-  ["Lyle Paraboles", "HR Intern", 3, "Jyrra Arcales", 3],
+  // Marketing Intelligence (reports to Jyrra via Sarah)
+  ["Sarah Grace A. Busto", "Market Research Analyst", 3, "Jyrra Mae Tan", 0],
+  ["Jillian Andrae P. Tang", "Market Research Analyst Intern", 3, "Sarah Grace A. Busto", 1],
 
-  // Marketing (reports to Jyrra)
-  ["Audrey Maureen Molina", "Marketing Lead", 4, "Jyrra Arcales", 0],
-  ["Mickey Co", "Marketing Intern", 4, "Audrey Maureen Molina", 1],
-  ["Jillian Tang", "Marketing Intern", 4, "Audrey Maureen Molina", 2],
-  ["Deikna Anay", "Marketing Intern", 4, "Audrey Maureen Molina", 3],
+  // Sales (reports to Jyrra via Toni)
+  ["Toni Apostol", "Sales Manager", 4, "Jyrra Mae Tan", 0],
+  ["Ricardo Salvador", "Account Executive Associate/Sales Trainer", 4, "Toni Apostol", 1],
+  ["Mariane De Mesa", "Account Executive Intern", 4, "Toni Apostol", 2],
+  ["Kenneth Carrell C. Siapco", "Account Executive Intern", 4, "Toni Apostol", 3],
 
-  // Sales (reports to Jyrra)
-  ["Rich Salvador", "Account Executive", 5, "Jyrra Arcales", 0],
-  ["Mafi Labucuas", "Account Executive Intern", 5, "Rich Salvador", 1],
-  ["Jayber Lingogon", "Account Executive Intern", 5, "Rich Salvador", 2],
-  ["Kailynne Lee", "Account Executive Intern", 5, "Rich Salvador", 3],
-  ["Mari Mirabueno", "Account Executive Intern", 5, "Rich Salvador", 4],
-  ["Ryied Bose", "Account Executive Intern", 5, "Rich Salvador", 5],
+  // Tech (reports to Jyrra via Mark & Ken)
+  ["Mark Angelo Siazon", "Product Designer", 5, "Jyrra Mae Tan", 0],
+  ["Ken Patrick Aviñante Garcia", "Full Stack Developer - Web and Mobile", 5, "Jyrra Mae Tan", 1],
+  ["Michelle P. Dayday", "Graphics Designer", 5, "Mark Angelo Siazon", 2],
+  ["Camyl Richie Gile", "UI/UX Intern", 5, "Mark Angelo Siazon", 3],
+  ["Desiree Jipus", "Graphic Design Intern", 5, "Mark Angelo Siazon", 4],
 ];
 
 const DEFAULT_USERS = [

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ClipboardList,
   Image,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
@@ -281,6 +282,17 @@ export function AdminSidebar() {
               <span className="ml-2">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
             )}
           </Button>
+        </SidebarTooltip>
+        <SidebarTooltip label="Change Password" show={collapsed}>
+          <Link
+            href="/account"
+            className={`flex items-center ${
+              collapsed ? "justify-center px-2" : "gap-3 px-3"
+            } py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-all duration-200`}
+          >
+            <KeyRound className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>Change Password</span>}
+          </Link>
         </SidebarTooltip>
         <SidebarTooltip label="Sign Out" show={collapsed}>
           <Button

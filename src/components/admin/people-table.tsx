@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonForm } from "@/components/admin/person-form";
-import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, Filter, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, Filter, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
@@ -454,7 +454,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     setDeleteIntent({
       ids: [...selected],
       title: `Delete ${count} ${count === 1 ? "person" : "people"}?`,
-      description: "This action permanently removes the selected people and cannot be undone.",
+      description: "This will deactivate the selected people. You can undo this action.",
     });
   }
 
@@ -503,7 +503,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     setDeleteIntent({
       ids: [person.id],
       title: `Delete ${person.name}?`,
-      description: "This action permanently removes this person and cannot be undone.",
+      description: "This will deactivate this person. You can undo this action.",
     });
   }
 
@@ -512,39 +512,112 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     setBulkBusy(true);
     try {
       const count = deleteIntent.ids.length;
-      await Promise.all(deleteIntent.ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
+      const ids = [...deleteIntent.ids];
+      // Soft-delete: deactivate instead of permanently removing
+      await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/people/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isActive: false }),
+          })
+        )
+      );
       setSelected((prev) => {
         const next = new Set(prev);
-        for (const id of deleteIntent.ids) next.delete(id);
+        for (const id of ids) next.delete(id);
         return next;
       });
       setDeleteIntent(null);
       await fetchPeople();
-      toast.success(`${count} ${count === 1 ? "person" : "people"} deleted`);
+      toast.success(
+        `${count} ${count === 1 ? "person" : "people"} deactivated`,
+        {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              await Promise.all(
+                ids.map((id) =>
+                  fetch(`/api/people/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isActive: true }),
+                  })
+                )
+              );
+              await fetchPeople();
+              toast.success(`${count} ${count === 1 ? "person" : "people"} reactivated`);
+            },
+          },
+        }
+      );
     } finally {
       setBulkBusy(false);
     }
   }
 
+  function handleExportCsv() {
+    const csvHeader = ["Name", "Title", "Department", "Status", "Reports To"];
+    const csvRows = visibleRows.map((row) => {
+      const reportsToName = row.reportsTo
+        ? people.find((p) => p.id === row.reportsTo)?.name ?? ""
+        : "";
+      return [
+        row.name,
+        row.title,
+        row.departmentName ?? "",
+        row.isActive ? "Active" : "Inactive",
+        reportsToName,
+      ].map((field) => {
+        if (/[",\n\r]/.test(field)) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      });
+    });
+
+    const csvContent = [csvHeader.join(","), ...csvRows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "people-export.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold">People</h1>
           <p className="text-sm text-muted-foreground">
             Manage the people in your org chart
           </p>
         </div>
-        <PersonForm
-          onSave={fetchPeople}
-          trigger={
-            <Button className="cursor-pointer transition-all duration-200">
-              <Plus className="size-4" />
-              Add Person
-            </Button>
-          }
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={visibleRows.length === 0}
+            className="cursor-pointer transition-all duration-200"
+          >
+            <Download className="size-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">CSV</span>
+          </Button>
+          <PersonForm
+            onSave={fetchPeople}
+            trigger={
+              <Button className="cursor-pointer transition-all duration-200">
+                <Plus className="size-4" />
+                <span className="hidden sm:inline">Add Person</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       {/* Search */}
@@ -559,7 +632,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
       </div>
       {/* Filters & suggestions */}
       {!search && people.length > 0 && (
-        <div className="flex items-center gap-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {/* Active filter chips */}
           {sortLabel && (
             <span className="inline-flex items-center gap-1 rounded-full border bg-muted/60 pl-2.5 pr-0.5 py-0.5 text-foreground animate-in fade-in slide-in-from-left-1 duration-200">
@@ -847,7 +920,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
           )}
         </div>
       ) : (
-        <div className="rounded-lg border">
+        <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -880,7 +953,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                   </button>
                 </th>
                 <th
-                  className="px-3 py-2 text-left font-medium"
+                  className="hidden sm:table-cell px-3 py-2 text-left font-medium"
                   aria-sort={sortColumn === "title" ? "ascending" : sortColumn === "title-desc" ? "descending" : "none"}
                 >
                   <button
@@ -900,7 +973,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                   </button>
                 </th>
                 <th
-                  className="px-3 py-2 text-left font-medium"
+                  className="hidden md:table-cell px-3 py-2 text-left font-medium"
                   aria-sort={sortColumn === "department" ? "ascending" : sortColumn === "department-desc" ? "descending" : "none"}
                 >
                   <button
@@ -919,7 +992,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                         : null}
                   </button>
                 </th>
-                <th className="px-3 py-2 text-left font-medium">
+                <th className="hidden sm:table-cell px-3 py-2 text-left font-medium">
                   <button
                     type="button"
                     onClick={() => setStatusFilter((prev) =>
@@ -981,15 +1054,18 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                         )}
                         <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{person.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{person.name}</span>
+                        <span className="sm:hidden text-xs text-muted-foreground">{person.title}</span>
+                      </div>
                     </div>
                   </td>
 
                   {/* Title */}
-                  <td className="px-3 py-2 text-muted-foreground">{person.title}</td>
+                  <td className="hidden sm:table-cell px-3 py-2 text-muted-foreground">{person.title}</td>
 
                   {/* Department */}
-                  <td className="px-3 py-2">
+                  <td className="hidden md:table-cell px-3 py-2">
                     <DepartmentBadge
                       departmentName={person.departmentName}
                       departmentColor={person.departmentColor}
@@ -997,7 +1073,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                   </td>
 
                   {/* Status — clickable toggle pill */}
-                  <td className="px-3 py-2">
+                  <td className="hidden sm:table-cell px-3 py-2">
                     <button
                       onClick={() => handleToggle(person.id)}
                       disabled={togglingIds.has(person.id)}

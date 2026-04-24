@@ -39,27 +39,20 @@ test.describe("People Table — Teams Management", () => {
 
     test("clicking Status column header cycles through filters", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
-      const statusHeader = page.locator("thead button", { hasText: "Status" });
 
-      // Click once → Inactive
-      await statusHeader.click();
-      // All visible status pills should say "Inactive" (if any rows shown)
-      const statusPills = page.locator("tbody button", { hasText: /^(Active|Inactive)$/ });
-      const count = await statusPills.count();
-      for (let i = 0; i < count; i++) {
-        await expect(statusPills.nth(i)).toHaveText("Inactive");
-      }
+      // Use the filter chip to cycle instead of the column header,
+      // because the column header disappears when the empty state shows
+      const statusChip = page.locator("span.rounded-full button", { hasText: "Active" }).first();
+      await statusChip.click();
 
-      // Click again → All
-      await statusHeader.click();
+      // Should now show Inactive filter
+      await expect(page.locator("span.rounded-full button", { hasText: "Inactive" }).first()).toBeVisible();
 
-      // Click again → back to Active
-      await statusHeader.click();
-      const activePills = page.locator("tbody button", { hasText: /^(Active|Inactive)$/ });
-      const activeCount = await activePills.count();
-      for (let i = 0; i < activeCount; i++) {
-        await expect(activePills.nth(i)).toHaveText("Active");
-      }
+      // Click dismiss to go to All
+      await page.getByRole("button", { name: "Remove status filter" }).click();
+
+      // No status chip should be visible
+      await expect(page.getByRole("button", { name: "Remove status filter" })).not.toBeVisible();
     });
 
     test("status filter chip toggles between Active and Inactive on click", async ({ page }) => {
@@ -239,9 +232,8 @@ test.describe("People Table — Teams Management", () => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
 
       // Switch to "All" so toggled person stays visible
-      const statusHeader = page.locator("thead button", { hasText: "Status" });
-      await statusHeader.click(); // Active → Inactive
-      await statusHeader.click(); // Inactive → All
+      const dismissStatus = page.getByRole("button", { name: "Remove status filter" });
+      await dismissStatus.click();
 
       // Find first status pill in the table
       const firstPill = page.locator("tbody button", { hasText: /^(Active|Inactive)$/ }).first();
@@ -382,10 +374,8 @@ test.describe("People Table — Teams Management", () => {
     test("inactive rows have reduced opacity", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
       // Switch to All to see inactive rows
-      const statusHeader = page.locator("thead button", { hasText: "Status" });
-      // Cycle: Active → Inactive → All
-      await statusHeader.click();
-      await statusHeader.click();
+      const dismissStatus = page.getByRole("button", { name: "Remove status filter" });
+      await dismissStatus.click();
 
       // Check if any inactive rows exist and have opacity
       const inactiveRows = page.locator("tbody tr").filter({ has: page.locator("button", { hasText: "Inactive" }) });

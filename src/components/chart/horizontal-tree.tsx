@@ -21,7 +21,13 @@ import { computeTranslateExtent } from "@/lib/chart-utils";
 import type { TreeNode } from "@/types";
 
 const X_GAP = 250;
-const Y_GAP = 100;
+/**
+ * Vertical spacing between leaf-node centres.
+ * The horizontal node is ~80px tall visually, plus decorative blur/shadow
+ * elements extend ~7px beyond each edge, giving an effective height of ~94px.
+ * 120px keeps a comfortable ~26px gap between adjacent nodes.
+ */
+const Y_GAP = 120;
 const EDGE_STYLE = {
   stroke: "var(--chart-edge-stroke)",
   strokeWidth: 1.5,
