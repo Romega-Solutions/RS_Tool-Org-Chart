@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireEditor } from "@/lib/auth";
 
 export async function PATCH(request: Request) {
   const body = await request.json();
@@ -24,7 +24,8 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const actor = await getUserFromRequest(request);
+  const [actor, authErr] = await requireEditor(request);
+  if (authErr) return authErr;
 
   const person = db.select().from(people).where(eq(people.id, personId)).get();
   if (!person) {
@@ -62,7 +63,7 @@ export async function PATCH(request: Request) {
     .where(eq(people.id, personId))
     .run();
 
-  logChange("updated", "person", personId, person.name, actor?.username ?? null, changes);
+  logChange("updated", "person", personId, person.name, actor.username, changes);
 
   const updated = db.select().from(people).where(eq(people.id, personId)).get();
   return NextResponse.json(updated);

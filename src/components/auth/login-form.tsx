@@ -36,7 +36,7 @@ export function LoginForm() {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Enter username"
           required
-          className="h-11 transition-colors duration-200"
+          className="h-11 bg-muted/40 dark:!bg-black/20 border-t-border border-l-border border-b-background border-r-background dark:border-t-black/40 dark:border-l-black/40 dark:border-b-white/[0.06] dark:border-r-white/[0.06] shadow-[inset_0_2px_5px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_2px_5px_rgba(0,0,0,0.3)] focus-visible:bg-background dark:focus-visible:!bg-background/80 transition-all duration-200"
         />
       </div>
       <div className="space-y-2">
@@ -48,7 +48,7 @@ export function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
           required
-          className="h-11 transition-colors duration-200"
+          className="h-11 bg-muted/40 dark:!bg-black/20 border-t-border border-l-border border-b-background border-r-background dark:border-t-black/40 dark:border-l-black/40 dark:border-b-white/[0.06] dark:border-r-white/[0.06] shadow-[inset_0_2px_5px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_2px_5px_rgba(0,0,0,0.3)] focus-visible:bg-background dark:focus-visible:!bg-background/80 transition-all duration-200"
         />
       </div>
       {error && (

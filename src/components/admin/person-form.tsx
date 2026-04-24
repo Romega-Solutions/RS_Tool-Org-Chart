@@ -1,6 +1,7 @@
 "use client";
 import { createElement, useState, useEffect, useRef } from "react";
 import NextImage from "next/image";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,9 @@ interface PersonWithDept extends Person {
 interface Props {
   person?: PersonWithDept;
   onSave: () => void;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function getInitials(value: string) {
@@ -43,8 +46,13 @@ function getInitials(value: string) {
     .slice(0, 2);
 }
 
-export function PersonForm({ person, onSave, trigger }: Props) {
-  const [open, setOpen] = useState(false);
+export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOpenChange }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (value: boolean) => {
+    setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [departmentId, setDepartmentId] = useState<number | null>(null);
@@ -156,11 +164,11 @@ export function PersonForm({ person, onSave, trigger }: Props) {
     }
 
     onSave();
+    toast.success(person ? `${name} updated` : `${name} added`);
   }
 
-  const reportsToLabel = reportsTo
-    ? allPeople.find((p) => p.id === reportsTo)?.name ?? "Select manager"
-    : "None (top-level)";
+  const reportsToMatch = reportsTo ? allPeople.find((p) => p.id === reportsTo) : null;
+  const reportsToLabel = reportsToMatch?.name ?? (reportsTo ? "Select manager" : "None (top-level)");
   const managerGroups = allPeople
     .filter((p) => (person ? p.id !== person.id : true))
     .reduce((map, currentPerson) => {
@@ -179,12 +187,13 @@ export function PersonForm({ person, onSave, trigger }: Props) {
     })
     .map(([groupName, peopleInGroup]) => ({
       groupName,
+      groupColor: peopleInGroup[0]?.departmentColor || null,
       people: peopleInGroup.sort((a, b) => a.name.localeCompare(b.name)),
     }));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement}>{}</DialogTrigger>
+      {trigger && <DialogTrigger render={trigger as React.ReactElement}>{}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{person ? "Edit Person" : "Add Person"}</DialogTitle>
@@ -326,23 +335,41 @@ export function PersonForm({ person, onSave, trigger }: Props) {
               }
             >
               <SelectTrigger className="w-full">
-                <span className={reportsTo == null ? "text-muted-foreground" : ""}>
-                  {reportsToLabel}
+                <span className={`inline-flex items-center gap-1.5 ${reportsTo == null ? "text-muted-foreground" : ""}`}>
+                  {reportsToMatch?.departmentName && (
+                    <span className="shrink-0" style={{ color: reportsToMatch.departmentColor || undefined }}>
+                      {createElement(getDeptIcon(reportsToMatch.departmentName), { className: "size-3.5" })}
+                    </span>
+                  )}
+                  <span className="truncate">{reportsToLabel}</span>
+                  {reportsToMatch?.departmentName && (
+                    <span className="text-xs text-muted-foreground">· {reportsToMatch.departmentName}</span>
+                  )}
                 </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None (top-level)</SelectItem>
                 {sortedManagerGroups.length > 0 && <SelectSeparator />}
-                {sortedManagerGroups.map(({ groupName, people }) => (
+                {sortedManagerGroups.map(({ groupName, groupColor, people }) => (
                   <SelectGroup key={groupName}>
-                    <SelectLabel>{groupName}</SelectLabel>
+                    <SelectLabel>
+                      <span className="inline-flex items-center gap-1.5" style={{ color: groupColor || undefined }}>
+                        {createElement(getDeptIcon(groupName), { className: "size-3" })}
+                        {groupName}
+                      </span>
+                    </SelectLabel>
                     {people.map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate">{p.name}</span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {p.title}
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="mt-0.5 shrink-0" style={{ color: p.departmentColor || undefined }}>
+                            {createElement(getDeptIcon(p.departmentName || "Other"), { className: "size-3.5" })}
                           </span>
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate">{p.name}</span>
+                            <span className="truncate text-xs text-muted-foreground">
+                              {p.title}
+                            </span>
+                          </div>
                         </div>
                       </SelectItem>
                     ))}

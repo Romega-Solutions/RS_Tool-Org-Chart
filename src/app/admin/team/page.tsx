@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Building2 } from "lucide-react";
 import { PeopleTable } from "@/components/admin/people-table";
@@ -9,6 +10,9 @@ import { ImportDialog } from "@/components/admin/import-dialog";
 
 export default function TeamPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab") === "departments" ? "departments" : "people";
+  const filter = searchParams.get("filter") as "active" | "inactive" | "all" | null;
 
   return (
     <div className="space-y-6">
@@ -24,7 +28,7 @@ export default function TeamPage() {
         <ImportDialog onImportComplete={() => setRefreshKey((k) => k + 1)} />
       </div>
 
-      <Tabs defaultValue="people" className="w-full">
+      <Tabs defaultValue={tab} className="w-full">
         <TabsList className="w-fit">
           <TabsTrigger value="people" className="cursor-pointer transition-all duration-200 gap-2">
             <Users className="w-4 h-4" />
@@ -36,7 +40,7 @@ export default function TeamPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="people" className="mt-4">
-          <PeopleTable key={refreshKey} />
+          <PeopleTable key={refreshKey} initialFilter={filter ?? undefined} />
         </TabsContent>
         <TabsContent value="departments" className="mt-4">
           <DepartmentList />

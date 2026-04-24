@@ -3,13 +3,19 @@ import { db } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
+import { requireEditor } from "@/lib/auth";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface CsvRow { name: string; title: string; department: string; reports_to_name: string; photo_filename: string; }
 
 export async function POST(request: Request) {
+  const [, err] = await requireEditor(request);
+  if (err) return err;
   const formData = await request.formData();
   const file = formData.get("file") as File;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 413 });
 
   const text = await file.text();
   const { data, errors } = Papa.parse<CsvRow>(text, { header: true, skipEmptyLines: true });

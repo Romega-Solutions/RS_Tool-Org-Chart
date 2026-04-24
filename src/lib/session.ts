@@ -9,13 +9,19 @@ export interface SessionPayload extends Record<string, unknown> {
 
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
   console.error(
-    "[orgchart] WARNING: SESSION_SECRET is not set. Using the insecure dev fallback key in production is a security risk. Set SESSION_SECRET to at least 32 random characters. Generate one with: openssl rand -base64 32"
+    "[orgchart] FATAL: SESSION_SECRET is not set. Set it to at least 32 random characters: openssl rand -base64 32"
   );
 }
 
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "orgchart-internal-secret-key-2026!!"
-);
+function getSecretKey(): Uint8Array {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("[orgchart] SESSION_SECRET must be set in production");
+  }
+  return new TextEncoder().encode(
+    secret ?? "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
+  );
+}
 
 export const SESSION_COOKIE = "orgchart_token";
 export const SESSION_EXPIRY = "7d";
@@ -25,12 +31,12 @@ export async function signToken(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(SESSION_EXPIRY)
-    .sign(SECRET_KEY);
+    .sign(getSecretKey());
 }
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET_KEY);
+    const { payload } = await jwtVerify(token, getSecretKey());
     return payload as unknown as SessionPayload;
   } catch {
     return null;

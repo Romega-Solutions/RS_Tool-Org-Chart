@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
-import { X, UserRound, Briefcase, ChevronLeft } from "lucide-react";
+import { X, UserRound, Briefcase, ChevronLeft, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PersonForm } from "@/components/admin/person-form";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { TreeNode } from "@/types";
 
@@ -13,6 +14,8 @@ interface Props {
   onClose: () => void;
   onSelectPerson?: (person: TreeNode) => void;
   tree?: TreeNode[];
+  isEditor?: boolean;
+  onPersonUpdated?: () => void;
 }
 
 function getInitials(name: string) {
@@ -110,7 +113,7 @@ function MiniHierarchyCard({
   );
 }
 
-export function PersonDetailPanel({ person, onClose, onSelectPerson, tree }: Props) {
+export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEditor, onPersonUpdated }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<TreeNode[]>([]);
   const handlePanelClose = useCallback(() => {
@@ -187,7 +190,7 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree }: Pro
             transition={enterTransition}
             // UX §3: reduced-motion
             style={{ willChange: "transform, opacity" }}
-            className="absolute top-0 right-0 z-20 h-full w-80 bg-card border-l border-border shadow-2xl flex flex-col rounded-l-xl outline-none motion-reduce:transition-none"
+            className="absolute top-0 right-0 z-20 h-full w-80 bg-card border-l border-border shadow-lg flex flex-col rounded-l-xl outline-none motion-reduce:transition-none"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">
@@ -208,16 +211,48 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree }: Pro
                   Person Details
                 </h3>
               </div>
-              {/* UX §1: aria-labels */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePanelClose}
-                aria-label="Close detail panel"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-150"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {isEditor && person && (
+                  <PersonForm
+                    person={{
+                      id: person.id,
+                      name: person.name,
+                      title: person.title,
+                      isActive: person.isActive,
+                      departmentId: person.department?.id ?? 0,
+                      reportsTo: person.reportsTo ?? null,
+                      displayOrder: person.displayOrder ?? 0,
+                      photoUrl: person.photoUrl,
+                      createdAt: person.createdAt ?? "",
+                      updatedAt: person.updatedAt ?? "",
+                      employmentType: person.employmentType ?? null,
+                      projectIds: person.projectIds ?? null,
+                      departmentName: person.department?.name ?? null,
+                      departmentColor: person.department?.color ?? null,
+                    }}
+                    onSave={() => onPersonUpdated?.()}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Edit person"
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-150"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePanelClose}
+                  aria-label="Close detail panel"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-150"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Content — animate on person change for smooth transitions */}

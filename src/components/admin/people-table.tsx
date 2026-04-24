@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, createElement } from "react";
+import { useState, useEffect, useCallback, useMemo, createElement, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 interface PersonRow extends Person {
   departmentName: string | null;
@@ -158,13 +159,17 @@ function SmoothCheckbox({
 }: {
   checked: boolean;
   indeterminate?: boolean;
-  onChange: () => void;
+  onChange: (shiftKey: boolean) => void;
   ariaLabel: string;
 }) {
   return (
     <label
       className="group relative inline-flex cursor-pointer items-center justify-center"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onChange(e.shiftKey);
+      }}
     >
       <input
         type="checkbox"
@@ -174,7 +179,7 @@ function SmoothCheckbox({
         ref={(el) => {
           if (el) el.indeterminate = indeterminate;
         }}
-        onChange={onChange}
+        onChange={() => {/* handled by label onClick */}}
         className="peer sr-only"
       />
       <span
@@ -201,11 +206,11 @@ function SmoothCheckbox({
   );
 }
 
-export function PeopleTable() {
+export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter }) {
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialFilter ?? "active");
   const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
   const [loading, setLoading] = useState(true);
 
@@ -282,6 +287,8 @@ export function PeopleTable() {
   }, [filtered, sortColumn]);
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const lastClickedIndexRef = useRef<number | null>(null);
+  const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
   const [deleteIntent, setDeleteIntent] = useState<{
@@ -367,13 +374,28 @@ export function PeopleTable() {
     persistSavedViews(next);
   }
 
-  const toggleSelect = useCallback((id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
+  const toggleSelect = useCallback((id: number, shiftKey = false) => {
+    const currentIndex = visibleRows.findIndex((p) => p.id === id);
+
+    if (shiftKey && lastClickedIndexRef.current !== null && lastClickedIndexRef.current !== currentIndex) {
+      const from = Math.min(lastClickedIndexRef.current, currentIndex);
+      const to = Math.max(lastClickedIndexRef.current, currentIndex);
+      const rangeIds = visibleRows.slice(from, to + 1).map((p) => p.id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const rid of rangeIds) next.add(rid);
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    }
+
+    lastClickedIndexRef.current = currentIndex;
+  }, [visibleRows]);
 
   const toggleSelectAll = useCallback(() => {
     setSelected((prev) => {
@@ -398,6 +420,7 @@ export function PeopleTable() {
       );
       setSelected(new Set());
       await fetchPeople();
+      toast.success(`${ids.length} ${ids.length === 1 ? "person" : "people"} activated`);
     } finally {
       setBulkBusy(false);
     }
@@ -419,6 +442,7 @@ export function PeopleTable() {
       );
       setSelected(new Set());
       await fetchPeople();
+      toast.success(`${ids.length} ${ids.length === 1 ? "person" : "people"} deactivated`);
     } finally {
       setBulkBusy(false);
     }
@@ -459,11 +483,13 @@ export function PeopleTable() {
       setPeople((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isActive: updated.isActive } : p))
       );
+      toast.success(`${current.name} ${nextIsActive ? "activated" : "deactivated"}`);
     } catch {
       // Revert on failure
       setPeople((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
       );
+      toast.error("Failed to update status");
     } finally {
       setTogglingIds((prev) => {
         const next = new Set(prev);
@@ -485,6 +511,7 @@ export function PeopleTable() {
     if (!deleteIntent || bulkBusy) return;
     setBulkBusy(true);
     try {
+      const count = deleteIntent.ids.length;
       await Promise.all(deleteIntent.ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
       setSelected((prev) => {
         const next = new Set(prev);
@@ -493,6 +520,7 @@ export function PeopleTable() {
       });
       setDeleteIntent(null);
       await fetchPeople();
+      toast.success(`${count} ${count === 1 ? "person" : "people"} deleted`);
     } finally {
       setBulkBusy(false);
     }
@@ -768,7 +796,7 @@ export function PeopleTable() {
                 <th className="px-3 py-2 text-left"><div className="h-4 w-12 rounded bg-muted animate-pulse" /></th>
                 <th className="px-3 py-2 text-left"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></th>
                 <th className="px-3 py-2 text-left"><div className="h-4 w-14 rounded bg-muted animate-pulse" /></th>
-                <th className="px-3 py-2 text-right"><div className="h-4 w-16 rounded bg-muted animate-pulse ml-auto" /></th>
+                {/* Actions column removed */}
               </tr>
             </thead>
             <tbody>
@@ -784,7 +812,7 @@ export function PeopleTable() {
                   <td className="px-3 py-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /></td>
                   <td className="px-3 py-2"><div className="h-5 w-20 rounded-full bg-muted animate-pulse" /></td>
                   <td className="px-3 py-2"><div className="h-5 w-14 rounded-full bg-muted animate-pulse" /></td>
-                  <td className="px-3 py-2"><div className="flex justify-end gap-1"><div className="size-7 rounded-md bg-muted animate-pulse" /><div className="size-7 rounded-md bg-muted animate-pulse" /></div></td>
+                  {/* Actions column removed */}
                 </tr>
               ))}
             </tbody>
@@ -910,7 +938,7 @@ export function PeopleTable() {
                         : <ListFilter className="size-3.5 opacity-40" />}
                   </button>
                 </th>
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
+                {/* Actions column removed — row click opens edit */}
               </tr>
             </thead>
             <tbody>
@@ -918,10 +946,16 @@ export function PeopleTable() {
                 <tr
                   key={person.id}
                   onClick={(e) => {
-                    // Don't toggle selection if clicking buttons, inputs, or links
                     const target = e.target as HTMLElement;
+                    // Don't do anything if clicking interactive elements
                     if (target.closest("button, input, a, [role=menuitem]")) return;
-                    toggleSelect(person.id);
+                    // Checkbox column click → toggle selection
+                    if (target.closest("td")?.cellIndex === 0) {
+                      toggleSelect(person.id, e.shiftKey);
+                      return;
+                    }
+                    // Anywhere else → open edit
+                    setEditingPerson(person);
                   }}
                   className={cn(
                     "border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200",
@@ -933,7 +967,7 @@ export function PeopleTable() {
                   <td className="w-10 px-3 py-2">
                     <SmoothCheckbox
                       checked={selected.has(person.id)}
-                      onChange={() => toggleSelect(person.id)}
+                      onChange={(shiftKey) => toggleSelect(person.id, shiftKey)}
                       ariaLabel={`Select ${person.name}`}
                     />
                   </td>
@@ -981,29 +1015,7 @@ export function PeopleTable() {
                     </button>
                   </td>
 
-                  {/* Actions */}
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-1">
-                      <PersonForm
-                        person={person}
-                        onSave={fetchPeople}
-                        trigger={
-                          <Button variant="ghost" size="icon-sm" title="Edit" className="cursor-pointer transition-all duration-200">
-                            <Pencil className="size-4" />
-                          </Button>
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Delete"
-                        onClick={() => handleDelete(person)}
-                        className="cursor-pointer hover:bg-destructive/10 transition-all duration-200"
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </td>
+                  {/* Actions column removed — row click opens edit, delete via bulk actions */}
                 </tr>
               ))}
             </tbody>
@@ -1016,6 +1028,16 @@ export function PeopleTable() {
         <p className="text-xs text-muted-foreground tabular-nums">
           Showing {visibleRows.length} of {people.length} people
         </p>
+      )}
+
+      {/* Row-click edit dialog */}
+      {editingPerson && (
+        <PersonForm
+          person={editingPerson}
+          onSave={() => { setEditingPerson(null); fetchPeople(); }}
+          open={true}
+          onOpenChange={(isOpen) => { if (!isOpen) setEditingPerson(null); }}
+        />
       )}
 
       <ConfirmDialog

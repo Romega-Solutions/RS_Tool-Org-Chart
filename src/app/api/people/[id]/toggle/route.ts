@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireEditor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Invalid person id" }, { status: 400 });
   }
 
-  const actor = await getUserFromRequest(request);
+  const [actor, authErr] = await requireEditor(request);
+  if (authErr) return authErr;
   const person = db.select().from(people).where(eq(people.id, personId)).get();
   if (!person) {
     return NextResponse.json({ error: "Person not found" }, { status: 404 });
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     "person",
     personId,
     person.name,
-    actor?.username ?? null
+    actor.username
   );
   const updated = db.select().from(people).where(eq(people.id, personId)).get();
   return NextResponse.json(updated);

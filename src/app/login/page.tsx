@@ -2,16 +2,18 @@
 import NextImage from "next/image";
 import { motion } from "framer-motion";
 import { LoginForm } from "@/components/auth/login-form";
+import { ChartBackgroundDecor } from "@/components/chart/chart-background-decor";
 import { Shield } from "lucide-react";
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 dark:from-background dark:via-background dark:to-background">
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-background">
+      <ChartBackgroundDecor />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-md px-4"
+        className="relative z-10 w-full max-w-md px-4"
       >
         <div className="bg-card border border-border rounded-2xl shadow-xl p-8 space-y-6">
           <div className="text-center">

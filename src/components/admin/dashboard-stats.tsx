@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person, Department } from "@/types";
@@ -190,107 +191,139 @@ export function DashboardStats() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total People */}
-        <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                Total People
-              </CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-rs-primary-500/10 flex items-center justify-center">
-                <Users className="w-4 h-4 text-rs-primary-400" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonLine className="h-8 w-16" />
-            ) : (
-              <p className="text-3xl font-bold text-foreground">
-                {stats.totalCount}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger render={<Link href="/admin/team?filter=all" className="group cursor-pointer" />}>
+            <Card className="bg-card border-border hover:shadow-md hover:border-rs-primary-500/40 transition-all duration-200 h-full">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                    Total People
+                  </CardTitle>
+                  <div className="w-8 h-8 rounded-lg bg-rs-primary-500/10 flex items-center justify-center group-hover:bg-rs-primary-500/20 transition-colors">
+                    <Users className="w-4 h-4 text-rs-primary-400" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  {loading ? (
+                    <SkeletonLine className="h-8 w-16" />
+                  ) : (
+                    <p className="text-3xl font-bold text-foreground">
+                      {stats.totalCount}
+                    </p>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all duration-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>View all team members</TooltipContent>
+        </Tooltip>
 
         {/* Active */}
-        <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                Active
-              </CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <UserCheck className="w-4 h-4 text-emerald-400" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonLine className="h-8 w-16" />
-            ) : (
-              <div>
-                <p className="text-3xl font-bold text-foreground">
-                  {stats.activeCount}
-                </p>
-                {stats.totalCount > 0 && (
-                  <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    {Math.round(
-                      (stats.activeCount / stats.totalCount) * 100
-                    )}
-                    % of total
-                  </p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger render={<Link href="/admin/team?filter=active" className="group cursor-pointer" />}>
+            <Card className="bg-card border-border hover:shadow-md hover:border-emerald-500/40 transition-all duration-200 h-full">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                    Active
+                  </CardTitle>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                    <UserCheck className="w-4 h-4 text-emerald-400" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  {loading ? (
+                    <SkeletonLine className="h-8 w-16" />
+                  ) : (
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">
+                        {stats.activeCount}
+                      </p>
+                      {stats.totalCount > 0 && (
+                        <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" />
+                          {Math.round(
+                            (stats.activeCount / stats.totalCount) * 100
+                          )}
+                          % of total
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all duration-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>View active members</TooltipContent>
+        </Tooltip>
 
         {/* Inactive */}
-        <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                Inactive
-              </CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <UserX className="w-4 h-4 text-amber-400" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonLine className="h-8 w-16" />
-            ) : (
-              <p className="text-3xl font-bold text-foreground">
-                {stats.inactiveCount}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger render={<Link href="/admin/team?filter=inactive" className="group cursor-pointer" />}>
+            <Card className="bg-card border-border hover:shadow-md hover:border-amber-500/40 transition-all duration-200 h-full">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                    Inactive
+                  </CardTitle>
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                    <UserX className="w-4 h-4 text-amber-400" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  {loading ? (
+                    <SkeletonLine className="h-8 w-16" />
+                  ) : (
+                    <p className="text-3xl font-bold text-foreground">
+                      {stats.inactiveCount}
+                    </p>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all duration-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>View inactive members</TooltipContent>
+        </Tooltip>
 
         {/* Departments */}
-        <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                Departments
-              </CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-rs-accent-500/10 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-rs-accent-400" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonLine className="h-8 w-16" />
-            ) : (
-              <p className="text-3xl font-bold text-foreground">
-                {stats.departmentCount}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger render={<Link href="/admin/team?tab=departments" className="group cursor-pointer" />}>
+            <Card className="bg-card border-border hover:shadow-md hover:border-rs-accent-500/40 transition-all duration-200 h-full">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                    Departments
+                  </CardTitle>
+                  <div className="w-8 h-8 rounded-lg bg-rs-accent-500/10 flex items-center justify-center group-hover:bg-rs-accent-500/20 transition-colors">
+                    <Building2 className="w-4 h-4 text-rs-accent-400" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  {loading ? (
+                    <SkeletonLine className="h-8 w-16" />
+                  ) : (
+                    <p className="text-3xl font-bold text-foreground">
+                      {stats.departmentCount}
+                    </p>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all duration-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>Manage departments</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Two-column section */}
@@ -329,7 +362,13 @@ export function DashboardStats() {
                 {stats.deptStats.map((dept) => {
                   const DeptIcon = getDeptIcon(dept.name);
                   return (
-                  <div key={dept.id}>
+                  <Tooltip key={dept.id}>
+                  <TooltipTrigger render={
+                    <Link
+                      href="/admin/team?tab=departments"
+                      className="block rounded-lg px-2 py-1.5 -mx-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                    />
+                  }>
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <div
@@ -359,7 +398,9 @@ export function DashboardStats() {
                         }}
                       />
                     </div>
-                  </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{`Manage ${dept.name} department`}</TooltipContent>
+                  </Tooltip>
                   );
                 })}
               </div>
@@ -400,10 +441,13 @@ export function DashboardStats() {
             ) : (
               <div className="space-y-1">
                 {stats.recentPeople.map((person) => (
-                  <div
-                    key={person.id}
-                    className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors"
-                  >
+                  <Tooltip key={person.id}>
+                  <TooltipTrigger render={
+                    <Link
+                      href="/admin/team"
+                      className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                    />
+                  }>
                     {/* Avatar */}
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
@@ -434,7 +478,9 @@ export function DashboardStats() {
                     <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
                       {formatRelative(person.updatedAt)}
                     </span>
-                  </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{`View ${person.name} in team`}</TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             )}

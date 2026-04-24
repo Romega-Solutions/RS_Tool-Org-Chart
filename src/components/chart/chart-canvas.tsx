@@ -694,7 +694,7 @@ export function ChartCanvas({ isEditor }: Props) {
       )}
 
       {/* Detail panel */}
-      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} tree={data.tree} />
+      <PersonDetailPanel person={selectedPerson} onClose={handleClosePanel} onSelectPerson={handleSearchSelect} tree={data.tree} isEditor={isEditor} onPersonUpdated={refetch} />
       <ConfirmDialog
         open={Boolean(deleteIntent)}
         title={deleteIntent?.title || "Confirm delete"}

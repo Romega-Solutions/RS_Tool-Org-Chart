@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { people, departments, settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
+import { requireEditor } from "@/lib/auth";
 
 interface CsvRow {
   name: string;
@@ -13,6 +14,8 @@ interface CsvRow {
 }
 
 export async function POST(request: Request) {
+  const [, authErr] = await requireEditor(request);
+  if (authErr) return authErr;
   // Get sheets_url from request body OR from settings
   let sheetsUrl: string | null = null;
   try {
@@ -38,9 +41,9 @@ export async function POST(request: Request) {
     const res = await fetch(sheetsUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     text = await res.text();
-  } catch (err) {
+  } catch {
     return NextResponse.json(
-      { error: `Failed to fetch sheet: ${err instanceof Error ? err.message : String(err)}` },
+      { error: "Failed to fetch sheet. Check the URL and try again." },
       { status: 502 }
     );
   }

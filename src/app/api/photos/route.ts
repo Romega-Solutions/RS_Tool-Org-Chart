@@ -3,10 +3,13 @@ import path from "path";
 import fs from "fs/promises";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const [, err] = await requireAuth(request);
+  if (err) return err;
   const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
 
   let filenames: string[] = [];

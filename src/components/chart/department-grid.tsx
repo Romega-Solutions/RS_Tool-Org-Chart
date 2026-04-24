@@ -77,7 +77,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
 
   return (
     <div
-      className="h-full overflow-y-auto bg-background p-6"
+      className="h-full overflow-y-auto bg-background px-6 pb-6 pt-20"
       onContextMenu={handleBackgroundContextMenu}
     >
       <div className={cn(
@@ -91,7 +91,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
           return (
           <div
             key={department.id}
-            className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-md hover:border-primary/30 transition-all duration-200"
+            className="bg-card border border-border rounded-lg overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] hover:shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)] dark:hover:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.3)] hover:border-primary/30 transition-all duration-200"
           >
             {/* Department header */}
             <div

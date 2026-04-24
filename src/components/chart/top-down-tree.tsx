@@ -21,9 +21,9 @@ import { computeTranslateExtent } from "@/lib/chart-utils";
 import type { TreeNode } from "@/types";
 
 const Y_GAP = 160;
-const GRID_X_GAP = 142;
-const GRID_ROW_GAP = 128;
-const NODE_GAP = 40;
+const GRID_X_GAP = 200;
+const GRID_ROW_GAP = Y_GAP;
+const NODE_GAP = 50;
 const DROP_RADIUS = 130;
 const NODE_WIDTH = 160;
 const NODE_HEIGHT = 90;
@@ -124,14 +124,16 @@ function layoutSubtree(node: TreeNode): SubtreeResult {
     const rows = Math.ceil(allLeaves.length / cols);
     const positions: PosEntry[] = [];
 
-    // Grid occupies 1 contour depth level — use max row width
-    let maxRowWidth = 0;
+    // Each grid row claims a contour depth level so adjacent subtrees
+    // don't place nodes into the vertical space the grid occupies.
+    const left: number[] = [];
+    const right: number[] = [];
     for (let r = 0; r < rows; r++) {
       const itemsInRow = r < rows - 1 ? cols : allLeaves.length - r * cols;
-      maxRowWidth = Math.max(maxRowWidth, (itemsInRow - 1) * GRID_X_GAP + NODE_WIDTH);
+      const rowWidth = (itemsInRow - 1) * GRID_X_GAP + NODE_WIDTH;
+      left.push(0);
+      right.push(rowWidth);
     }
-    const left = [0];
-    const right = [maxRowWidth];
 
     // Position leaves with yOffset for rows within the single depth level
     for (let i = 0; i < allLeaves.length; i++) {
@@ -606,7 +608,8 @@ export function TopDownTree({
           onInit={onInit}
           nodeTypes={nodeTypes}
           nodesDraggable={isEditor}
-          selectionOnDrag
+          panOnDrag
+          selectionOnDrag={false}
           selectionMode={SelectionMode.Partial}
           selectionKeyCode="Shift"
           fitView

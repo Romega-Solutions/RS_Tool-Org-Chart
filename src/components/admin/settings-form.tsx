@@ -34,6 +34,9 @@ import {
   Settings,
   Link2,
   RefreshCw,
+  Plug,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -119,6 +122,8 @@ export function SettingsForm() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedApi, setCopiedApi] = useState<string | null>(null);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -200,6 +205,17 @@ export function SettingsForm() {
     setCopied(true);
     toast.success("Embed code copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleCopyApi(text: string, label: string) {
+    await navigator.clipboard.writeText(text);
+    setCopiedApi(label);
+    toast.success(`${label} copied`);
+    setTimeout(() => setCopiedApi(null), 2000);
+  }
+
+  function getBaseUrl() {
+    return typeof window !== "undefined" ? window.location.origin : "https://your-domain.com";
   }
 
   async function handleSync() {
@@ -500,6 +516,214 @@ export function SettingsForm() {
                 <Copy className="w-4 h-4" />
               )}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Integration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
+              <Plug className="w-4.5 h-4.5 text-cyan-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base">API Integration</CardTitle>
+              <CardDescription>
+                Connect external tools like n8n, AI agents, or custom scripts.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* API Key */}
+          <div className="space-y-1.5">
+            <Label>API Key</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  readOnly
+                  value={apiKeyVisible ? (form.api_key || "Not configured — set API_KEY in .env.local") : (form.api_key ? "••••••••••••••••••••••••••••••••" : "Not configured")}
+                  className="font-mono text-sm pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full w-10 cursor-pointer text-muted-foreground hover:text-foreground"
+                  onClick={() => setApiKeyVisible(!apiKeyVisible)}
+                  aria-label={apiKeyVisible ? "Hide API key" : "Show API key"}
+                >
+                  {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+              {form.api_key && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 cursor-pointer"
+                  onClick={() => handleCopyApi(form.api_key, "API key")}
+                  aria-label="Copy API key"
+                >
+                  {copiedApi === "API key" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Set <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">API_KEY</code> in <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">.env.local</code>. Send as <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">X-API-Key</code> header.
+            </p>
+          </div>
+
+          {/* Quick Start */}
+          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
+            <p className="text-xs font-medium text-foreground">Quick Start</p>
+            <div className="relative">
+              <pre className="text-[11px] font-mono text-foreground/80 overflow-x-auto whitespace-pre">{`curl ${getBaseUrl()}/api/people -H "X-API-Key: YOUR_KEY"`}</pre>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute -top-1 right-0 h-6 w-6 cursor-pointer text-muted-foreground hover:text-foreground"
+                onClick={() => handleCopyApi(`curl ${getBaseUrl()}/api/people -H "X-API-Key: YOUR_KEY"`, "Quick start")}
+                aria-label="Copy quick start command"
+              >
+                {copiedApi === "Quick start" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              For <strong>n8n</strong>: HTTP Request node → Header: <code className="text-[10px] bg-muted px-1 py-0.5 rounded">X-API-Key</code>
+            </p>
+          </div>
+
+          {/* Endpoint Reference — grouped */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Endpoint Reference</Label>
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Public</span>
+                <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">Editor</span>
+                <span className="text-muted-foreground">
+                  <code className="bg-muted px-1 py-0.5 rounded">?</code> = optional
+                </span>
+              </div>
+            </div>
+
+            {/* Endpoint groups */}
+            {([
+              {
+                group: "People",
+                color: "text-blue-500",
+                endpoints: [
+                  ["List", "GET", "/api/people", "?includeInactive=true", "Public"],
+                  ["Get", "GET", "/api/people/{id}", "", "Public"],
+                  ["Create", "POST", "/api/people", "name, title, departmentId, reportsTo?, photoUrl?", "Editor"],
+                  ["Update", "PATCH", "/api/people/{id}", "name?, title?, departmentId?, reportsTo?, isActive?", "Editor"],
+                  ["Delete", "DELETE", "/api/people/{id}", "", "Editor"],
+                  ["Toggle active", "PATCH", "/api/people/{id}/toggle", "", "Editor"],
+                  ["Reassign", "PATCH", "/api/people/reassign", "personId, reportsTo", "Editor"],
+                ],
+              },
+              {
+                group: "Departments",
+                color: "text-violet-500",
+                endpoints: [
+                  ["List", "GET", "/api/departments", "", "Public"],
+                  ["Create", "POST", "/api/departments", "name, color?, displayOrder?", "Editor"],
+                  ["Update", "PATCH", "/api/departments/{id}", "name?, color?, displayOrder?", "Editor"],
+                  ["Delete", "DELETE", "/api/departments/{id}", "", "Editor"],
+                ],
+              },
+              {
+                group: "Chart & Data",
+                color: "text-emerald-500",
+                endpoints: [
+                  ["Org chart tree", "GET", "/api/chart-data", "", "Public"],
+                  ["Audit log", "GET", "/api/audit", "?page=1&limit=50", "Public"],
+                  ["Photos", "GET", "/api/photos", "", "Public"],
+                  ["Delete photo", "DELETE", "/api/photos/{filename}", "", "Editor"],
+                ],
+              },
+              {
+                group: "System",
+                color: "text-amber-500",
+                endpoints: [
+                  ["Get settings", "GET", "/api/settings", "", "Public"],
+                  ["Update settings", "PATCH", "/api/settings", '{"key":"value"}', "Editor"],
+                  ["Import CSV", "POST", "/api/import", "multipart file", "Editor"],
+                  ["Sync Sheets", "POST", "/api/sync", "url?", "Editor"],
+                  ["Upload photo", "POST", "/api/upload", "multipart file", "Editor"],
+                ],
+              },
+            ] as { group: string; color: string; endpoints: [string, string, string, string, string][] }[]).map(({ group, color, endpoints }) => (
+              <div key={group} className="rounded-lg border border-border overflow-hidden">
+                <div className="bg-muted/40 px-3 py-1.5 border-b border-border">
+                  <span className={`text-xs font-semibold ${color}`}>{group}</span>
+                  <span className="text-[10px] text-muted-foreground ml-2">{endpoints.length} endpoints</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <tbody className="divide-y divide-border/50">
+                      {endpoints.map(([action, method, endpoint, body, auth]) => {
+                        const methodBg = method === "GET" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : method === "POST" ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                          : method === "PATCH" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : "bg-red-500/15 text-red-600 dark:text-red-400";
+                        return (
+                          <tr key={`${method}-${endpoint}`} className="hover:bg-muted/20 transition-colors">
+                            <td className="px-3 py-1.5 whitespace-nowrap w-[100px]">{action}</td>
+                            <td className="px-2 py-1.5 w-[70px]">
+                              <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold font-mono ${methodBg}`}>{method}</span>
+                            </td>
+                            <td className="px-2 py-1.5 font-mono text-muted-foreground text-[11px]">{endpoint}</td>
+                            <td className="px-2 py-1.5 font-mono text-muted-foreground/70 text-[10px] max-w-[180px] truncate" title={body}>{body || "—"}</td>
+                            <td className="px-2 py-1.5 w-[60px] text-right">
+                              {auth === "Editor" && (
+                                <span className="inline-block rounded-full w-1.5 h-1.5 bg-amber-500" title="Requires auth" />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Examples — tabbed */}
+          <div className="space-y-2">
+            <Label>Examples</Label>
+            <div className="space-y-2">
+              {([
+                ["List people", `curl ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY"`],
+                ["Create person", `curl -X POST ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3}'`],
+                ["Update person", `curl -X PATCH ${getBaseUrl()}/api/people/1 \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"title":"Senior Engineer"}'`],
+                ["Reassign", `curl -X PATCH ${getBaseUrl()}/api/people/reassign \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"personId":10,"reportsTo":14}'`],
+                ["Chart data", `curl ${getBaseUrl()}/api/chart-data`],
+              ] as [string, string][]).map(([label, cmd]) => (
+                <div key={label} className="rounded-lg border border-border overflow-hidden">
+                  <div className="flex items-center justify-between bg-muted/40 px-3 py-1 border-b border-border">
+                    <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 cursor-pointer text-muted-foreground hover:text-foreground"
+                      onClick={() => handleCopyApi(cmd, label)}
+                      aria-label={`Copy ${label} example`}
+                    >
+                      {copiedApi === label ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  <pre className="px-3 py-2 text-[11px] font-mono text-foreground/80 overflow-x-auto whitespace-pre">{cmd}</pre>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All mutation endpoints return the updated object as JSON. Unauthorized requests return <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">401</code> or <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">403</code>.
+            </p>
           </div>
         </CardContent>
       </Card>

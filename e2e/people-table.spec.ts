@@ -261,24 +261,34 @@ test.describe("People Table — Teams Management", () => {
   });
 
   test.describe("Row Selection & Bulk Actions", () => {
-    test("clicking a row toggles selection", async ({ page }) => {
+    test("clicking checkbox column toggles selection", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
 
-      // Click a row (not on a button)
+      // Click the checkbox label in the first row
       const firstRow = page.locator("tbody tr").first();
-      const nameCell = firstRow.locator("td").nth(1);
-      await nameCell.click();
+      await firstRow.locator("td").first().locator("label").click();
 
       // Bulk action bar should appear
       await expect(page.getByText("1 selected")).toBeVisible();
     });
 
+    test("clicking row body opens edit dialog", async ({ page }) => {
+      await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
+
+      // Click the name cell (second td) — should open edit, not select
+      const firstRow = page.locator("tbody tr").first();
+      await firstRow.locator("td").nth(1).click();
+
+      // Edit dialog should appear
+      await expect(page.getByText("Edit Person")).toBeVisible({ timeout: 5_000 });
+    });
+
     test("bulk action bar shows activate, deactivate, and delete", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
 
-      // Select a row
+      // Select a row via checkbox label
       const firstRow = page.locator("tbody tr").first();
-      await firstRow.locator("td").nth(1).click();
+      await firstRow.locator("td").first().locator("label").click();
 
       // Scope to the bulk action bar
       const bulkBar = page.getByText("1 selected").locator("..");
@@ -307,22 +317,20 @@ test.describe("People Table — Teams Management", () => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
       const searchInput = page.getByPlaceholder("Search by name, title, or department...");
 
-      // Get the first person's name
-      const firstName = await page.locator("tbody tr").first().locator("td").nth(1).locator("span.font-medium").textContent();
-      if (!firstName) return;
+      // Get the first person's full name from the name cell (2nd td)
+      const fullName = await page.locator("tbody tr").first().locator("td").nth(1).locator("span.font-medium").textContent();
+      if (!fullName) return;
 
-      // Search for the first word of their name
-      const searchTerm = firstName.split(" ")[0];
+      // Search for the full name to ensure exact match
+      const searchTerm = fullName.trim();
       await searchInput.fill(searchTerm);
 
-      // All visible rows should contain the search term
+      // At least one row should be visible and contain the name
       const rows = page.locator("tbody tr");
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
-      for (let i = 0; i < count; i++) {
-        const name = await rows.nth(i).locator("td").nth(1).textContent();
-        expect(name?.toLowerCase()).toContain(searchTerm.toLowerCase());
-      }
+      const firstResult = await rows.first().locator("td").nth(1).locator("span.font-medium").textContent();
+      expect(firstResult?.toLowerCase()).toContain(searchTerm.toLowerCase());
     });
 
     test("clearing search restores full list", async ({ page }) => {

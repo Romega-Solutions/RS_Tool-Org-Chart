@@ -35,14 +35,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ExportQuickAction } from "@/components/export/export-quick-action";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
+function SidebarTooltip({
+  label,
+  show,
+  children,
+}: {
+  label: string;
+  show: boolean;
+  children: React.ReactElement;
+}) {
+  if (!show) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children}></TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chart", label: "Chart", icon: Network },
   { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
-  { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/admin/photos", label: "Photos", icon: Image },
+  { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/accessibility", label: "Accessibility & Support", icon: LifeBuoy },
 ];
 
@@ -95,20 +114,21 @@ export function AdminSidebar() {
             <p className="text-[10px] text-muted-foreground mt-0.5">Org Chart Generator</p>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="shrink-0 w-8 h-8 cursor-pointer transition-all duration-200 text-muted-foreground hover:text-foreground"
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
-        </Button>
+        <SidebarTooltip label={collapsed ? "Expand sidebar" : "Collapse sidebar"} show={collapsed}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="shrink-0 w-8 h-8 cursor-pointer transition-all duration-200 text-muted-foreground hover:text-foreground"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </Button>
+        </SidebarTooltip>
       </div>
 
       {/* Navigation */}
@@ -117,23 +137,22 @@ export function AdminSidebar() {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              title={collapsed ? item.label : undefined}
-              className={`flex items-center ${
-                collapsed ? "justify-center px-2" : "gap-3 px-3"
-              } py-2 rounded-md text-sm cursor-pointer transition-all duration-200 ${
-                isActive
-                  ? "bg-rs-primary-500/15 text-rs-primary-400 font-medium border-l-2 border-rs-primary-400"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-              style={isActive && !collapsed ? { paddingLeft: 10 } : undefined}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
+            <SidebarTooltip key={item.href} label={item.label} show={collapsed}>
+              <Link
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex items-center ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3 border-l-2"
+                } py-2 rounded-md text-sm cursor-pointer transition-all duration-200 ${
+                  isActive
+                    ? "bg-rs-primary-500/15 text-rs-primary-400 font-medium border-rs-primary-400"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground border-transparent"
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </Link>
+            </SidebarTooltip>
           );
         })}
       </nav>
@@ -161,65 +180,69 @@ export function AdminSidebar() {
               </span>
             </button>
           ) : (
-            <button
-              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-              aria-label={quickActionsOpen ? "Hide quick actions" : "Show quick actions"}
-              aria-expanded={quickActionsOpen}
-              aria-controls="sidebar-quick-actions"
-              className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
-              title={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"}
-            >
-              {quickActionsOpen ? (
-                <ChevronDown className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5" />
-              )}
-            </button>
+            <SidebarTooltip label={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"} show={true}>
+              <button
+                onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+                aria-label={quickActionsOpen ? "Hide quick actions" : "Show quick actions"}
+                aria-expanded={quickActionsOpen}
+                aria-controls="sidebar-quick-actions"
+                className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
+              >
+                {quickActionsOpen ? (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </SidebarTooltip>
           )}
           {quickActionsOpen && <div id="sidebar-quick-actions" className="space-y-1"><PersonForm
             onSave={() => router.refresh()}
             trigger={
-              <Button
-                variant="ghost"
-                size={collapsed ? "icon" : "sm"}
-                className={`${
-                  collapsed ? "w-full justify-center" : "w-full justify-start"
-                } text-muted-foreground hover:text-rs-primary-400 hover:bg-rs-primary-500/10 cursor-pointer transition-all duration-200`}
-                title={collapsed ? "Add Person" : undefined}
-              >
-                <UserPlus className="w-4 h-4 shrink-0" />
-                {!collapsed && <span className="ml-2">Add Person</span>}
-              </Button>
+              <SidebarTooltip label="Add Person" show={collapsed}>
+                <Button
+                  variant="ghost"
+                  size={collapsed ? "icon" : "sm"}
+                  className={`${
+                    collapsed ? "w-full justify-center" : "w-full justify-start"
+                  } text-muted-foreground hover:text-rs-primary-400 hover:bg-rs-primary-500/10 cursor-pointer transition-all duration-200`}
+                >
+                  <UserPlus className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span className="ml-2">Add Person</span>}
+                </Button>
+              </SidebarTooltip>
             }
           />
           <DepartmentForm
             onSave={() => router.refresh()}
             trigger={
-              <Button
-                variant="ghost"
-                size={collapsed ? "icon" : "sm"}
-                className={`${
-                  collapsed ? "w-full justify-center" : "w-full justify-start"
-                } text-muted-foreground hover:text-rs-accent-400 hover:bg-rs-accent-500/10 cursor-pointer transition-all duration-200`}
-                title={collapsed ? "Add Department" : undefined}
-              >
-                <FolderPlus className="w-4 h-4 shrink-0" />
-                {!collapsed && <span className="ml-2">Add Department</span>}
-              </Button>
+              <SidebarTooltip label="Add Department" show={collapsed}>
+                <Button
+                  variant="ghost"
+                  size={collapsed ? "icon" : "sm"}
+                  className={`${
+                    collapsed ? "w-full justify-center" : "w-full justify-start"
+                  } text-muted-foreground hover:text-rs-accent-400 hover:bg-rs-accent-500/10 cursor-pointer transition-all duration-200`}
+                >
+                  <FolderPlus className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span className="ml-2">Add Department</span>}
+                </Button>
+              </SidebarTooltip>
             }
           />
-          <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "sm"}
-            className={`${
-              collapsed ? "w-full justify-center" : "w-full justify-start"
-            } text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all duration-200`}
-            onClick={() => setImportOpen(true)}
-            title={collapsed ? "Import CSV" : undefined}
-          >
-            <Upload className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="ml-2">Import CSV</span>}
-          </Button>
+          <SidebarTooltip label="Import CSV" show={collapsed}>
+            <Button
+              variant="ghost"
+              size={collapsed ? "icon" : "sm"}
+              className={`${
+                collapsed ? "w-full justify-center" : "w-full justify-start"
+              } text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all duration-200`}
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="ml-2">Import CSV</span>}
+            </Button>
+          </SidebarTooltip>
           <ExportQuickAction collapsed={collapsed} />
           </div>}
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
@@ -240,36 +263,38 @@ export function AdminSidebar() {
             {user?.name} ({user?.role})
           </p>
         )}
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          className={`${
-            collapsed ? "w-full justify-center" : "w-full justify-start"
-          } text-muted-foreground cursor-pointer transition-all duration-200`}
-          onClick={toggle}
-          title={collapsed ? (theme === "dark" ? "Light Mode" : "Dark Mode") : undefined}
-        >
-          {theme === "dark" ? (
-            <Sun className="w-4 h-4 shrink-0" />
-          ) : (
-            <Moon className="w-4 h-4 shrink-0" />
-          )}
-          {!collapsed && (
-            <span className="ml-2">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          className={`${
-            collapsed ? "w-full justify-center" : "w-full justify-start"
-          } text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all duration-200`}
-          onClick={logout}
-          title={collapsed ? "Sign Out" : undefined}
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="ml-2">Sign Out</span>}
-        </Button>
+        <SidebarTooltip label={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"} show={collapsed}>
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`${
+              collapsed ? "w-full justify-center" : "w-full justify-start"
+            } text-muted-foreground cursor-pointer transition-all duration-200`}
+            onClick={toggle}
+          >
+            {theme === "dark" ? (
+              <Moon className="w-4 h-4 shrink-0" />
+            ) : (
+              <Sun className="w-4 h-4 shrink-0" />
+            )}
+            {!collapsed && (
+              <span className="ml-2">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
+            )}
+          </Button>
+        </SidebarTooltip>
+        <SidebarTooltip label="Sign Out" show={collapsed}>
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            className={`${
+              collapsed ? "w-full justify-center" : "w-full justify-start"
+            } text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all duration-200`}
+            onClick={logout}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="ml-2">Sign Out</span>}
+          </Button>
+        </SidebarTooltip>
       </div>
     </aside>
   );

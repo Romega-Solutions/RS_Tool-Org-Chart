@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
-import { getUserFromRequest } from "@/lib/auth";
+import { requireEditor } from "@/lib/auth";
 
 export async function DELETE(
   request: Request,
@@ -17,7 +17,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
   }
 
-  const actor = await getUserFromRequest(request);
+  const [actor, authErr] = await requireEditor(request);
+  if (authErr) return authErr;
   const photoUrl = `/uploads/photos/${filename}`;
   const filePath = path.join(process.cwd(), "public", "uploads", "photos", filename);
 
@@ -32,7 +33,7 @@ export async function DELETE(
       .set({ photoUrl: null, updatedAt: new Date().toISOString() })
       .where(eq(people.id, person.id))
       .run();
-    logChange("updated", "person", person.id, person.name, actor?.username ?? null, { photoUrl: null });
+    logChange("updated", "person", person.id, person.name, actor.username, { photoUrl: null });
   }
 
   try {

@@ -212,7 +212,8 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
           nodeTypes={nodeTypes}
           nodesDraggable={false}
           nodesConnectable={false}
-          selectionOnDrag
+          panOnDrag
+          selectionOnDrag={false}
           selectionMode={SelectionMode.Partial}
           selectionKeyCode="Shift"
           fitView

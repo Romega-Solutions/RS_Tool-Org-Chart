@@ -1,6 +1,6 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Feature-complete — all 3 improvement phases done, needs production env config
+> Status: Feature-complete — all 3 improvement phases done + Phase 4 UX polish
 > Last updated: 2026-04-24
 
 ---
@@ -8,7 +8,7 @@
 ## What's Done
 
 ### Core Features
-- [x] 4 chart views (top-down, horizontal, collapsible, department grid)
+- [x] 3 chart views (top-down, horizontal, department grid)
 - [x] Full CRUD admin for people and departments
 - [x] CSV import
 - [x] Google Sheets sync (configure URL in Settings → "Sync Now")
@@ -42,19 +42,26 @@
 - [x] Photo management page (/admin/photos) with upload/delete
 - [x] Delete cascade warning for people with direct reports
 
+### Phase 4 — UX Polish ✅
+- [x] Dashboard stat cards are clickable (link to filtered team views)
+- [x] shadcn tooltips on dashboard cards and sidebar (collapsed state)
+- [x] Sidebar tooltips for all nav items, quick actions, and footer when collapsed
+- [x] Print page restyled to match Department Grid view layout
+- [x] Print respects current theme (light/dark mode friendly)
+- [x] Login page uses dotted background pattern (matches chart view)
+- [x] Login inputs styled with depth/inset effect
+- [x] Team page reads URL params (?tab=, ?filter=) for deep linking from dashboard
+
 ## Remaining
 
-### For Ken (production)
+### For Mark (production + data)
 
 - [ ] 🔴 Set `SESSION_SECRET` env var (min 32 chars) before production deploy — see `.env.example`
 - [ ] 🟡 Change default account passwords after first deploy
-- [ ] 🟡 Deploy to production (Docker on VPS) if not already live
+- [ ] 🟡 Deploy to production (Docker on VPS)
 - [ ] 🟢 Configure Google Sheets URL for real org data (currently uses sample)
-
-### For Mark
-
 - [ ] 🟡 Populate with real team data (or import via CSV/Google Sheets)
-- [ ] 🟢 Add team photos if desired
+- [ ] 🟢 Add team photos
 
 ---
 
