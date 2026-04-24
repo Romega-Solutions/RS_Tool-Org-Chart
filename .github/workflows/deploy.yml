@@ -7,17 +7,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: VPS_HOST
     steps:
-      - name: Debug secrets
-        run: |
-          echo "Host length: ${#HOST}"
-          echo "User length: ${#USER}"
-          echo "Pass length: ${#PASS}"
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USER }}
-          PASS: ${{ secrets.VPS_PASSWORD }}
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
