@@ -66,10 +66,29 @@ function mapRow(raw: Record<string, string>): {
 
 /** Split multi-department entries — returns the primary department */
 function parsePrimaryDepartment(raw: string): string {
-  // "HR/Finance & Tech" → "HR/Finance" (first before &)
-  // "Marketing & Sales" → "Marketing"
   const parts = raw.split(/\s*&\s*/);
   return parts[0].trim();
+}
+
+/** Convert photo value to a usable URL — handles Google Drive links, direct URLs, and filenames */
+function normalizePhotoUrl(raw: string): string {
+  const trimmed = raw.trim();
+  // Google Drive share link → direct image URL
+  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+  }
+  // Google Drive open link
+  const openMatch = trimmed.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (openMatch) {
+    return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
+  }
+  // Already a URL
+  if (trimmed.startsWith("http") || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  // Filename only
+  return `/uploads/photos/${trimmed}`;
 }
 
 export async function POST(request: Request) {
@@ -158,7 +177,7 @@ export async function POST(request: Request) {
     }
 
     const existingId = nameToId.get(row.name.toLowerCase());
-    const photoUrl = row.photo ? (row.photo.startsWith("/") || row.photo.startsWith("http") ? row.photo : `/uploads/photos/${row.photo}`) : null;
+    const photoUrl = row.photo ? normalizePhotoUrl(row.photo) : null;
 
     if (existingId) {
       db.update(people).set({

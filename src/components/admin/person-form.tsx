@@ -254,6 +254,22 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
                   </button>
                 )}
               </div>
+              <Input
+                placeholder="or paste image / Google Drive URL"
+                className="text-xs h-8"
+                value={photoUrl?.startsWith("/uploads/") ? "" : photoUrl ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  if (!val) { setPhotoUrl(null); setPhotoPreview(null); return; }
+                  // Convert Google Drive share links to direct image URLs
+                  const driveMatch = val.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                  const openMatch = val.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                  const fileId = driveMatch?.[1] ?? openMatch?.[1];
+                  const url = fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : val;
+                  setPhotoUrl(url);
+                  setPhotoPreview(url);
+                }}
+              />
             </div>
           </div>
 
