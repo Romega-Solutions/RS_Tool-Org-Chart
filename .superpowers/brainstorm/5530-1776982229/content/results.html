@@ -1,0 +1,29 @@
+<h2>Overview Dashboard — Complete</h2>
+<p class="subtitle">All 6 Playwright tests passing</p>
+
+<div style="max-width:700px;margin:0 auto;">
+  <div style="background:#0d1117;border-radius:12px;padding:20px;font-family:monospace;font-size:13px;line-height:1.8;color:#c9d1d9;">
+    <div style="color:#8b949e;margin-bottom:8px;">Running 6 tests using 1 worker</div>
+    <div><span style="color:#3fb950;">✓</span> can switch to Overview view from view switcher <span style="color:#8b949e;">(14.7s)</span></div>
+    <div><span style="color:#3fb950;">✓</span> shows department breakdown section <span style="color:#8b949e;">(9.3s)</span></div>
+    <div><span style="color:#3fb950;">✓</span> shows employment types and largest teams sections <span style="color:#8b949e;">(2.5s)</span></div>
+    <div><span style="color:#3fb950;">✓</span> stat cards display numeric values <span style="color:#8b949e;">(2.6s)</span></div>
+    <div><span style="color:#3fb950;">✓</span> zoom buttons are hidden in overview mode <span style="color:#8b949e;">(2.2s)</span></div>
+    <div><span style="color:#3fb950;">✓</span> can switch back to Top-Down from Overview <span style="color:#8b949e;">(2.7s)</span></div>
+    <div style="margin-top:12px;color:#3fb950;font-weight:bold;">6 passed (36.4s)</div>
+  </div>
+
+  <div style="margin-top:24px;">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Changes Summary</h3>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+      <div style="display:flex;gap:8px;"><span style="color:#f85149;font-weight:600;">deleted</span> <span>collapsible-tree.tsx</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#3fb950;font-weight:600;">new</span> <span>overview-dashboard.tsx</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#3fb950;font-weight:600;">new</span> <span>e2e/overview-dashboard.spec.ts</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#d29922;font-weight:600;">modified</span> <span>view-switcher.tsx — collapsible → overview</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#d29922;font-weight:600;">modified</span> <span>chart-canvas.tsx — render OverviewDashboard</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#d29922;font-weight:600;">modified</span> <span>chart-toolbar.tsx — hide zoom in overview</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#d29922;font-weight:600;">modified</span> <span>tree.ts — add getOrgStats()</span></div>
+      <div style="display:flex;gap:8px;"><span style="color:#d29922;font-weight:600;">modified</span> <span>types/index.ts — add OrgStats interface</span></div>
+    </div>
+  </div>
+</div>
