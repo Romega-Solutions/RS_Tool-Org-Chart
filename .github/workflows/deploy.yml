@@ -8,12 +8,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug secrets
+        run: |
+          echo "Host length: ${#HOST}"
+          echo "User length: ${#USER}"
+          echo "Pass length: ${#PASS}"
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          PASS: ${{ secrets.VPS_PASSWORD }}
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
           script: |
             cd ~/RS_Tool-Org-Chart
             git pull origin master
