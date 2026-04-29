@@ -18,31 +18,20 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
-            echo "=== Deployment Permissions & Sync ==="
-            # Use sudo for permission-heavy Easypanel paths
-            # Note: This assumes VPS_USER has passwordless sudo or we can't easily fix this via SSH action without it.
-            
             PROJECT_DIR="/etc/easypanel/projects/romega-projects/rs_tool-org-chart/code"
-            
-            # Use a more accessible path for the git clone to avoid permission issues if possible
-            # OR try to fix permissions on the project dir
-            
-            sudo git config --global --add safe.directory "$PROJECT_DIR"
-            
+            echo "=== Syncing Code (No Auth) ==="
             cd "$PROJECT_DIR"
             
-            # Try to sync using sudo
             if [ ! -d ".git" ]; then
-              echo "Initializing git repository..."
               sudo git init
               sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
             fi
             
-            sudo git fetch origin master
-            sudo git reset --hard origin/master
+            sudo git fetch origin master --depth=1
+            sudo git reset --hard FETCH_HEAD
             
-            echo "=== Triggering Easypanel Rebuild ==="
+            echo "=== Triggering Rebuild ==="
             sudo touch package.json
             
-            echo "=== Final Status ==="
+            echo "=== Latest Commit on VPS ==="
             sudo git log -1 --oneline
