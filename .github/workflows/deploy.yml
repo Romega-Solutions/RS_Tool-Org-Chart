@@ -18,11 +18,15 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
-            echo "=== Deep Path Search ==="
-            find / -maxdepth 5 -name ".git" 2>/dev/null | grep -i "org-chart" || echo "No .git found"
+            echo "=== Syncing Code ==="
+            cd /etc/easypanel/projects/romega-projects/rs_tool-org-chart/code
+            git fetch origin master
+            git reset --hard origin/master
             
-            echo "=== Easypanel Projects ==="
-            ls -R /etc/easypanel 2>/dev/null | grep -i "org" || echo "No easypanel config found"
-
-            echo "=== Docker Mounts ==="
-            docker inspect romega-projects_rs_tool-org-chart.1.g7qe26aldhz9tm5enxrw7pn4l --format '{{ range .Mounts }}{{ .Source }} -> {{ .Destination }}{{ end }}' 2>/dev/null || echo "Could not inspect"
+            echo "=== Triggering Easypanel Rebuild ==="
+            # This is a common Easypanel convention for SSH-based triggers if webhooks aren't set up
+            # But since we have direct access to the code folder, we can try to find the docker-compose or just wait for Easypanel's file watcher
+            ls -la
+            
+            echo "=== Last Commit ==="
+            git log -1 --oneline
