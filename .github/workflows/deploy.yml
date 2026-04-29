@@ -22,28 +22,11 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Since git is already there and we are in a SSH session, 
-            # we can try to use a personal access token if we had one,
-            # but since we don't, we will try to fix the local git config to use a non-interactive fetch.
-            
-            echo "=== Attempting Git Sync (Local Fix) ==="
-            sudo git config --global user.email "deploy@romega.local"
-            sudo git config --global user.name "Deploy Bot"
-            
-            # Initialize if needed
-            if [ ! -d ".git" ]; then
-              sudo git init
-              sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
-            fi
-            
-            # Use the GITHUB_TOKEN as a password for git fetch
-            # Note: This requires passing the token from the action
-            # For now, let's try the most robust way to get a public repo:
-            # Re-cloning into a temp dir and moving files
-            
-            echo "=== Re-cloning master ==="
+            # Use GITHUB_TOKEN passed as an environment variable to authenticate the clone
+            # This is the most standard way for GitHub Actions to talk to GitHub
+            echo "=== Re-cloning master with AUTH ==="
             sudo rm -rf /tmp/org-chart-master
-            sudo git clone --depth=1 https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git /tmp/org-chart-master
+            sudo git clone --depth=1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Romega-Solutions/RS_Tool-Org-Chart.git /tmp/org-chart-master
             
             echo "=== Copying files ==="
             sudo cp -rf /tmp/org-chart-master/* .
@@ -53,4 +36,4 @@ jobs:
             sudo touch package.json
             
             echo "=== Deployment Success ==="
-            sudo git log -1 --oneline || date
+            date
