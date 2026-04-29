@@ -22,18 +22,19 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Use public URL with git fetch, but need to bypass potential credential prompt
-            # Git 2.3+ allows setting terminal prompt to false
-            export GIT_TERMINAL_PROMPT=0
+            # Use a protocol that doesn't prompt for auth on public repos
+            # Or use a dummy credential helper
+            sudo git config --global credential.helper store
+            echo "https://nobody:password@github.com" | sudo tee ~/.git-credentials > /dev/null
             
-            # Since sudo was needed for touch, use it for git too
             if [ ! -d ".git" ]; then
               sudo git init
               sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
             fi
             
             echo "=== Fetching from GitHub ==="
-            sudo git fetch --depth=1 origin master
+            # Use explicit URL to bypass local remote config issues
+            sudo git fetch --depth=1 https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git master
             
             echo "=== Resetting to latest master ==="
             sudo git reset --hard FETCH_HEAD
