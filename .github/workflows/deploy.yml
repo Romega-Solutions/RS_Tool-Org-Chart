@@ -1,8 +1,9 @@
-name: Deploy to VPS
+﻿name: Deploy to VPS
 
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,10 +18,16 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
-            echo "=== Home contents ==="
-            ls -la ~/
-            echo "=== Find repo ==="
-            find / -maxdepth 4 -name "docker-compose.yaml" -path "*/Org*" 2>/dev/null
-            find / -maxdepth 4 -name "docker-compose.yaml" -path "*/org*" 2>/dev/null
-            echo "=== Docker containers ==="
+            echo "=== User & Home ==="
+            whoami
+            pwd
+            
+            echo "=== Searching for project folder ==="
+            # Search in home and common locations
+            find ~ /var/www /opt /etc/easypanel -maxdepth 4 -name ".git" 2>/dev/null | xargs -I {} dirname {} | grep -i "org-chart" || echo "No .git folders found with 'org-chart'"
+            
+            echo "=== Searching for Docker Compose ==="
+            find / -maxdepth 5 -name "docker-compose.yaml" -path "*org*" 2>/dev/null || echo "No docker-compose.yaml found"
+
+            echo "=== Docker Status ==="
             docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
