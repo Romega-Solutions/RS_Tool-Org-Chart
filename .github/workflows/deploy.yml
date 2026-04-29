@@ -19,19 +19,27 @@ jobs:
           port: 22
           script: |
             PROJECT_DIR="/etc/easypanel/projects/romega-projects/rs_tool-org-chart/code"
-            echo "=== Syncing Code (No Auth) ==="
+            echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
+            # Use public URL with git fetch, but need to bypass potential credential prompt
+            # Git 2.3+ allows setting terminal prompt to false
+            export GIT_TERMINAL_PROMPT=0
+            
+            # Since sudo was needed for touch, use it for git too
             if [ ! -d ".git" ]; then
               sudo git init
               sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
             fi
             
-            sudo git fetch origin master --depth=1
+            echo "=== Fetching from GitHub ==="
+            sudo git fetch --depth=1 origin master
+            
+            echo "=== Resetting to latest master ==="
             sudo git reset --hard FETCH_HEAD
             
-            echo "=== Triggering Rebuild ==="
+            echo "=== Triggering Easypanel Build ==="
             sudo touch package.json
             
-            echo "=== Latest Commit on VPS ==="
+            echo "=== VPS Deployment Log ==="
             sudo git log -1 --oneline
