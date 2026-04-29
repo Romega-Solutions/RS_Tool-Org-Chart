@@ -22,25 +22,18 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Use a protocol that doesn't prompt for auth on public repos
-            # Or use a dummy credential helper
-            sudo git config --global credential.helper store
-            echo "https://nobody:password@github.com" | sudo tee ~/.git-credentials > /dev/null
+            # Use wget to download the archive of the master branch from GitHub
+            # This completely bypasses git auth issues for public repos
+            echo "=== Downloading master branch archive ==="
+            sudo wget https://github.com/Romega-Solutions/RS_Tool-Org-Chart/archive/refs/heads/master.tar.gz -O master.tar.gz
             
-            if [ ! -d ".git" ]; then
-              sudo git init
-              sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
-            fi
-            
-            echo "=== Fetching from GitHub ==="
-            # Use explicit URL to bypass local remote config issues
-            sudo git fetch --depth=1 https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git master
-            
-            echo "=== Resetting to latest master ==="
-            sudo git reset --hard FETCH_HEAD
+            echo "=== Extracting archive ==="
+            # Extract and move files to current directory, overwriting existing ones
+            sudo tar -xzf master.tar.gz --strip-components=1
+            sudo rm master.tar.gz
             
             echo "=== Triggering Easypanel Build ==="
             sudo touch package.json
             
-            echo "=== VPS Deployment Log ==="
-            sudo git log -1 --oneline
+            echo "=== Deployment Success ==="
+            date
