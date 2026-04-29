@@ -22,18 +22,21 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Use wget to download the archive of the master branch from GitHub
-            # This completely bypasses git auth issues for public repos
-            echo "=== Downloading master branch archive ==="
-            sudo wget https://github.com/Romega-Solutions/RS_Tool-Org-Chart/archive/refs/heads/master.tar.gz -O master.tar.gz
+            # Use curl to download the zip from the correct public URL structure
+            echo "=== Downloading master branch zip ==="
+            sudo curl -L https://github.com/Romega-Solutions/RS_Tool-Org-Chart/archive/refs/heads/master.zip -o master.zip
             
-            echo "=== Extracting archive ==="
-            # Extract and move files to current directory, overwriting existing ones
-            sudo tar -xzf master.tar.gz --strip-components=1
-            sudo rm master.tar.gz
+            echo "=== Extracting zip ==="
+            # Use unzip which is standard on most VPS
+            sudo unzip -o master.zip
+            
+            echo "=== Moving files ==="
+            # GitHub zips include a nested folder like project-name-master
+            sudo cp -rn RS_Tool-Org-Chart-master/. .
+            sudo rm -rf RS_Tool-Org-Chart-master master.zip
             
             echo "=== Triggering Easypanel Build ==="
             sudo touch package.json
             
-            echo "=== Deployment Success ==="
+            echo "=== Deployment Log ==="
             date
