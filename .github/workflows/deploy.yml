@@ -22,21 +22,35 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Use curl to download the zip from the correct public URL structure
-            echo "=== Downloading master branch zip ==="
-            sudo curl -L https://github.com/Romega-Solutions/RS_Tool-Org-Chart/archive/refs/heads/master.zip -o master.zip
+            # Since git is already there and we are in a SSH session, 
+            # we can try to use a personal access token if we had one,
+            # but since we don't, we will try to fix the local git config to use a non-interactive fetch.
             
-            echo "=== Extracting zip ==="
-            # Use unzip which is standard on most VPS
-            sudo unzip -o master.zip
+            echo "=== Attempting Git Sync (Local Fix) ==="
+            sudo git config --global user.email "deploy@romega.local"
+            sudo git config --global user.name "Deploy Bot"
             
-            echo "=== Moving files ==="
-            # GitHub zips include a nested folder like project-name-master
-            sudo cp -rn RS_Tool-Org-Chart-master/. .
-            sudo rm -rf RS_Tool-Org-Chart-master master.zip
+            # Initialize if needed
+            if [ ! -d ".git" ]; then
+              sudo git init
+              sudo git remote add origin https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git
+            fi
             
-            echo "=== Triggering Easypanel Build ==="
+            # Use the GITHUB_TOKEN as a password for git fetch
+            # Note: This requires passing the token from the action
+            # For now, let's try the most robust way to get a public repo:
+            # Re-cloning into a temp dir and moving files
+            
+            echo "=== Re-cloning master ==="
+            sudo rm -rf /tmp/org-chart-master
+            sudo git clone --depth=1 https://github.com/Romega-Solutions/RS_Tool-Org-Chart.git /tmp/org-chart-master
+            
+            echo "=== Copying files ==="
+            sudo cp -rf /tmp/org-chart-master/* .
+            sudo cp -rf /tmp/org-chart-master/.[!.]* . 2>/dev/null || true
+            
+            echo "=== Triggering Rebuild ==="
             sudo touch package.json
             
-            echo "=== Deployment Log ==="
-            date
+            echo "=== Deployment Success ==="
+            sudo git log -1 --oneline || date
