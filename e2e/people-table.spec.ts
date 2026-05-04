@@ -334,8 +334,10 @@ test.describe("People Table — Teams Management", () => {
       await expect(page.getByText("No results found")).toBeVisible();
 
       await searchInput.clear();
-      // After clearing, should show at least as many rows as before
-      await expect(page.locator("tbody tr")).toHaveCount(initialCount, { timeout: 5_000 });
+      // After clearing, results should return and the empty state should disappear.
+      await expect(page.getByText("No results found")).not.toBeVisible();
+      await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 5_000 });
+      expect(await page.locator("tbody tr").count()).toBeGreaterThanOrEqual(initialCount);
     });
   });
 

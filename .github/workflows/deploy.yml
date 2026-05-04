@@ -5,8 +5,56 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  ci:
+    name: Lint, build, and test
+    runs-on: ubuntu-latest
+    env:
+      SESSION_SECRET: ci-only-session-secret-for-build-and-e2e-checks
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test --browser=chromium
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+
   deploy:
+    name: Deploy to VPS
+    needs: ci
     runs-on: ubuntu-latest
     environment: VPS_HOST
     steps:
@@ -37,3 +85,14 @@ jobs:
             
             echo "=== Deployment Success ==="
             date
+
+      - name: Verify live site
+        env:
+          LIVE_URL: https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host
+        run: |
+          set -euo pipefail
+
+          echo "Checking $LIVE_URL"
+          html="$(curl --fail --silent --show-error --location --max-time 30 "$LIVE_URL")"
+          echo "$html" | grep -q "<title>Org Chart - Romega Solutions</title>"
+          echo "Live site returned expected title."

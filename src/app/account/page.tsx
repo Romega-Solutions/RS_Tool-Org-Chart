@@ -396,7 +396,7 @@ export default function AccountPage() {
 
         {/* Footer note */}
         <p className="text-center text-[11px] text-muted-foreground/50">
-          You'll be signed out after changing your password.
+          You&apos;ll be signed out after changing your password.
         </p>
       </div>
 

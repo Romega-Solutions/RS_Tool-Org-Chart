@@ -136,11 +136,16 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
       mountedRef.current = true;
       return;
     }
-    setAnimating(true);
-    setNodes(initialNodes);
-    setEdges(initialEdges);
+    const frame = requestAnimationFrame(() => {
+      setAnimating(true);
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+    });
     const timer = setTimeout(() => setAnimating(false), 400);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   // Update node highlight when highlightedNodeId changes
