@@ -99,14 +99,14 @@ test.describe("People Table — Teams Management", () => {
 
     test("Department column sorts A-Z then Z-A", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
-      const deptHeader = page.locator("thead button", { hasText: /^Department$/ });
-      const deptTh = deptHeader.locator("xpath=ancestor::th[1]");
+      const deptTh = page.locator("thead th").filter({ hasText: /^Department$/ });
+      const deptHeader = deptTh.getByRole("button", { name: /^Department$/ });
 
-      await deptHeader.scrollIntoViewIfNeeded();
-      await deptHeader.click({ force: true });
+      await expect(deptHeader).toBeVisible();
+      await deptHeader.click();
       await expect(deptTh).toHaveAttribute("aria-sort", "ascending");
 
-      await deptHeader.click({ force: true });
+      await deptHeader.click();
       await expect(deptTh).toHaveAttribute("aria-sort", "descending");
     });
 
