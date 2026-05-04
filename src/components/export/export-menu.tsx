@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileSpreadsheet, Image, Printer } from "lucide-react";
+import { Download, FileSpreadsheet, Image as ImageIcon, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,7 +30,7 @@ export function ExportMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuItem disabled={exporting} onClick={() => void handleExportPng()}>
-          <Image className="w-3.5 h-3.5" />
+          <ImageIcon className="w-3.5 h-3.5" />
           PNG Image
         </DropdownMenuItem>
         <DropdownMenuItem disabled={exporting} onClick={() => void handleExcel()}>

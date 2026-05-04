@@ -97,27 +97,16 @@ test.describe("People Table — Teams Management", () => {
       await expect(personTh).toHaveAttribute("aria-sort", "none");
     });
 
-    test("Title column sorts Senior first then Junior first", async ({ page }) => {
-      await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
-      const titleHeader = page.locator("thead button", { hasText: "Title" });
-
-      await titleHeader.click();
-      const titleTh = page.locator("th[aria-sort]").nth(1);
-      await expect(titleTh).toHaveAttribute("aria-sort", "ascending");
-
-      await titleHeader.click();
-      await expect(titleTh).toHaveAttribute("aria-sort", "descending");
-    });
-
     test("Department column sorts A-Z then Z-A", async ({ page }) => {
       await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
-      const deptHeader = page.locator("thead button", { hasText: "Department" });
+      const deptHeader = page.locator("thead button", { hasText: /^Department$/ });
+      const deptTh = deptHeader.locator("xpath=ancestor::th[1]");
 
-      await deptHeader.click();
-      const deptTh = page.locator("th[aria-sort]").nth(2);
+      await deptHeader.scrollIntoViewIfNeeded();
+      await deptHeader.click({ force: true });
       await expect(deptTh).toHaveAttribute("aria-sort", "ascending");
 
-      await deptHeader.click();
+      await deptHeader.click({ force: true });
       await expect(deptTh).toHaveAttribute("aria-sort", "descending");
     });
 

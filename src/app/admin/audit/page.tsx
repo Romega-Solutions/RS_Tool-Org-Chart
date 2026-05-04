@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +69,7 @@ export default function AuditLogPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  async function fetchAuditLog(p = page) {
+  const fetchAuditLog = useCallback(async (p = page) => {
     setLoading(true);
     setError(null);
     try {
@@ -92,11 +92,11 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page]);
 
   useEffect(() => {
     fetchAuditLog(page);
-  }, [page]);
+  }, [fetchAuditLog, page]);
 
   return (
     <div className="space-y-6">

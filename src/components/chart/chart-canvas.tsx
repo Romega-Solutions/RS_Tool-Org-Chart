@@ -197,7 +197,7 @@ export function ChartCanvas({ isEditor }: Props) {
     setHighlightedNodeId(nodeId);
   }, [view]);
 
-  const { focusedNodeId } = useKeyboardNav(
+  useKeyboardNav(
     data?.tree ?? [],
     handleNodeClick,
     handleZoomToNode

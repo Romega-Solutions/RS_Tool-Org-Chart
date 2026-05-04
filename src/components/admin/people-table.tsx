@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonForm } from "@/components/admin/person-form";
-import { Pencil, Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, Filter, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users, Download } from "lucide-react";
+import { Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person } from "@/types";
@@ -497,14 +497,6 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
         return next;
       });
     }
-  }
-
-  function handleDelete(person: PersonRow) {
-    setDeleteIntent({
-      ids: [person.id],
-      title: `Delete ${person.name}?`,
-      description: "This will deactivate this person. You can undo this action.",
-    });
   }
 
   async function confirmDelete() {

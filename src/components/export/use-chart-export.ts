@@ -260,8 +260,6 @@ export function useChartExport() {
         // Compute bounding box of all nodes in flow coordinates
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const node of nodeEls) {
-          const x = parseFloat(node.style.left || "0") + (parseFloat(node.getAttribute("data-x") || node.style.left || "0"));
-          const y = parseFloat(node.style.top || "0") + (parseFloat(node.getAttribute("data-y") || node.style.top || "0"));
           // Use transform for position (React Flow uses CSS transform)
           const transform = node.style.transform;
           const match = transform?.match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
@@ -351,7 +349,6 @@ export function useChartExport() {
 
       // Branding from settings
       const chartTitle = settings?.chart_title || "Organization Chart";
-      const orgName = settings?.org_name || "";
       const tagline = settings?.tagline || "";
       const colorPrimary = settings?.color_primary || "#005ce6";
       const logoUrl = settings?.logo_url || "/assets/romega-logo.svg";

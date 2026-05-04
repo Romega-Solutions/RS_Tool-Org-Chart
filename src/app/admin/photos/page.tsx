@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Upload,
   Trash2,
-  Image,
   UserCircle,
   ImageOff,
   Camera,
