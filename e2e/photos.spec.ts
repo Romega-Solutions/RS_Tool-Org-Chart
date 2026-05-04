@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+const png1x1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64",
+);
+
 // Helper: login via API and inject cookie into browser context
 async function loginAsEditor(page: import("@playwright/test").Page) {
   const res = await page.request.post("/api/auth/login", {
@@ -43,6 +48,50 @@ async function loginAsViewer(page: import("@playwright/test").Page) {
         path: "/",
       }]);
     }
+  }
+}
+
+async function uploadQaPhoto(page: import("@playwright/test").Page) {
+  const res = await page.request.post("/api/upload", {
+    multipart: {
+      file: {
+        name: `qa-gallery-${Date.now()}.png`,
+        mimeType: "image/png",
+        buffer: png1x1,
+      },
+    },
+  });
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  return body.url as string;
+}
+
+async function createQaPerson(page: import("@playwright/test").Page, photoUrl?: string | null) {
+  const departmentsRes = await page.request.get("/api/departments");
+  expect(departmentsRes.ok()).toBeTruthy();
+  const departments = await departmentsRes.json();
+  expect(departments.length).toBeGreaterThan(0);
+
+  const name = `QA Gallery ${Date.now()}`;
+  const createRes = await page.request.post("/api/people", {
+    data: {
+      name,
+      title: "QA Gallery Tester",
+      departmentId: departments[0].id,
+      reportsTo: null,
+      photoUrl: photoUrl ?? null,
+      displayOrder: 9999,
+    },
+  });
+  expect(createRes.status()).toBe(201);
+  const person = await createRes.json();
+  return { id: person.id as number, name };
+}
+
+async function deleteQaPhoto(page: import("@playwright/test").Page, photoUrl: string | null) {
+  const filename = photoUrl?.split("/").pop();
+  if (filename) {
+    await page.request.delete(`/api/photos/${encodeURIComponent(filename)}`).catch(() => undefined);
   }
 }
 
@@ -162,52 +211,53 @@ test.describe("Photos page — Editor", () => {
 });
 
 test.describe("Assign photo from gallery", () => {
+  let personId: number | null = null;
+  let photoUrl: string | null = null;
+
   test.beforeEach(async ({ page }) => {
     await loginAsEditor(page);
-    await page.goto("/admin/photos");
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (personId) {
+      await page.request.delete(`/api/people/${personId}`).catch(() => undefined);
+      personId = null;
+    }
+    await deleteQaPhoto(page, photoUrl);
+    photoUrl = null;
   });
 
   test("unused photo card shows Assign button on hover", async ({ page }) => {
-    const photos = await page.request.get("/api/photos");
-    const photoList = await photos.json();
-    const unusedPhoto = photoList.find((p: PhotoEntry) => !p.usedBy);
-    if (!unusedPhoto) {
-      test.skip();
-      return;
-    }
+    photoUrl = await uploadQaPhoto(page);
+    await page.goto("/admin/photos");
 
-    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: "Unused" }).first();
+    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: photoUrl.split("/").pop()! });
     await unusedCard.hover();
     await expect(unusedCard.getByRole("button", { name: /Assign/i })).toBeVisible();
   });
 
   test("Assign button opens person picker dialog", async ({ page }) => {
-    const photos = await page.request.get("/api/photos");
-    const photoList = await photos.json();
-    const unusedPhoto = photoList.find((p: PhotoEntry) => !p.usedBy);
-    if (!unusedPhoto) {
-      test.skip();
-      return;
-    }
+    photoUrl = await uploadQaPhoto(page);
+    const person = await createQaPerson(page);
+    personId = person.id;
+    await page.goto("/admin/photos");
 
-    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: "Unused" }).first();
+    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: photoUrl.split("/").pop()! });
     await unusedCard.hover();
     await unusedCard.getByRole("button", { name: /Assign/i }).click();
 
     await expect(page.getByRole("heading", { name: "Assign Photo" })).toBeVisible();
     await expect(page.getByPlaceholder(/Search by name/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(person.name) })).toBeVisible();
   });
 
   test("person picker dialog has searchable list", async ({ page }) => {
-    const photos = await page.request.get("/api/photos");
-    const photoList = await photos.json();
-    const unusedPhoto = photoList.find((p: PhotoEntry) => !p.usedBy);
-    if (!unusedPhoto) {
-      test.skip();
-      return;
-    }
+    photoUrl = await uploadQaPhoto(page);
+    const person = await createQaPerson(page);
+    personId = person.id;
+    await page.goto("/admin/photos");
 
-    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: "Unused" }).first();
+    const unusedCard = page.locator("[data-slot='card']").filter({ hasText: photoUrl.split("/").pop()! });
     await unusedCard.hover();
     await unusedCard.getByRole("button", { name: /Assign/i }).click();
 
@@ -218,27 +268,22 @@ test.describe("Assign photo from gallery", () => {
     await expect(page.getByText("No matching team members found.")).toBeVisible();
 
     await searchInput.clear();
-    const personButtons = page.locator("[role='dialog'] button[type='button']").filter({ hasNotText: /close/i });
-    await expect(personButtons.first()).toBeVisible();
+    await searchInput.fill(person.name);
+    await expect(page.getByRole("button", { name: new RegExp(person.name) })).toBeVisible();
   });
 
   test("assigned photo card does not show Assign button", async ({ page }) => {
-    const photos = await page.request.get("/api/photos");
-    const photoList = await photos.json();
-    const assignedPhoto = photoList.find((p: PhotoEntry) => p.usedBy);
-    if (!assignedPhoto) {
-      test.skip();
-      return;
-    }
+    photoUrl = await uploadQaPhoto(page);
+    const person = await createQaPerson(page, photoUrl);
+    personId = person.id;
+    await page.goto("/admin/photos");
 
-    const assignedCard = page.locator("[data-slot='card']").filter({ hasText: assignedPhoto.usedBy.name }).first();
+    const assignedCard = page.locator("[data-slot='card']").filter({ hasText: person.name }).first();
     await assignedCard.hover();
     await expect(assignedCard.getByRole("button", { name: /Delete/i })).toBeVisible();
     await expect(assignedCard.getByRole("button", { name: /Assign/i })).not.toBeVisible();
   });
 });
-
-type PhotoEntry = { filename: string; url: string; usedBy: { id: number; name: string } | null };
 
 test.describe("Photos page — Viewer", () => {
   test("viewer is blocked from /admin/photos (requireEditor)", async ({ page }) => {
