@@ -76,15 +76,13 @@ export function seedSettings() {
 }
 
 export function seedUsers() {
-  const existing = db.select({ count: count() }).from(users).get();
-  if (existing && existing.count > 0) return;
   for (const u of DEFAULT_USERS) {
     db.insert(users).values({
       username: u.username,
       name: u.name,
       passwordHash: hashSync(u.password, 10),
       role: u.role,
-    }).run();
+    }).onConflictDoNothing().run();
   }
 }
 
