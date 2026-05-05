@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, assetPath } from "@/lib/paths";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,10 +152,10 @@ export default function PhotosPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/photos");
+      const res = await fetch(apiPath("/api/photos"));
       if (!res.ok) throw new Error(`Failed to fetch photos (${res.status})`);
       setPhotos(await res.json());
-      const peopleRes = await fetch("/api/people");
+      const peopleRes = await fetch(apiPath("/api/people"));
       if (peopleRes.ok) {
         const allPeople = await peopleRes.json();
         setMissingPhotos(
@@ -207,7 +208,7 @@ export default function PhotosPage() {
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         formData.append("file", files[i]);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const res = await fetch(apiPath("/api/upload"), { method: "POST", body: formData });
         if (!res.ok) {
           const body = await res.json().catch(() => ({ error: "Upload failed" }));
           errors.push(`${files[i].name} — ${body.error}`);
@@ -305,7 +306,7 @@ export default function PhotosPage() {
     if (!assignPhoto) return;
     setAssigning(true);
     try {
-      const res = await fetch(`/api/people/${personId}`, {
+      const res = await fetch(apiPath(`/api/people/${personId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photoUrl: assignPhoto.url }),
@@ -338,10 +339,10 @@ export default function PhotosPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadRes = await fetch(apiPath("/api/upload"), { method: "POST", body: formData });
       if (!uploadRes.ok) return;
       const { url } = await uploadRes.json();
-      const patchRes = await fetch(`/api/people/${personId}`, {
+      const patchRes = await fetch(apiPath(`/api/people/${personId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photoUrl: url }),
@@ -549,7 +550,7 @@ export default function PhotosPage() {
               <div className="aspect-square bg-muted relative overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo.url}
+                  src={assetPath(photo.url)}
                   alt={photo.usedBy?.name ?? photo.filename}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
                 />

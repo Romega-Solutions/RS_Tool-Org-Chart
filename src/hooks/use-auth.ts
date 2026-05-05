@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback } from "react";
 import type { AuthUser } from "@/types";
 
@@ -7,7 +8,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch(apiPath("/api/auth/me"))
       .then((r) => r.json())
       .then((data) => {
         setUser(data ?? null);
@@ -17,7 +18,7 @@ export function useAuth() {
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<AuthUser | null> => {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch(apiPath("/api/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -29,7 +30,7 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(apiPath("/api/auth/logout"), { method: "POST" });
     setUser(null);
   }, []);
 

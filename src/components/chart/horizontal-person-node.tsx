@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,7 +66,7 @@ function HorizontalPersonNodeComponent({
         )}
         <div className="relative flex items-center gap-3">
           <Avatar className="w-10 h-10">
-            {photoUrl && <AvatarImage src={photoUrl} />}
+            {photoUrl && <AvatarImage src={assetPath(photoUrl)} />}
             <AvatarFallback className="bg-rs-primary-500/20 text-rs-primary-400 text-xs">
               {initials}
             </AvatarFallback>

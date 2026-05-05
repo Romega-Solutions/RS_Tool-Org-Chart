@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { appPath, assetPath } from "./helpers/paths";
 
 const png1x1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
@@ -6,7 +7,7 @@ const png1x1 = Buffer.from(
 );
 
 async function login(page: Page, username: string, password: string) {
-  const res = await page.request.post("/api/auth/login", { data: { username, password } });
+  const res = await page.request.post(appPath("/api/auth/login"), { data: { username, password } });
   expect(res.ok()).toBeTruthy();
   const token = res.headers()["set-cookie"]?.match(/orgchart_token=([^;]+)/)?.[1];
   expect(token).toBeTruthy();
@@ -25,13 +26,13 @@ test.describe.serial("Product QA flow", () => {
     await login(page, "admin", "admin123");
 
     try {
-      const departmentsRes = await page.request.get("/api/departments");
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
       expect(departmentsRes.ok()).toBeTruthy();
       const departments = await departmentsRes.json();
       expect(departments.length).toBeGreaterThan(0);
 
       await test.step("create, edit, and assign photo", async () => {
-        const createRes = await page.request.post("/api/people", {
+        const createRes = await page.request.post(appPath("/api/people"), {
           data: {
             name: qaName,
             title: "QA Analyst",
@@ -43,7 +44,7 @@ test.describe.serial("Product QA flow", () => {
         expect(createRes.status()).toBe(201);
         personId = (await createRes.json()).id;
 
-        const uploadRes = await page.request.post("/api/upload", {
+        const uploadRes = await page.request.post(appPath("/api/upload"), {
           multipart: {
             file: { name: "qa-avatar.png", mimeType: "image/png", buffer: png1x1 },
           },
@@ -52,27 +53,27 @@ test.describe.serial("Product QA flow", () => {
         photoUrl = (await uploadRes.json()).url;
         expect(photoUrl).toMatch(/^\/uploads\/photos\/.+\.webp$/);
 
-        const patchRes = await page.request.patch(`/api/people/${personId}`, {
+        const patchRes = await page.request.patch(appPath(`/api/people/${personId}`), {
           data: { name: qaEditedName, title: "QA Lead", photoUrl, isActive: true },
         });
         expect(patchRes.ok()).toBeTruthy();
       });
 
       await test.step("verify admin table and gallery display", async () => {
-        await page.goto("/admin/team");
+        await page.goto(appPath("/admin/team"));
         await page.getByPlaceholder("Search by name, title, or department...").fill(qaEditedName);
         const row = page.locator("tbody tr").filter({ hasText: qaEditedName });
         await expect(row).toBeVisible();
         await expect(row).toContainText("QA Lead");
-        await expect(row.locator(`img[src="${photoUrl}"]`).first()).toBeVisible();
+        await expect(row.locator(`img[src="${assetPath(photoUrl!)}"]`).first()).toBeVisible();
 
-        await page.goto("/admin/photos");
+        await page.goto(appPath("/admin/photos"));
         await expect(page.getByRole("heading", { name: "Photos", exact: true })).toBeVisible();
         await expect(page.locator("[data-slot='card']").filter({ hasText: qaEditedName })).toBeVisible();
       });
 
       await test.step("verify chart search and view modes", async () => {
-        await page.goto("/chart");
+        await page.goto(appPath("/chart"));
         await expect(page.getByText(qaEditedName).first()).toBeVisible({ timeout: 15_000 });
         await page.getByRole("button", { name: "Search people" }).click();
         await page.getByPlaceholder("Search by name or title...").fill(qaEditedName);
@@ -87,7 +88,7 @@ test.describe.serial("Product QA flow", () => {
       });
 
       await test.step("verify export and print output", async () => {
-        await page.goto("/chart");
+        await page.goto(appPath("/chart"));
         await page.getByRole("button", { name: "Open export options" }).click();
         const [excelDownload] = await Promise.all([
           page.waitForEvent("download"),
@@ -102,18 +103,18 @@ test.describe.serial("Product QA flow", () => {
         ]);
         expect(pngDownload.suggestedFilename()).toMatch(/org-chart-.+\.png$/);
 
-        await page.goto("/chart/print");
+        await page.goto(appPath("/chart/print"));
         await expect(page.getByText("Print-ready org chart")).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText(qaEditedName).first()).toBeVisible();
       });
 
       await test.step("verify mobile layout smoke", async () => {
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.goto("/chart");
+        await page.goto(appPath("/chart"));
         await expect(page.getByText(qaEditedName).first()).toBeVisible({ timeout: 15_000 });
         await expect(page.getByRole("button", { name: "Search people" })).toBeVisible();
 
-        await page.goto("/admin/photos");
+        await page.goto(appPath("/admin/photos"));
         await expect(page.getByRole("heading", { name: "Photos", exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: /Upload Photo/i }).first()).toBeVisible();
       });
@@ -123,9 +124,9 @@ test.describe.serial("Product QA flow", () => {
         const viewerPage = await viewerContext.newPage();
         await login(viewerPage, "viewer", "viewer123");
 
-        await viewerPage.goto("/admin/photos");
+        await viewerPage.goto(appPath("/admin/photos"));
         await expect(viewerPage.getByRole("heading", { name: "Photos", exact: true })).not.toBeVisible();
-        const forbiddenPatch = await viewerPage.request.patch(`/api/people/${personId}`, {
+        const forbiddenPatch = await viewerPage.request.patch(appPath(`/api/people/${personId}`), {
           data: { title: "Viewer Should Not Edit" },
         });
         expect(forbiddenPatch.status()).toBe(403);
@@ -133,11 +134,11 @@ test.describe.serial("Product QA flow", () => {
       });
 
       await test.step("delete disposable person and verify audit entries", async () => {
-        const deleteRes = await page.request.delete(`/api/people/${personId}`);
+        const deleteRes = await page.request.delete(appPath(`/api/people/${personId}`));
         expect(deleteRes.ok()).toBeTruthy();
         personId = null;
 
-        const auditRes = await page.request.get("/api/audit?limit=25");
+        const auditRes = await page.request.get(appPath("/api/audit?limit=25"));
         expect(auditRes.ok()).toBeTruthy();
         const audit = await auditRes.json();
         const entries = audit.entries ?? audit;
@@ -147,11 +148,11 @@ test.describe.serial("Product QA flow", () => {
       });
     } finally {
       if (personId) {
-        await page.request.delete(`/api/people/${personId}`).catch(() => undefined);
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
       }
       if (photoUrl) {
         const filename = photoUrl.split("/").pop();
-        if (filename) await page.request.delete(`/api/photos/${encodeURIComponent(filename)}`).catch(() => undefined);
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
       }
     }
   });

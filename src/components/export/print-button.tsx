@@ -2,10 +2,11 @@
 
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { appPath } from "@/lib/paths";
 
 export function PrintButton() {
   function handlePrint() {
-    const printUrl = new URL("/chart/print", window.location.origin);
+    const printUrl = new URL(appPath("/chart/print"), window.location.origin);
     const printWindow = window.open(printUrl.toString(), "_blank");
 
     if (!printWindow) {

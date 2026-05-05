@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, appPath, assetPath } from "@/lib/paths";
 
 import { useCallback, useState } from "react";
 import type { Department, Person } from "@/types";
@@ -27,7 +28,7 @@ export function useChartExport() {
   const { settings } = useSettings();
 
   const handlePrint = useCallback(() => {
-    const printUrl = new URL("/chart/print", window.location.origin);
+    const printUrl = new URL(appPath("/chart/print"), window.location.origin);
     const printWindow = window.open(printUrl.toString(), "_blank");
 
     if (!printWindow) {
@@ -41,8 +42,8 @@ export function useChartExport() {
 
     try {
       const [people, departments] = await Promise.all([
-        fetchJson<Person[]>("/api/people?includeInactive=true"),
-        fetchJson<Department[]>("/api/departments"),
+        fetchJson<Person[]>(apiPath("/api/people?includeInactive=true")),
+        fetchJson<Department[]>(apiPath("/api/departments")),
       ]);
 
       const deptMap = new Map<number, string>();
@@ -351,7 +352,7 @@ export function useChartExport() {
       const chartTitle = settings?.chart_title || "Organization Chart";
       const tagline = settings?.tagline || "";
       const colorPrimary = settings?.color_primary || "#005ce6";
-      const logoUrl = settings?.logo_url || "/assets/romega-logo.svg";
+      const logoUrl = assetPath(settings?.logo_url || "/assets/romega-logo.svg");
 
       let logoImg: HTMLImageElement | null = null;
       try { logoImg = await loadImage(logoUrl); } catch { /* proceed without */ }

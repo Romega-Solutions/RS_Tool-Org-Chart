@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { appPath } from "./helpers/paths";
 
 test.describe("People Table — Teams Management", () => {
   test.beforeEach(async ({ page, context }) => {
     // Log in as admin via API to get session cookie
-    const res = await context.request.post("/api/auth/login", {
+    const res = await context.request.post(appPath("/api/auth/login"), {
       data: { username: "admin", password: "admin123" },
     });
     expect(res.ok()).toBeTruthy();
 
-    await page.goto("/admin/team");
+    await page.goto(appPath("/admin/team"));
     await page.waitForLoadState("networkidle");
   });
 
@@ -164,7 +165,7 @@ test.describe("People Table — Teams Management", () => {
     test.beforeEach(async ({ page }) => {
       // Clear saved views from localStorage
       await page.evaluate(() => localStorage.removeItem("orgchart-people-saved-views"));
-      await page.goto("/admin/team");
+      await page.goto(appPath("/admin/team"));
       await page.waitForLoadState("networkidle");
     });
 

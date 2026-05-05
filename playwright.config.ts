@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 const port = Number(process.env.PORT ?? 3000);
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -8,7 +9,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: `http://localhost:${port}${basePath}`,
     browserName: "chromium",
     headless: true,
   },

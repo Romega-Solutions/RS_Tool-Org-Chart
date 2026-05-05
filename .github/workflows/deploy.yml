@@ -110,21 +110,21 @@ jobs:
           echo "$html" | grep -q "<title>Org Chart - Romega Solutions</title>"
           echo "Live site returned expected title."
 
-          account_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/account")"
+          account_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/org-chart/account")"
           if [ "$account_status" != "200" ] && [ "$account_status" != "307" ] && [ "$account_status" != "308" ]; then
-            echo "::error::Expected /account to be available or redirect to login, got HTTP $account_status"
+            echo "::error::Expected /org-chart/account to be available or redirect to login, got HTTP $account_status"
             exit 1
           fi
 
           change_password_status="$(
             curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 \
-              -X POST "$LIVE_URL/api/auth/change-password" \
+              -X POST "$LIVE_URL/org-chart/api/auth/change-password" \
               -H "Origin: $LIVE_URL" \
               -H "Content-Type: application/json" \
               --data '{"currentPassword":"x","newPassword":"y"}'
           )"
           if [ "$change_password_status" != "401" ]; then
-            echo "::error::Expected /api/auth/change-password to exist and reject anonymous requests with 401, got HTTP $change_password_status"
+            echo "::error::Expected /org-chart/api/auth/change-password to exist and reject anonymous requests with 401, got HTTP $change_password_status"
             exit 1
           fi
 

@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus } from "lucide-react";
@@ -11,14 +12,14 @@ export function DepartmentList() {
   const [loading, setLoading] = useState(true);
 
   const fetchDepartments = useCallback(async () => {
-    const res = await fetch("/api/departments");
+    const res = await fetch(apiPath("/api/departments"));
     setDepartments(await res.json());
     setLoading(false);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/departments")
+    fetch(apiPath("/api/departments"))
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) {
@@ -31,7 +32,7 @@ export function DepartmentList() {
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this department?")) return;
-    const res = await fetch(`/api/departments/${id}`, { method: "DELETE" });
+    const res = await fetch(apiPath(`/api/departments/${id}`), { method: "DELETE" });
     if (!res.ok) { const err = await res.json(); alert(err.error); return; }
     fetchDepartments();
   }

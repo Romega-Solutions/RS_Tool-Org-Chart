@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ChartData } from "@/types";
 
@@ -12,7 +13,7 @@ export function useChartData() {
     if (!initialLoadDone.current) setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/chart-data", { signal });
+      const res = await fetch(apiPath("/api/chart-data"), { signal });
       if (!res.ok) {
         throw new Error(`Failed to fetch chart data (${res.status})`);
       }

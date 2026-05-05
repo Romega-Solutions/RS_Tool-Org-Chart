@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -94,8 +95,8 @@ export function DashboardStats() {
     async function fetchStats() {
       try {
         const [peopleRes, deptsRes] = await Promise.all([
-          fetch("/api/people?includeInactive=true"),
-          fetch("/api/departments"),
+          fetch(apiPath("/api/people?includeInactive=true")),
+          fetch(apiPath("/api/departments")),
         ]);
         const people: PersonWithDept[] = await peopleRes.json();
         const departments: Department[] = await deptsRes.json();

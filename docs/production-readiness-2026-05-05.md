@@ -85,10 +85,10 @@ Default seeded credentials still work in production:
 
 This must be fixed before calling the rollout stable.
 
-Live rotation cannot be completed until the active Easypanel deployment exposes the account-management routes:
+Live rotation cannot be completed until the active Easypanel deployment exposes the base-path account-management routes:
 
-- `/account`
-- `/api/auth/change-password`
+- `/org-chart/account`
+- `/org-chart/api/auth/change-password`
 
 ## Domain Direction
 
@@ -116,8 +116,8 @@ Recommended rollout:
 ## Next Steps
 
 1. Add `EASYPANEL_DEPLOY_WEBHOOK` to the `VPS_HOST` GitHub environment secrets.
-2. Run the GitHub Actions deploy workflow and verify `/account` and `POST /api/auth/change-password` pass live deep-route checks.
-3. Change all live default account passwords through `/account` or `POST /api/auth/change-password`.
+2. Run the GitHub Actions deploy workflow and verify `/org-chart/account` and `POST /org-chart/api/auth/change-password` pass live deep-route checks.
+3. Change all live default account passwords through `/org-chart/account` or `POST /org-chart/api/auth/change-password`.
 4. Re-test default logins and confirm they fail.
 5. Confirm the new admin/editor/viewer credentials work.
 6. Configure and verify `tools.romega-solutions.com/org-chart`.

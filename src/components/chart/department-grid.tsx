@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { useMemo, useState, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -144,7 +145,7 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
                   >
                     <Avatar className="w-8 h-8">
                       {person.photoUrl && (
-                        <AvatarImage src={person.photoUrl} />
+                        <AvatarImage src={assetPath(person.photoUrl)} />
                       )}
                       <AvatarFallback className="bg-rs-primary-500/10 text-rs-primary-400 text-[10px]">
                         {initials}

@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, appPath } from "@/lib/paths";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -112,7 +113,7 @@ export function ChartCanvas({ isEditor }: Props) {
     setBulkBusy(true);
     try {
       await Promise.all(selectedNodeIds.map((id) =>
-        fetch(`/api/people/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: true }) })
+        fetch(apiPath(`/api/people/${id}`), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: true }) })
       ));
       showFeedback(`Activated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
@@ -127,7 +128,7 @@ export function ChartCanvas({ isEditor }: Props) {
     setBulkBusy(true);
     try {
       await Promise.all(selectedNodeIds.map((id) =>
-        fetch(`/api/people/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: false }) })
+        fetch(apiPath(`/api/people/${id}`), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: false }) })
       ));
       showFeedback(`Deactivated ${selectedNodeIds.length} people`);
       setSelectedNodeIds([]);
@@ -251,7 +252,7 @@ export function ChartCanvas({ isEditor }: Props) {
       if (oldReportsTo === targetId) return;
 
       try {
-        const patchRes = await fetch("/api/people/reassign", {
+        const patchRes = await fetch(apiPath("/api/people/reassign"), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ personId, reportsTo: targetId }),
@@ -262,7 +263,7 @@ export function ChartCanvas({ isEditor }: Props) {
         push({
           description: `Move ${person.name} to report to #${targetId}`,
           undo: async () => {
-            await fetch("/api/people/reassign", {
+            await fetch(apiPath("/api/people/reassign"), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ personId, reportsTo: oldReportsTo }),
@@ -270,7 +271,7 @@ export function ChartCanvas({ isEditor }: Props) {
             await refetch();
           },
           redo: async () => {
-            await fetch("/api/people/reassign", {
+            await fetch(apiPath("/api/people/reassign"), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ personId, reportsTo: targetId }),
@@ -338,7 +339,7 @@ export function ChartCanvas({ isEditor }: Props) {
       try {
         await Promise.all(
           updates.map((u) =>
-            fetch(`/api/people/${u.id}`, {
+            fetch(apiPath(`/api/people/${u.id}`), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ displayOrder: u.displayOrder }),
@@ -351,7 +352,7 @@ export function ChartCanvas({ isEditor }: Props) {
           undo: async () => {
             await Promise.all(
               originalOrders.map((u) =>
-                fetch(`/api/people/${u.id}`, {
+                fetch(apiPath(`/api/people/${u.id}`), {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ displayOrder: u.displayOrder }),
@@ -363,7 +364,7 @@ export function ChartCanvas({ isEditor }: Props) {
           redo: async () => {
             await Promise.all(
               updates.map((u) =>
-                fetch(`/api/people/${u.id}`, {
+                fetch(apiPath(`/api/people/${u.id}`), {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ displayOrder: u.displayOrder }),
@@ -396,7 +397,7 @@ export function ChartCanvas({ isEditor }: Props) {
       const nextIsActive = !current.isActive;
 
       try {
-        const res = await fetch(`/api/people/${personId}`, {
+        const res = await fetch(apiPath(`/api/people/${personId}`), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isActive: nextIsActive }),
@@ -407,7 +408,7 @@ export function ChartCanvas({ isEditor }: Props) {
         push({
           description: `Toggle ${updated.name} active status`,
           undo: async () => {
-            await fetch(`/api/people/${personId}`, {
+            await fetch(apiPath(`/api/people/${personId}`), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ isActive: current.isActive }),
@@ -415,7 +416,7 @@ export function ChartCanvas({ isEditor }: Props) {
             await refetch();
           },
           redo: async () => {
-            await fetch(`/api/people/${personId}`, {
+            await fetch(apiPath(`/api/people/${personId}`), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ isActive: nextIsActive }),
@@ -458,7 +459,7 @@ export function ChartCanvas({ isEditor }: Props) {
     const count = deleteIntent.ids.length;
     setBulkBusy(true);
     try {
-      await Promise.all(deleteIntent.ids.map((id) => fetch(`/api/people/${id}`, { method: "DELETE" })));
+      await Promise.all(deleteIntent.ids.map((id) => fetch(apiPath(`/api/people/${id}`), { method: "DELETE" })));
       showFeedback(`Deleted ${count} ${count === 1 ? "person" : "people"}`);
       setSelectedNodeIds((current) => current.filter((id) => !deleteIntent.ids.includes(id)));
       setDeleteIntent(null);
@@ -562,7 +563,7 @@ export function ChartCanvas({ isEditor }: Props) {
           </div>
           {isEditor && (
             <div className="flex items-center justify-center gap-3">
-              <a href="/admin/team" className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200">
+              <a href={appPath("/admin/team")} className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200">
                 Add People
               </a>
             </div>

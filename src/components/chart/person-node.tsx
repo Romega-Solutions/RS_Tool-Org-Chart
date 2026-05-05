@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -76,7 +77,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
         )}
         <div className="relative flex flex-col items-center gap-2 text-center">
           <Avatar className="h-11 w-11 shadow-sm ring-1 ring-border/60">
-            {photoUrl && <AvatarImage src={photoUrl} />}
+            {photoUrl && <AvatarImage src={assetPath(photoUrl)} />}
             <AvatarFallback className="bg-rs-primary-500/20 text-rs-primary-400 text-xs">
               {initials}
             </AvatarFallback>

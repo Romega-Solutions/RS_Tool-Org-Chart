@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ export default function AuditLogPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/audit?limit=${PAGE_SIZE}&page=${p}`);
+      const res = await fetch(apiPath(`/api/audit?limit=${PAGE_SIZE}&page=${p}`));
       if (!res.ok) throw new Error(`Failed to fetch audit log (${res.status})`);
       const data = await res.json();
       // Support both paginated and legacy response formats

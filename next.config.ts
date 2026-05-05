@@ -1,8 +1,27 @@
 import type { NextConfig } from "next";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
+
 const nextConfig: NextConfig = {
+  basePath,
   output: "standalone",
   serverExternalPackages: ["better-sqlite3", "sharp"],
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: `${basePath}/chart`,
+        permanent: false,
+        basePath: false,
+      },
+      {
+        source: "/:path((?!org-chart|_next|api|uploads|assets|favicon.ico).*)",
+        destination: `${basePath}/:path`,
+        permanent: false,
+        basePath: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, assetPath } from "@/lib/paths";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import NextImage from "next/image";
@@ -153,7 +154,7 @@ export function SettingsForm() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload", {
+      const res = await fetch(apiPath("/api/upload"), {
         method: "POST",
         body: formData,
       });
@@ -221,7 +222,7 @@ export function SettingsForm() {
   async function handleSync() {
     setSyncing(true);
     try {
-      const res = await fetch("/api/sync", { method: "POST" });
+      const res = await fetch(apiPath("/api/sync"), { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync failed");
       const { summary } = data;
@@ -351,7 +352,7 @@ export function SettingsForm() {
               {form.logo_url ? (
                 <div className="relative">
                   <NextImage
-                    src={form.logo_url}
+                    src={assetPath(form.logo_url)}
                     alt="Logo"
                     width={80}
                     height={80}

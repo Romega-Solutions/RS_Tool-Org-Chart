@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { appPath } from "@/lib/paths";
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
@@ -19,7 +20,7 @@ export function LoginForm() {
     const result = await login(username, password);
     if (result) {
       const next = new URLSearchParams(window.location.search).get("next");
-      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/chart";
+      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : appPath("/chart");
       router.replace(target);
     } else {
       setError("Invalid username or password");

@@ -1,3 +1,4 @@
+import { assetPath } from "@/lib/paths";
 /* eslint-disable @next/next/no-img-element */
 import { createElement } from "react";
 import { getDeptIcon } from "@/lib/dept-icons";
@@ -51,7 +52,7 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
       {/* Header — matches app card style */}
       <header className="bg-card border border-border rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-          <img src="/assets/romega-logo-full.svg" alt="Romega Solutions" className="h-7 w-auto dark:brightness-[1.8] dark:saturate-[0.8]" />
+          <img src={assetPath("/assets/romega-logo-full.svg")} alt="Romega Solutions" className="h-7 w-auto dark:brightness-[1.8] dark:saturate-[0.8]" />
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[0.65rem] font-bold uppercase tracking-wider bg-rs-primary-500 text-white px-2.5 py-1 rounded-full">{total} people</span>
             <span className="text-[0.65rem] font-bold uppercase tracking-wider bg-rs-primary-500 text-white px-2.5 py-1 rounded-full">{departments.length} depts</span>
@@ -109,7 +110,7 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
                     className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 min-w-[10rem] max-w-[16rem]"
                   >
                     {person.photoUrl ? (
-                      <img src={person.photoUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-border" />
+                      <img src={assetPath(person.photoUrl)} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-border" />
                     ) : (
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"

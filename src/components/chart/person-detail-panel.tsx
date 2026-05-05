@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { X, UserRound, Briefcase, ChevronLeft, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -89,7 +90,7 @@ function MiniHierarchyCard({
       </div>
       <div className="relative flex items-center gap-2.5">
         <Avatar className="h-8 w-8 shrink-0" size="sm">
-          {p.photoUrl && <AvatarImage src={p.photoUrl} />}
+          {p.photoUrl && <AvatarImage src={assetPath(p.photoUrl)} />}
           <AvatarFallback className="bg-rs-primary-500/10 text-rs-primary-400 text-[10px]">
             {getInitials(p.name)}
           </AvatarFallback>
@@ -269,7 +270,7 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                 <div className="flex flex-col items-center text-center gap-3">
                   <div className="relative">
                     <Avatar className="w-20 h-20" size="lg">
-                      {person.photoUrl && <AvatarImage src={person.photoUrl} />}
+                      {person.photoUrl && <AvatarImage src={assetPath(person.photoUrl)} />}
                       <AvatarFallback className="bg-rs-primary-500/20 text-rs-primary-400 text-lg">
                         {getInitials(person.name)}
                       </AvatarFallback>

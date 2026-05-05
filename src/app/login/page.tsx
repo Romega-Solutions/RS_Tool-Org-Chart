@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import NextImage from "next/image";
 import { motion } from "framer-motion";
 import { LoginForm } from "@/components/auth/login-form";
@@ -18,7 +19,7 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-2xl shadow-xl p-8 space-y-6">
           <div className="text-center">
             <NextImage
-              src="/assets/romega-logo.svg"
+              src={assetPath("/assets/romega-logo.svg")}
               alt="Romega Solutions"
               width={280}
               height={78}

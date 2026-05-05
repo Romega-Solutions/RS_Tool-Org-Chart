@@ -6,6 +6,13 @@ const SECRET_KEY = new TextEncoder().encode(
   process.env.SESSION_SECRET ?? "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
 );
 const SESSION_COOKIE = "orgchart_token";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
+
+function appPath(path: string) {
+  if (!BASE_PATH || BASE_PATH === "/") return path;
+  if (path === BASE_PATH || path.startsWith(`${BASE_PATH}/`)) return path;
+  return `${BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 // Global rate limiter: 200 req/min per IP (DDoS mitigation at edge)
 const ipCounts = new Map<string, { count: number; resetAt: number }>();
@@ -61,7 +68,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
 
   if (!token) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL(appPath("/login"), request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -70,7 +77,7 @@ export async function proxy(request: NextRequest) {
     await jwtVerify(token, SECRET_KEY);
     return NextResponse.next();
   } catch {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL(appPath("/login"), request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }

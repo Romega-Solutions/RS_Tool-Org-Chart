@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,7 @@ export function ChartSearch({ tree, departments, onSelect }: Props) {
                     >
                       <Avatar className="w-6 h-6 shrink-0">
                         {person.photoUrl && (
-                          <AvatarImage src={person.photoUrl} />
+                          <AvatarImage src={assetPath(person.photoUrl)} />
                         )}
                         <AvatarFallback className="bg-rs-primary-500/10 text-rs-primary-400 text-[9px]">
                           {initials}

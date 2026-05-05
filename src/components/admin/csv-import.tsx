@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 
 import { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
@@ -103,7 +104,7 @@ export function CsvImport({ compact = false, onComplete }: CsvImportProps = {}) 
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/import", { method: "POST", body: formData });
+      const res = await fetch(apiPath("/api/import"), { method: "POST", body: formData });
       const data = await res.json();
 
       if (!res.ok) {

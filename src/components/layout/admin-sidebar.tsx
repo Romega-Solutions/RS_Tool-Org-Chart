@@ -1,4 +1,5 @@
 "use client";
+import { assetPath } from "@/lib/paths";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -104,7 +105,7 @@ export function AdminSidebar() {
         {!collapsed && (
           <div className="overflow-hidden">
             <NextImage
-              src="/assets/romega-logo.svg"
+              src={assetPath("/assets/romega-logo.svg")}
               alt="Romega Solutions"
               width={180}
               height={50}

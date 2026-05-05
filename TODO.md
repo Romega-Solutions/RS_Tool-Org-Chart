@@ -134,10 +134,18 @@
 - The last remaining skipped gallery test was replaced with disposable upload data.
 - Local verification passed: `pnpm lint` and `npx playwright test --browser=chromium` with `47 passed` and no skips.
 
+### Path support update — 2026-05-06
+
+- The app now has proper Next.js `basePath` support for `/org-chart`.
+- Browser API calls, uploaded-photo URLs, static assets, export/print links, and Playwright tests were updated to use the app base path.
+- Root `/` redirects to `/org-chart/chart`; legacy page paths such as `/chart` redirect under `/org-chart`.
+- Local verification passed under `/org-chart`: `pnpm lint`, `pnpm build`, and `npx playwright test --browser=chromium` with `47 passed`.
+- GitHub deploy verification now checks `/org-chart/account` and `POST /org-chart/api/auth/change-password`.
+
 ### Production blocker
 
 - [ ] 🔴 Add `EASYPANEL_DEPLOY_WEBHOOK` to the `VPS_HOST` GitHub environment secrets
-- [ ] 🔴 Refresh/rebuild the active Easypanel deployment so `/account` and `/api/auth/change-password` are available live
+- [ ] 🔴 Refresh/rebuild the active Easypanel deployment so `/org-chart/account` and `/org-chart/api/auth/change-password` are available live
 - [ ] 🔴 Change default live account passwords for `admin`, `editor`, and `viewer`
 - [ ] 🔴 Confirm default logins fail after password changes:
   - `admin / admin123`
@@ -150,7 +158,7 @@
 - [ ] 🟡 Configure final custom domain as `tools.romega-solutions.com/org-chart`
 - [ ] 🟡 Point `tools.romega-solutions.com` DNS to the current deployed app
 - [ ] 🟡 Add the custom domain in Easypanel and verify HTTPS
-- [ ] 🟡 Decide whether `/` redirects to `/org-chart` or becomes a simple tools index
+- [x] 🟢 Decide whether `/` redirects to `/org-chart` or becomes a simple tools index for this repo: root redirects to `/org-chart/chart`
 - [ ] 🟡 Update README/TODO/live references after the custom domain is verified
 
 ### For Mark (data)

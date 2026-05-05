@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, assetPath } from "@/lib/paths";
 import { createElement, useState, useEffect, useRef } from "react";
 import NextImage from "next/image";
 import { toast } from "sonner";
@@ -80,8 +81,8 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
       setLoadError(false);
 
       Promise.all([
-        fetch("/api/departments").then((r) => r.json()),
-        fetch("/api/people").then((r) => r.json()),
+        fetch(apiPath("/api/departments")).then((r) => r.json()),
+        fetch(apiPath("/api/people")).then((r) => r.json()),
       ])
         .then(([depts, persons]) => {
           setDepartments(depts);
@@ -102,7 +103,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const res = await fetch(apiPath("/api/upload"), { method: "POST", body: formData });
       const data = await res.json();
       if (data.url) {
         setPhotoUrl(data.url);
@@ -210,7 +211,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
             <div className="flex items-center gap-3">
               {photoPreview ? (
                 <NextImage
-                  src={photoPreview}
+                  src={assetPath(photoPreview)}
                   alt="Preview"
                   width={48}
                   height={48}

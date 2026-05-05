@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, assetPath } from "@/lib/paths";
 import { useState, useEffect, useCallback, useMemo, createElement, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -217,7 +218,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
   const fetchPeople = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/people?includeInactive=true");
+      const res = await fetch(apiPath("/api/people?includeInactive=true"));
       const data = await res.json();
       setPeople(data);
     } finally {
@@ -411,7 +412,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch(`/api/people/${id}`, {
+          fetch(apiPath(`/api/people/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ isActive: true }),
@@ -433,7 +434,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch(`/api/people/${id}`, {
+          fetch(apiPath(`/api/people/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ isActive: false }),
@@ -472,7 +473,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     );
 
     try {
-      const res = await fetch(`/api/people/${id}`, {
+      const res = await fetch(apiPath(`/api/people/${id}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: nextIsActive }),
@@ -508,7 +509,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
       // Soft-delete: deactivate instead of permanently removing
       await Promise.all(
         ids.map((id) =>
-          fetch(`/api/people/${id}`, {
+          fetch(apiPath(`/api/people/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ isActive: false }),
@@ -530,7 +531,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
             onClick: async () => {
               await Promise.all(
                 ids.map((id) =>
-                  fetch(`/api/people/${id}`, {
+                  fetch(apiPath(`/api/people/${id}`), {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ isActive: true }),
@@ -1042,7 +1043,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                     <div className="flex items-center gap-2.5">
                       <Avatar size="default">
                         {person.photoUrl && (
-                          <AvatarImage src={person.photoUrl} alt={person.name} />
+                          <AvatarImage src={assetPath(person.photoUrl)} alt={person.name} />
                         )}
                         <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
                       </Avatar>

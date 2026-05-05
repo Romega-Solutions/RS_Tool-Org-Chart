@@ -11,9 +11,9 @@ The app manages people, departments, photos, audit history, chart views, exports
 | Production URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host` |
 | Planned domain | `tools.romega-solutions.com/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
-| Latest verification | CI and product QA passing; live deep-route check found stale account routes |
+| Latest verification | Local `/org-chart` lint, build, and Playwright QA passing |
 | Test suite | Playwright Chromium: 47 passing tests, no skips |
-| Production blocker | Default seeded passwords still work live; `/account` and `/api/auth/change-password` are 404 on the active deployment |
+| Production blocker | Live rebuild still needs the Easypanel deploy webhook, then password rotation |
 
 Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs/production-readiness-2026-05-05.md).
 
@@ -70,7 +70,8 @@ The suite runs serially because it uses shared local SQLite data and upload stor
 
 Must finish before calling the rollout stable:
 
-- [ ] Refresh/rebuild the active Easypanel deployment so `/account` and `/api/auth/change-password` are available live.
+- [ ] Refresh/rebuild the active Easypanel deployment so `/org-chart/account` and `/org-chart/api/auth/change-password` are available live.
+- [ ] Verify live `/org-chart/account` and `/org-chart/api/auth/change-password`.
 - [ ] Change production passwords for `admin`, `editor`, and `viewer`.
 - [ ] Confirm the seeded passwords fail:
   - `admin / admin123`

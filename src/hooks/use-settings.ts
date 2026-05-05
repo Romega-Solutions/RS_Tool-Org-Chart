@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback } from "react";
 
 export function useSettings() {
@@ -6,7 +7,7 @@ export function useSettings() {
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async () => {
-    const res = await fetch("/api/settings");
+    const res = await fetch(apiPath("/api/settings"));
     const data = await res.json();
     setSettings(data);
     setLoading(false);
@@ -14,7 +15,7 @@ export function useSettings() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/settings")
+    fetch(apiPath("/api/settings"))
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) {
@@ -26,7 +27,7 @@ export function useSettings() {
   }, []);
 
   const updateSettings = useCallback(async (updates: Record<string, string>) => {
-    await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+    await fetch(apiPath("/api/settings"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
     setSettings((prev) => ({ ...prev, ...updates }));
   }, []);
 

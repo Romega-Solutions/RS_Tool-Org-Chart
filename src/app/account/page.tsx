@@ -1,4 +1,5 @@
 "use client";
+import { apiPath, appPath } from "@/lib/paths";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -143,7 +144,7 @@ export default function AccountPage() {
   }
 
   if (!user) {
-    router.replace("/login?next=/account");
+    router.replace(appPath("/login?next=/account"));
     return null;
   }
 
@@ -169,7 +170,7 @@ export default function AccountPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await fetch(apiPath("/api/auth/change-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
@@ -188,7 +189,7 @@ export default function AccountPage() {
 
       setTimeout(() => {
         logout();
-        router.replace("/login");
+        router.replace(appPath("/login"));
       }, 3000);
     } finally {
       setSubmitting(false);

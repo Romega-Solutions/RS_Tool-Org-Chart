@@ -1,4 +1,5 @@
 "use client";
+import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -36,11 +37,11 @@ export function QuickAddDialog({ open, onOpenChange, onSaved }: Props) {
   useEffect(() => {
     if (!open) return;
     setError(null);
-    fetch("/api/departments")
+    fetch(apiPath("/api/departments"))
       .then((r) => r.json())
       .then(setDepartments)
       .catch(() => setError("Failed to load departments"));
-    fetch("/api/people")
+    fetch(apiPath("/api/people"))
       .then((r) => r.json())
       .then(setPeople)
       .catch(() => {/* non-critical, reports-to list just stays empty */});
@@ -60,7 +61,7 @@ export function QuickAddDialog({ open, onOpenChange, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/people", {
+      const res = await fetch(apiPath("/api/people"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
