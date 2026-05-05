@@ -78,11 +78,26 @@ jobs:
             sudo cp -rf /tmp/org-chart-master/* .
             sudo cp -rf /tmp/org-chart-master/.[!.]* . 2>/dev/null || true
             
-            echo "=== Triggering Rebuild ==="
+            echo "=== Marking Easypanel source dirty ==="
             sudo touch package.json
             
-            echo "=== Deployment Success ==="
+            echo "=== Source Sync Complete ==="
             date
+
+      - name: Trigger Easypanel deployment
+        env:
+          EASYPANEL_DEPLOY_WEBHOOK: ${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EASYPANEL_DEPLOY_WEBHOOK:-}" ]; then
+            echo "::error::Set EASYPANEL_DEPLOY_WEBHOOK in the VPS_HOST environment. The SSH copy step syncs source files, but Easypanel must still rebuild/redeploy the running app."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error --location --max-time 60 "$EASYPANEL_DEPLOY_WEBHOOK" >/dev/null
+          echo "Easypanel deployment webhook triggered."
+          sleep 90
 
       - name: Verify live site
         env:
@@ -94,3 +109,23 @@ jobs:
           html="$(curl --fail --silent --show-error --location --max-time 30 "$LIVE_URL")"
           echo "$html" | grep -q "<title>Org Chart - Romega Solutions</title>"
           echo "Live site returned expected title."
+
+          account_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/account")"
+          if [ "$account_status" != "200" ] && [ "$account_status" != "307" ] && [ "$account_status" != "308" ]; then
+            echo "::error::Expected /account to be available or redirect to login, got HTTP $account_status"
+            exit 1
+          fi
+
+          change_password_status="$(
+            curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 \
+              -X POST "$LIVE_URL/api/auth/change-password" \
+              -H "Origin: $LIVE_URL" \
+              -H "Content-Type: application/json" \
+              --data '{"currentPassword":"x","newPassword":"y"}'
+          )"
+          if [ "$change_password_status" != "401" ]; then
+            echo "::error::Expected /api/auth/change-password to exist and reject anonymous requests with 401, got HTTP $change_password_status"
+            exit 1
+          fi
+
+          echo "Live deep-route verification passed."

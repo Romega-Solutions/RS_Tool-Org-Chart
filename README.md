@@ -1,220 +1,218 @@
-# RS-Auto-Org_Chart-Generator
+# RS Tool - Org Chart
 
-Auto-generating organizational chart tool for Romega Solutions.
+Internal org chart and team directory tool for Romega Solutions.
 
-## Quick Start (Development)
+The app manages people, departments, photos, audit history, chart views, exports, and role-based access for editors and viewers.
+
+## Current Status
+
+| Area | Status |
+|---|---|
+| Production URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host` |
+| Planned domain | `tools.romega-solutions.com/org-chart` |
+| Deployment | GitHub Actions -> VPS/Easypanel |
+| Latest verification | CI and product QA passing; live deep-route check found stale account routes |
+| Test suite | Playwright Chromium: 47 passing tests, no skips |
+| Production blocker | Default seeded passwords still work live; `/account` and `/api/auth/change-password` are 404 on the active deployment |
+
+Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs/production-readiness-2026-05-05.md).
+
+## What It Does
+
+- Interactive org chart with top-down, horizontal, and department-grid views.
+- Admin CRUD for people and departments.
+- People table with status filters, sorting, saved views, bulk actions, and CSV export.
+- Photo management with upload, WebP conversion, gallery assignment, missing-photo workflow, and delete cleanup.
+- Export to styled Excel, PNG, print/PDF view, and CSV.
+- Audit log for create, update, delete, toggle, and password-change activity.
+- Editor/viewer role model with JWT session cookies.
+- API-key support for external integrations such as n8n or automation scripts.
+
+## Quick Start
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000
+Open `http://localhost:3000`.
 
-Default accounts are seeded on first run:
+Default local accounts are seeded on first run:
 
 | Username | Password | Role |
-|----------|----------|------|
-| admin | admin123 | Editor |
-| editor | editor123 | Editor |
-| viewer | viewer123 | Viewer |
+|---|---|---|
+| `admin` | `admin123` | Editor |
+| `editor` | `editor123` | Editor |
+| `viewer` | `viewer123` | Viewer |
 
-Change passwords after first login.
+Change production passwords immediately after first login.
 
-## Production Deployment
+## Verification
 
-### Option A: Fresh VPS (recommended)
-
-```bash
-# 1. Clone to VPS
-git clone <repo-url> /opt/orgchart && cd /opt/orgchart
-
-# 2. Run hardening script (interactive — asks for domain + email)
-sudo ./scripts/harden-vps.sh
-
-# 3. Deploy
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
-```
-
-The hardening script configures: UFW firewall, SSH hardening, Fail2ban, HTTPS (Let's Encrypt), unattended upgrades, Docker log rotation, daily backups, and generates `SESSION_SECRET`.
-
-### Option B: Existing server
+Use the repo-local Playwright CLI with Chromium.
 
 ```bash
-cp .env.example .env    # Edit — set SESSION_SECRET (required)
-docker compose up -d --build
+pnpm lint
+pnpm build
+npx playwright test --browser=chromium
 ```
 
-### Post-deploy checklist
+Current expected E2E result:
 
-- [ ] Change default account passwords
-- [ ] Configure Google Sheets URL in Settings (optional)
-- [ ] Populate with real team data via CSV import or Google Sheets sync
+```text
+47 passed
+0 skipped
+```
+
+The suite runs serially because it uses shared local SQLite data and upload storage.
+
+## Production Checklist
+
+Must finish before calling the rollout stable:
+
+- [ ] Refresh/rebuild the active Easypanel deployment so `/account` and `/api/auth/change-password` are available live.
+- [ ] Change production passwords for `admin`, `editor`, and `viewer`.
+- [ ] Confirm the seeded passwords fail:
+  - `admin / admin123`
+  - `editor / editor123`
+  - `viewer / viewer123`
+- [ ] Confirm the new credentials work.
+- [ ] Re-run live smoke checks for chart, search, export, print, photos, and mobile.
+- [ ] Configure `tools.romega-solutions.com/org-chart`.
+- [ ] Update live references after the custom domain is verified.
+
+Data follow-up:
+
+- [ ] Upload production team photos.
+- [ ] Confirm real team data and reporting lines.
+- [ ] Configure Google Sheets sync if the live sheet should stay authoritative.
+
+## CI/CD
+
+Deployments are handled by `.github/workflows/deploy.yml`.
+
+On push to `master`, the workflow:
+
+1. Installs dependencies.
+2. Runs lint.
+3. Builds the app.
+4. Installs Playwright Chromium.
+5. Runs the full E2E suite.
+6. Deploys to the VPS through SSH.
+7. Verifies the live site title.
+
+The deploy job only runs after CI passes.
 
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `SESSION_SECRET` | **Yes (production)** | JWT signing key, min 32 chars. App refuses to start without it in production. Generate: `openssl rand -base64 32` |
-| `CRON_SECRET` | No | Bearer token for `/api/sync/cron`. Enables auto-sync sidecar. |
-| `SYNC_INTERVAL` | No | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off` (default). |
-| `API_KEY` | No | API key for external integrations (n8n, AI agents). Grants editor access via `X-API-Key` header. |
+|---|---|---|
+| `SESSION_SECRET` | Production required | JWT signing key. Production startup fails without it. Use at least 32 random characters. |
+| `CRON_SECRET` | Optional | Bearer token for `/api/sync/cron`. |
+| `SYNC_INTERVAL` | Optional | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off`. |
+| `API_KEY` | Optional | External integration key. Grants editor access through `X-API-Key`. |
 
-## Tech Stack
+## API Summary
 
-Next.js 16, React 19, TypeScript 5, Tailwind CSS v4, shadcn/ui, Drizzle ORM, SQLite (better-sqlite3), React Flow, ExcelJS, Sharp, bcryptjs, jose.
-
-## Features
-
-- **3 chart views:** top-down tree, horizontal tree, department grid with density toggle
-- **Full CRUD admin:** people, departments, CSV import/export, Google Sheets sync, branding settings
-- **People table:** status filtering (Active/Inactive/All), multi-column sorting (A-Z, Senior first, by department), quick filter suggestions, saved filter views, shift+click range select, inline edit via row click, CSV export
-- **Photo management:** multi-file drag-and-drop upload, assign from gallery, missing photos dialog, auto-convert to WebP
-- **Export:** Excel (styled with ExcelJS), PNG (HD 2x, theme-aware with dotted background), PDF, print, CSV (people table)
-- **Interactive dashboard** with clickable stat cards
-- **Audit log:** every create/update/delete/toggle tracked
-- **Soft delete with undo:** deactivating people shows an undo toast to reactivate
-- **Role-based auth:** editor (full access) vs. viewer (read-only chart)
-- **API integration:** `X-API-Key` header auth for n8n, AI agents, external scripts. In-app API docs in Settings.
-- **JWT sessions** via HTTP-only, SameSite=lax cookies
-- **Dark/light mode**, keyboard navigation, undo/redo
-- **Mobile responsive:** people table adapts with progressive column hiding, inline titles, horizontal scroll
-- **Accessibility:** aria-sort on table headers, aria-labels on all controls, skeleton loading, tabular-nums, focus management
-
-## API Reference
-
-All endpoints require authentication. Use session cookies (browser) or `X-API-Key` header (external systems).
+All endpoints require session auth unless noted. Write operations require editor access.
 
 ### People
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/people` | Any user | List people (`?includeInactive=true`) |
-| `GET` | `/api/people/:id` | Any user | Get person |
-| `POST` | `/api/people` | Editor | Create person |
-| `PATCH` | `/api/people/:id` | Editor | Update person |
-| `DELETE` | `/api/people/:id` | Editor | Delete person |
-| `PATCH` | `/api/people/:id/toggle` | Editor | Toggle active/inactive |
-| `PATCH` | `/api/people/reassign` | Editor | Reassign reporting line |
+|---|---|---|---|
+| `GET` | `/api/people` | Any user | List people. Supports `?includeInactive=true`. |
+| `GET` | `/api/people/:id` | Any user | Get one person. |
+| `POST` | `/api/people` | Editor | Create person. |
+| `PATCH` | `/api/people/:id` | Editor | Update person. |
+| `DELETE` | `/api/people/:id` | Editor | Delete person. |
+| `PATCH` | `/api/people/:id/toggle` | Editor | Toggle active/inactive. |
+| `PATCH` | `/api/people/reassign` | Editor | Reassign reporting line. |
 
 ### Departments
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/departments` | Any user | List departments |
-| `POST` | `/api/departments` | Editor | Create department |
-| `PATCH` | `/api/departments/:id` | Editor | Update department |
-| `DELETE` | `/api/departments/:id` | Editor | Delete department |
+|---|---|---|---|
+| `GET` | `/api/departments` | Any user | List departments. |
+| `POST` | `/api/departments` | Editor | Create department. |
+| `PATCH` | `/api/departments/:id` | Editor | Update department. |
+| `DELETE` | `/api/departments/:id` | Editor | Delete department. |
 
-### Chart & Data
+### Chart, Photos, and Audit
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/chart-data` | Any user | Full org chart tree |
-| `GET` | `/api/audit` | Any user | Audit log (`?page=1&limit=50`) |
-| `GET` | `/api/photos` | Any user | List uploaded photos |
-| `DELETE` | `/api/photos/:filename` | Editor | Delete photo + clear person reference |
+|---|---|---|---|
+| `GET` | `/api/chart-data` | Any user | Full org chart tree, departments, and settings. |
+| `GET` | `/api/audit` | Any user | Audit log. Supports `?page=1&limit=50`. |
+| `GET` | `/api/photos` | Any user | List uploaded photos and assignment status. |
+| `DELETE` | `/api/photos/:filename` | Editor | Delete photo and clear linked person photo reference. |
+| `POST` | `/api/upload` | Editor | Upload image. Max 5MB, WebP output, rate limited. |
 
 ### System
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/settings` | Any user | Get settings |
-| `PATCH` | `/api/settings` | Editor | Update settings |
-| `POST` | `/api/import` | Editor | CSV import (max 10MB) |
-| `POST` | `/api/sync` | Editor | Google Sheets sync |
-| `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger |
-| `POST` | `/api/upload` | Editor | Upload photo (max 5MB, rate limited) |
+|---|---|---|---|
+| `GET` | `/api/settings` | Any user | Get app settings. |
+| `PATCH` | `/api/settings` | Editor | Update branding/settings. |
+| `POST` | `/api/import` | Editor | CSV import. Max 10MB. |
+| `POST` | `/api/sync` | Editor | Google Sheets sync. |
+| `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
 
 ### Authentication
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/auth/login` | None | Login (rate limited) |
-| `POST` | `/api/auth/logout` | None | Logout |
-| `GET` | `/api/auth/me` | None | Get current user (returns null if not logged in) |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | Public | Login, rate limited. |
+| `POST` | `/api/auth/logout` | Public | Logout. |
+| `GET` | `/api/auth/me` | Public | Return current user or null. |
+| `POST` | `/api/auth/change-password` | Any user | Change current user's password. |
 
-### Examples
+## Security Notes
 
-```bash
-# Login
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+- API reads require authentication.
+- Writes require editor role.
+- CSRF protection uses Origin header validation for mutating requests.
+- Login has brute-force protection.
+- API keys use timing-safe comparison.
+- Uploads enforce file type, size, disk quota, rate limit, and WebP conversion.
+- File deletion protects against path traversal.
+- Production requires `SESSION_SECRET`.
+- Security headers and no-store API cache headers are applied.
 
-# Create person (with API key)
-curl -X POST http://localhost:3000/api/people \
-  -H "X-API-Key: YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3}'
+## Tech Stack
 
-# Get full org chart
-curl http://localhost:3000/api/chart-data \
-  -H "X-API-Key: YOUR_KEY"
-```
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui style components
+- Drizzle ORM
+- SQLite with `better-sqlite3`
+- ExcelJS
+- Sharp
+- bcryptjs
+- jose JWT sessions
+- Playwright E2E
 
-## Security
+## Data and Storage
 
-### Application layer
+Runtime data is intentionally ignored by git:
 
-- All API endpoints require authentication
-- Write operations require editor role
-- CSRF protection via Origin header validation
-- Login brute-force protection (10 failed attempts per 15 min → lockout)
-- Upload: 5MB/file, 500MB disk quota, 30/min per user, WebP auto-conversion
-- Import: 10MB file size limit
-- API key uses `crypto.timingSafeEqual` (timing-attack safe)
-- Input validation: string length, hex color, integer ranges
-- Path traversal protection on file operations
-- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`
-- API responses: `Cache-Control: no-store`
-- Session secret: fatal error in production if not set
+- SQLite DB: `data/orgchart.db`
+- Uploaded photos: `public/uploads/photos/`
 
-### Infrastructure layer (via `scripts/harden-vps.sh`)
+For QA, back up and restore those folders before running mutating product-flow tests against local data.
 
-- Nginx reverse proxy (app not directly exposed)
-- UFW firewall (ports 22, 80, 443 only)
-- SSH hardening (no root, no password, key-only)
-- Fail2ban (SSH + Nginx + bot scans)
-- HTTPS with Let's Encrypt (TLSv1.2+, HSTS, auto-renewal)
-- Unattended security updates
-- Docker log rotation (10MB x 3)
-- Daily backups (SQLite + uploads, 14-day retention)
+## Deployment Notes
 
-### DDoS protection (3 layers)
+The current app is deployed through GitHub Actions to the VPS/Easypanel app.
 
-| Layer | Where | Limits |
-|-------|-------|--------|
-| Nginx | Edge | 30 req/s general, 10 req/s API, 3 req/min login, 5 req/min upload, 20 conn/IP |
-| Next.js middleware | App | 200 req/min per IP |
-| App handlers | Route | 30 uploads/min per user, 10 login failures/15 min per user |
+Older Docker Compose and hardening scripts remain in the repo for fresh-server setup or recovery, but the active production path is the GitHub Actions deploy workflow.
 
-## Architecture
-
-```
-Client → Nginx:80/443 → orgchart:3000 (Docker internal)
-                              ├── Next.js App Router
-                              ├── Drizzle ORM → SQLite (data/orgchart.db)
-                              ├── Sharp → public/uploads/photos/ (WebP)
-                              └── JWT auth (jose + bcryptjs)
-```
-
-## Docker Compose Services
-
-| Service | Purpose |
-|---------|---------|
-| `nginx` | Reverse proxy, rate limiting, HTTPS termination |
-| `orgchart` | Next.js app (internal port 3000) |
-| `sync-cron` | Google Sheets auto-sync sidecar (optional) |
-| `certbot` | SSL certificate auto-renewal (production only) |
-| `backup` | Daily SQLite + uploads backup (production only) |
-
-## Development
+For a fresh self-hosted VPS:
 
 ```bash
-pnpm dev                      # Dev server on :3000
-pnpm build                    # Production build (type-checks)
-pnpm lint                     # ESLint
-pnpm start                    # Start production build
-npx playwright test e2e/      # E2E tests
+git clone <repo-url> /opt/orgchart
+cd /opt/orgchart
+sudo ./scripts/harden-vps.sh
+docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build
 ```

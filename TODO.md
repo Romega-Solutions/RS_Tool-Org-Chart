@@ -1,11 +1,23 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Feature-complete + security-hardened — ready for production deployment
-> Last updated: 2026-04-24
+> Status: Deployed with CI/CD and full QA coverage. Production is blocked by default live passwords and a stale active deployment missing the account password route.
+> Last updated: 2026-05-05
 
 ---
 
 ## What's Done
+
+### May 2026 — Deployment, CI/CD, and QA ✅
+- [x] GitHub Actions deploy workflow gates production deployment behind install, lint, build, Playwright Chromium tests, deploy, and live URL verification
+- [x] Workflow actions updated off deprecated Node 20 runtime annotations
+- [x] CI log noise cleaned up (`DEP0040` punycode warning suppressed only for that warning code)
+- [x] Stale local/remote branches removed
+- [x] Product QA pass completed against disposable local data
+- [x] Permanent product-flow Playwright spec added for CRUD, photos, chart views/search, export, print, audit, permissions, and mobile smoke
+- [x] Photo-gallery assignment tests made deterministic with disposable fixtures
+- [x] Full Playwright suite is now deterministic: 47 passing tests, no skips
+- [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
+- [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
 
 ### Core Features
 - [x] 3 chart views (top-down, horizontal, department grid)
@@ -105,11 +117,41 @@
 
 ## Remaining
 
-### For Ken (deployment)
+### Shift handoff — 2026-05-05
 
-- [ ] 🔴 Run `sudo ./scripts/harden-vps.sh` on VPS (sets up UFW, SSH, Fail2ban, HTTPS, backups, SESSION_SECRET)
-- [ ] 🔴 Deploy: `docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d --build`
-- [ ] 🔴 Change default account passwords via /account page after first login
+- Live password rotation was attempted but not completed because the active deployment returns `404` for `/account` and `POST /api/auth/change-password`.
+- The repo already contains those account-management routes, so refresh/rebuild Easypanel first and verify `/account` returns `200`.
+- No new live passwords were set. The unused generated local credential file was deleted.
+- After the route is live, rotate `admin`, `editor`, and `viewer`, then verify old default logins fail and new credentials work.
+- `tools.romega-solutions.com` currently has no DNS record. Current Easypanel host resolves to `51.83.97.146`.
+- Treat `tools.romega-solutions.com/org-chart` as a routing task, not just DNS. The app uses root-absolute paths (`/api`, `/uploads`, `/assets`), so either configure proxy rewrites carefully or add app-side base-path support and rerun full QA.
+
+### Resume update — 2026-05-06
+
+- Manual GitHub Actions deploy dispatch ran successfully, but live `/account` and `/api/auth/change-password` still returned `404` afterward.
+- Root-only live verification is not enough; the workflow now verifies `/account` and `POST /api/auth/change-password`.
+- The deploy workflow now requires `EASYPANEL_DEPLOY_WEBHOOK` in the `VPS_HOST` GitHub environment so Easypanel performs an actual rebuild/redeploy after source sync.
+- The last remaining skipped gallery test was replaced with disposable upload data.
+- Local verification passed: `pnpm lint` and `npx playwright test --browser=chromium` with `47 passed` and no skips.
+
+### Production blocker
+
+- [ ] 🔴 Add `EASYPANEL_DEPLOY_WEBHOOK` to the `VPS_HOST` GitHub environment secrets
+- [ ] 🔴 Refresh/rebuild the active Easypanel deployment so `/account` and `/api/auth/change-password` are available live
+- [ ] 🔴 Change default live account passwords for `admin`, `editor`, and `viewer`
+- [ ] 🔴 Confirm default logins fail after password changes:
+  - `admin / admin123`
+  - `editor / editor123`
+  - `viewer / viewer123`
+- [ ] 🔴 Confirm new credentials work and rerun live smoke checks
+
+### Domain consolidation
+
+- [ ] 🟡 Configure final custom domain as `tools.romega-solutions.com/org-chart`
+- [ ] 🟡 Point `tools.romega-solutions.com` DNS to the current deployed app
+- [ ] 🟡 Add the custom domain in Easypanel and verify HTTPS
+- [ ] 🟡 Decide whether `/` redirects to `/org-chart` or becomes a simple tools index
+- [ ] 🟡 Update README/TODO/live references after the custom domain is verified
 
 ### For Mark (data)
 
@@ -128,6 +170,7 @@
 | **Port** | 3000 (internal), 80/443 via Nginx |
 | **Package Manager** | pnpm |
 | **Auth** | JWT + bcrypt (Editor/Viewer roles) |
-| **Deployment** | Docker Compose + Nginx + Certbot |
+| **Deployment** | GitHub Actions → VPS/Easypanel live deploy |
+| **Planned Domain** | tools.romega-solutions.com/org-chart |
 | **Security** | 3-layer DDoS, CSRF, rate limiting, HTTPS, Fail2ban |
-| **Tests** | Playwright e2e (19 tests) |
+| **Tests** | Playwright e2e (47 tests, no skips) |

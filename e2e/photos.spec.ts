@@ -193,20 +193,19 @@ test.describe("Photos page — Editor", () => {
   });
 
   test("delete button opens confirm dialog on photo card hover", async ({ page }) => {
-    const photos = await page.request.get("/api/photos");
-    const photoList = await photos.json();
-    if (photoList.length === 0) {
-      test.skip();
-      return;
-    }
+    const uploadedPhotoUrl = await uploadQaPhoto(page);
+    await page.goto("/admin/photos");
 
-    const firstCard = page.locator("[data-slot='card']").first();
-    await firstCard.hover();
-    const deleteBtn = firstCard.getByRole("button", { name: /Delete/i });
+    const uploadedCard = page.locator("[data-slot='card']").filter({ hasText: uploadedPhotoUrl.split("/").pop()! });
+    await uploadedCard.hover();
+    const deleteBtn = uploadedCard.getByRole("button", { name: /Delete/i });
     await deleteBtn.click();
 
     await expect(page.getByText("Delete photo?")).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete" })).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await deleteQaPhoto(page, uploadedPhotoUrl);
   });
 });
 
