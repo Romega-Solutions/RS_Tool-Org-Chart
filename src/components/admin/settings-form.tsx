@@ -190,6 +190,8 @@ export function SettingsForm() {
   const [copiedApi, setCopiedApi] = useState<string | null>(null);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [previewingSync, setPreviewingSync] = useState(false);
+  const [syncPreview, setSyncPreview] = useState<SyncReview | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -299,6 +301,29 @@ export function SettingsForm() {
     }
   }
 
+  async function handleSyncPreview() {
+    setPreviewingSync(true);
+    try {
+      const res = await fetch(apiPath("/api/sync"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun: true, url: form.sheets_url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync preview failed");
+      setSyncPreview({
+        timestamp: new Date().toISOString(),
+        summary: data.summary,
+        changes: data.changes,
+      });
+      toast.success(`Preview ready: ${data.summary.created} created, ${data.summary.updated} updated, ${data.summary.errors} errors`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sync preview failed");
+    } finally {
+      setPreviewingSync(false);
+    }
+  }
+
   if (loading) {
     return <SettingsSkeleton />;
   }
@@ -308,7 +333,8 @@ export function SettingsForm() {
     ? new Date(lastSyncAt).toLocaleString()
     : "Never synced";
   const syncReview = parseSyncReview(settings.last_sync_summary);
-  const syncChangeCount = syncReview ? countMeaningfulSyncChanges(syncReview) : 0;
+  const displayedSyncReview = syncPreview ?? syncReview;
+  const syncChangeCount = displayedSyncReview ? countMeaningfulSyncChanges(displayedSyncReview) : 0;
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-3xl mx-auto pb-20">
@@ -861,44 +887,70 @@ export function SettingsForm() {
                 <span className="text-muted-foreground">Never synced</span>
               )}
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={syncing || !form.sheets_url}
-              onClick={handleSync}
-              className="cursor-pointer transition-all duration-200"
-            >
-              {syncing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              {syncing ? "Syncing..." : "Sync Now"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={previewingSync || syncing || !form.sheets_url}
+                onClick={handleSyncPreview}
+                className="cursor-pointer transition-all duration-200"
+              >
+                {previewingSync ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                {previewingSync ? "Previewing..." : "Preview Changes"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={syncing || previewingSync || !form.sheets_url}
+                onClick={handleSync}
+                className="cursor-pointer transition-all duration-200"
+              >
+                {syncing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                {syncing ? "Syncing..." : "Sync Now"}
+              </Button>
+            </div>
           </div>
-          {syncReview && (
+          {displayedSyncReview && (
             <div className="rounded-lg border border-border bg-muted/20">
               <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Latest Sync Review</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {syncPreview ? "Sync Preview" : "Latest Sync Review"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(syncReview.timestamp).toLocaleString()} · {syncReview.summary.total} sheet rows processed
+                    {new Date(displayedSyncReview.timestamp).toLocaleString()} · {displayedSyncReview.summary.total} sheet rows processed
                   </p>
                 </div>
-                <Badge
-                  variant="outline"
-                  className={syncReview.summary.errors > 0 ? "border-destructive/40 text-destructive" : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"}
-                >
-                  {syncReview.summary.errors > 0 ? `${syncReview.summary.errors} errors` : `${syncChangeCount} changes`}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {syncPreview && (
+                    <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
+                      Preview only
+                    </Badge>
+                  )}
+                  <Badge
+                    variant="outline"
+                    className={displayedSyncReview.summary.errors > 0 ? "border-destructive/40 text-destructive" : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"}
+                  >
+                    {displayedSyncReview.summary.errors > 0 ? `${displayedSyncReview.summary.errors} errors` : `${syncChangeCount} changes`}
+                  </Badge>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4">
                 {[
-                  ["Created", syncReview.summary.created],
-                  ["Updated Rows", syncReview.summary.updated],
-                  ["Errors", syncReview.summary.errors],
-                  ["Protected Photos", syncReview.changes.photoPreserved?.length ?? 0],
+                  ["Created", displayedSyncReview.summary.created],
+                  ["Updated Rows", displayedSyncReview.summary.updated],
+                  ["Errors", displayedSyncReview.summary.errors],
+                  ["Protected Photos", displayedSyncReview.changes.photoPreserved?.length ?? 0],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-md border border-border bg-background px-3 py-2">
                     <p className="text-[11px] text-muted-foreground">{label}</p>
@@ -908,7 +960,7 @@ export function SettingsForm() {
               </div>
               <div className="space-y-3 border-t border-border px-4 py-4">
                 {Object.entries(SYNC_CHANGE_LABELS)
-                  .map(([key, label]) => ({ key, label, items: syncReview.changes[key] ?? [] }))
+                  .map(([key, label]) => ({ key, label, items: displayedSyncReview.changes[key] ?? [] }))
                   .filter(({ items }) => items.length > 0)
                   .map(({ key, label, items }) => (
                     <div key={key} className="space-y-1.5">
@@ -931,7 +983,7 @@ export function SettingsForm() {
                       </div>
                     </div>
                   ))}
-                {syncChangeCount === 0 && (syncReview.changes.photoPreserved?.length ?? 0) === 0 && (
+                {syncChangeCount === 0 && (displayedSyncReview.changes.photoPreserved?.length ?? 0) === 0 && (
                   <p className="text-sm text-muted-foreground">No data changes found in the latest sync.</p>
                 )}
               </div>

@@ -30,6 +30,7 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 - n8n MCP workflow JSON for org chart tools plus daily Google Sheets review.
 - Google Sheets sync preserves good local WebP photos, inactive status, secondary reporting, and technical department aliases predictably.
 - Settings shows the latest sync review with created rows, updated rows, status/team/reporting/photo changes, protected web photos, and warnings.
+- Settings can preview sheet sync changes without applying them.
 
 ## Quick Start
 
@@ -71,7 +72,7 @@ See [docs/weekly-live-qa.md](docs/weekly-live-qa.md) for the production API, Goo
 Current expected E2E result:
 
 ```text
-59 passed
+60 passed
 0 skipped
 ```
 
@@ -197,7 +198,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/settings` | Any user | Get app settings. |
 | `PATCH` | `/api/settings` | Editor | Update branding/settings. |
 | `POST` | `/api/import` | Editor | CSV import. Max 10MB. |
-| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state, `Org Chart Team` / `Primary Team` for multi-team department overrides, and `Secondary Reports To` for dashed secondary chart connectors. Stores the latest sync review in settings. |
+| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state, `Org Chart Team` / `Primary Team` for multi-team department overrides, and `Secondary Reports To` for dashed secondary chart connectors. Send `dryRun: true` to preview without writing. Applied syncs store the latest sync review in settings. |
 | `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
 
 ### Authentication

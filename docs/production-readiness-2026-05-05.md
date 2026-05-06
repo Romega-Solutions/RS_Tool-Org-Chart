@@ -113,6 +113,8 @@ Passed checks:
 - Print/PDF route loads and includes Duane Vargas.
 - Mobile chart renders with 28 nodes and no horizontal overflow at a 390px viewport.
 - Sync Now uses the saved sheet URL and returns `created: 0`, `updated: 31`, `errors: 0`, `total: 31`.
+- Settings now supports `Preview Changes`, which calls `/api/sync` with `dryRun: true` and shows the same review without writing people, departments, reporting, photos, `last_sync_at`, or `last_sync_summary`.
+- Applied syncs store `last_sync_summary`, which is shown in Settings as `Latest Sync Review` with created/updated/error counts, status/team/reporting/photo changes, protected managed photos, and warnings.
 - Cleanup unused photos returns no failures and no leftover disposable QA records were found.
 
 Operational note: after the first connector check returned zero secondary edges, Sync Now was run and populated Duane Vargas with `secondaryReportsTo`. The rerun showed one secondary edge.
@@ -199,6 +201,8 @@ The optional `Org Chart Team` column controls the single department shown by the
 The optional `Reports To` column is authoritative only when present. Blank cells clear the manager; omitted columns leave existing reporting lines unchanged.
 
 The optional `Secondary Reports To` column creates dashed secondary connectors for matrix responsibilities without duplicating the person as a second node. Blank cells clear secondary connectors only when the column is present; omitted columns preserve existing secondary connectors.
+
+Use Settings -> `Preview Changes` before applying a high-risk sheet update. The preview is non-mutating and does not change the saved latest sync review. Use Settings -> `Sync Now` only when the preview looks correct.
 
 Use `/admin/photos` -> `Clean Unused` after duplicate imports to remove unassigned managed photo files.
 

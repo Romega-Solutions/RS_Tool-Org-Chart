@@ -15,7 +15,7 @@
 - [x] Product QA pass completed against disposable local data
 - [x] Permanent product-flow Playwright spec added for CRUD, photos, chart views/search, export, print, audit, permissions, and mobile smoke
 - [x] Photo-gallery assignment tests made deterministic with disposable fixtures
-- [x] Full Playwright suite is now deterministic: 59 passing tests, no skips
+- [x] Full Playwright suite is now deterministic: 60 passing tests, no skips
 - [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
 - [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
 - [x] May 7 live product QA passed for login, chart render, Duane secondary connector, hidden placeholder records, disposable people CRUD, photo upload/display, crop/zoom, Excel export, print view, mobile layout, Sync Now, and cleanup unused photos
@@ -30,6 +30,7 @@
 - [x] Google Sheets status sync for resigned/inactive people
 - [x] Google Sheets sync hardening for managed WebP photo source changes, omitted secondary-reporting columns, and technical department aliases
 - [x] Google Sheets sync review is visible in Settings with created/updated/error counts, status changes, reporting changes, photo changes, protected photos, and warnings
+- [x] Google Sheets sync dry-run preview is available in Settings and through `POST /api/sync` with `dryRun: true`
 - [x] Audit logging
 - [x] Role-based auth (Editor/Viewer) with bcrypt + JWT
 - [x] Export: Excel (styled with ExcelJS), PNG (HD 2x, dotted bg, theme-aware), PDF, print

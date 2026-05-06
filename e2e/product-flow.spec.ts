@@ -552,6 +552,78 @@ test.describe.serial("Product QA flow", () => {
     }
   });
 
+  test("sync dry run previews changes without mutating people or latest sync review", async ({ page }) => {
+    const qaName = `Sync Dry Run QA ${Date.now()}`;
+    const headers = integrationHeaders();
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        headers,
+        data: {
+          name: qaName,
+          title: "Sync Dry Run QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          isActive: true,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const beforeSettingsRes = await page.request.get(appPath("/api/settings"), { headers });
+      const beforeSettings = await beforeSettingsRes.json();
+      const beforeSummary = beforeSettings.last_sync_summary ?? null;
+
+      const csv = [
+        "Name,Role/Position,Team,Status",
+        `${qaName},Sync Dry Run QA Updated,${departments[0].name},Inactive`,
+      ].join("\n");
+      const previewRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { dryRun: true, url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(previewRes.ok()).toBeTruthy();
+      const preview = await previewRes.json();
+      expect(preview.dryRun).toBe(true);
+      expect(preview.summary).toMatchObject({ created: 0, updated: 1, errors: 0, total: 1 });
+      expect(preview.changes.status[0]).toMatchObject({
+        name: qaName,
+        before: "Active",
+        after: "Inactive",
+      });
+
+      const personRes = await page.request.get(appPath(`/api/people/${personId}`), { headers });
+      expect(personRes.ok()).toBeTruthy();
+      const person = await personRes.json();
+      expect(person.title).toBe("Sync Dry Run QA");
+      expect(person.isActive).toBe(true);
+
+      const afterSettingsRes = await page.request.get(appPath("/api/settings"), { headers });
+      const afterSettings = await afterSettingsRes.json();
+      expect(afterSettings.last_sync_summary ?? null).toBe(beforeSummary);
+
+      await login(page, "admin", "admin123");
+      await page.goto(appPath("/admin/settings"));
+      await page.getByLabel("Google Sheet CSV URL").fill(`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`);
+      await page.getByRole("button", { name: "Preview Changes" }).click();
+      await expect(page.getByText("Sync Preview")).toBeVisible();
+      await expect(page.getByText("Preview only")).toBeVisible();
+      await expect(page.getByText(qaName).first()).toBeVisible();
+      await expect(page.getByText("Active → Inactive")).toBeVisible();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
+      }
+    }
+  });
+
   test("cleanup unused photos deletes only unassigned files", async ({ page }) => {
     const qaName = `Cleanup Photo QA ${Date.now()}`;
     let personId: number | null = null;

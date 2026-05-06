@@ -177,9 +177,11 @@ export async function POST(request: Request) {
   if (authErr) return authErr;
 
   let sheetsUrl: string | null = null;
+  let dryRun = false;
   try {
     const body = await request.json().catch(() => ({}));
     sheetsUrl = body.url ?? null;
+    dryRun = body.dryRun === true;
   } catch { /* ignore */ }
 
   if (!sheetsUrl) {
@@ -250,6 +252,7 @@ export async function POST(request: Request) {
   const nameToId = new Map<string, number>();
   const existing = db.select().from(people).all();
   for (const p of existing) nameToId.set(p.name.toLowerCase(), p.id);
+  let nextDryRunId = -1;
   const deptRows = db.select().from(departments).all();
   const deptByName = new Map<string, number>();
   const deptNameById = new Map<number, string>();
@@ -260,6 +263,7 @@ export async function POST(request: Request) {
     }
   }
   let nextDeptOrder = deptRows.length;
+  let nextDryRunDeptId = -1;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -275,13 +279,19 @@ export async function POST(request: Request) {
     // Auto-create department if it doesn't exist
     if (!deptId) {
       const color = pickDeptColor(deptName);
-      const inserted = db.insert(departments).values({
-        name: deptName,
-        color,
-        displayOrder: nextDeptOrder++,
-      }).returning().get();
-      deptId = inserted.id;
-      deptNameById.set(deptId, inserted.name);
+      if (dryRun) {
+        deptId = nextDryRunDeptId--;
+        deptNameById.set(deptId, deptName);
+        nextDeptOrder++;
+      } else {
+        const inserted = db.insert(departments).values({
+          name: deptName,
+          color,
+          displayOrder: nextDeptOrder++,
+        }).returning().get();
+        deptId = inserted.id;
+        deptNameById.set(deptId, inserted.name);
+      }
       for (const alias of departmentAliases(deptName)) {
         deptByName.set(alias, deptId);
       }
@@ -316,25 +326,31 @@ export async function POST(request: Request) {
       const updateProjectIds = row.hasPhotoColumn && photoUrl && (shouldUpdatePhoto || previousSheetPhotoSource)
         ? setSheetPhotoSource(existingPerson?.projectIds ?? null, photoUrl)
         : existingPerson?.projectIds ?? null;
-      db.update(people).set({
-        title: row.title,
-        departmentId: deptId,
-        ...(shouldUpdatePhoto && { photoUrl }),
-        projectIds: updateProjectIds,
-        ...(row.isActive !== null && { isActive: row.isActive }),
-        updatedAt: new Date().toISOString(),
-      }).where(eq(people.id, existingId)).run();
+      if (!dryRun) {
+        db.update(people).set({
+          title: row.title,
+          departmentId: deptId,
+          ...(shouldUpdatePhoto && { photoUrl }),
+          projectIds: updateProjectIds,
+          ...(row.isActive !== null && { isActive: row.isActive }),
+          updatedAt: new Date().toISOString(),
+        }).where(eq(people.id, existingId)).run();
+      }
       results.push({ row: i + 1, name: row.name, status: "updated" });
     } else {
-      const inserted = db.insert(people).values({
-        name: row.name,
-        title: row.title,
-        departmentId: deptId,
-        photoUrl,
-        projectIds: photoUrl ? setSheetPhotoSource(null, photoUrl) : null,
-        isActive: row.isActive ?? true,
-      }).returning().get();
-      nameToId.set(row.name.toLowerCase(), inserted.id);
+      if (dryRun) {
+        nameToId.set(row.name.toLowerCase(), nextDryRunId--);
+      } else {
+        const inserted = db.insert(people).values({
+          name: row.name,
+          title: row.title,
+          departmentId: deptId,
+          photoUrl,
+          projectIds: photoUrl ? setSheetPhotoSource(null, photoUrl) : null,
+          isActive: row.isActive ?? true,
+        }).returning().get();
+        nameToId.set(row.name.toLowerCase(), inserted.id);
+      }
       changes.created.push({ name: row.name, title: row.title, department: deptNameById.get(deptId) ?? deptName });
       results.push({ row: i + 1, name: row.name, status: "created" });
     }
@@ -355,7 +371,9 @@ export async function POST(request: Request) {
           if (person?.reportsTo !== managerId) {
             changes.reporting.push({ name: row.name, before: beforeManager, after: row.reportsTo });
           }
-          db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
+          if (!dryRun) {
+            db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
+          }
         } else if (!managerId) {
           changes.warnings.push({ name: row.name, message: `Reports To manager not found: ${row.reportsTo}` });
         }
@@ -363,11 +381,13 @@ export async function POST(request: Request) {
         if (person?.reportsTo) {
           changes.reporting.push({ name: row.name, before: beforeManager, after: null });
         }
-        db.update(people).set({ reportsTo: null }).where(eq(people.id, personId)).run();
+        if (!dryRun) {
+          db.update(people).set({ reportsTo: null }).where(eq(people.id, personId)).run();
+        }
       }
     }
 
-    if (personId && row.hasSecondaryReportsToColumn) {
+    if (personId && personId > 0 && row.hasSecondaryReportsToColumn) {
       const person = db.select().from(people).where(eq(people.id, personId)).get();
       const beforeIds = parseSecondaryReportsTo(person?.projectIds ?? null);
       const secondaryReportsTo = splitManagerNames(row.secondaryReportsTo)
@@ -386,20 +406,17 @@ export async function POST(request: Request) {
         });
       }
 
-      db.update(people)
-        .set({ projectIds: setSecondaryReportsTo(person?.projectIds ?? null, secondaryReportsTo) })
-        .where(eq(people.id, personId))
-        .run();
+      if (!dryRun) {
+        db.update(people)
+          .set({ projectIds: setSecondaryReportsTo(person?.projectIds ?? null, secondaryReportsTo) })
+          .where(eq(people.id, personId))
+          .run();
+      }
     }
   }
 
   // Update last_sync_at
   const now = new Date().toISOString();
-  db.insert(settings)
-    .values({ key: "last_sync_at", value: now })
-    .onConflictDoUpdate({ target: settings.key, set: { value: now } })
-    .run();
-
   const created = results.filter((r) => r.status === "created").length;
   const updated = results.filter((r) => r.status === "updated").length;
   const errCount = results.filter((r) => r.status === "error").length;
@@ -408,12 +425,20 @@ export async function POST(request: Request) {
     summary: { created, updated, errors: errCount, total: rows.length },
     changes,
   };
-  db.insert(settings)
-    .values({ key: "last_sync_summary", value: JSON.stringify(syncSummary) })
-    .onConflictDoUpdate({ target: settings.key, set: { value: JSON.stringify(syncSummary) } })
-    .run();
+  if (!dryRun) {
+    db.insert(settings)
+      .values({ key: "last_sync_at", value: now })
+      .onConflictDoUpdate({ target: settings.key, set: { value: now } })
+      .run();
+
+    db.insert(settings)
+      .values({ key: "last_sync_summary", value: JSON.stringify(syncSummary) })
+      .onConflictDoUpdate({ target: settings.key, set: { value: JSON.stringify(syncSummary) } })
+      .run();
+  }
 
   return NextResponse.json({
+    dryRun,
     results,
     summary: { created, updated, errors: errCount, total: rows.length },
     changes,

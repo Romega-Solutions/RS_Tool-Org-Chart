@@ -15,6 +15,8 @@ It combines:
 
 The workflow does not auto-apply Google Sheet changes unless the `sync_google_sheet` MCP tool is called or the org chart app's Sync Now action is used.
 
+For manual operations in the org chart app, use Settings -> `Preview Changes` first. It calls `/api/sync` with `dryRun: true`, computes the same review, and does not mutate people, departments, reporting, photos, `last_sync_at`, or `last_sync_summary`.
+
 ## Current Live URLs
 
 Use the public app URL for browser and external clients:
@@ -208,6 +210,8 @@ Photo sync tracks the last sheet photo source after an external image is importe
 `Secondary Reports To` is optional. Use it when one person should keep one primary tree position but also show a dashed secondary connector to another manager or team placeholder, for example `Duane Vargas -> HR Team`. If the column is omitted entirely, existing secondary connectors are left unchanged. If the column is present with a blank cell, that person's secondary connectors are cleared.
 
 Use Photos -> Clean Unused after a bulk re-import if duplicate unassigned files are left in managed storage.
+
+Applied org chart syncs save a latest sync review in Settings. The review includes created/updated/error counts, status changes, department changes, reporting changes, photo source changes, protected managed photos, and warnings. Dry-run previews are not saved as the latest review.
 
 Do not put MCP tool names, REST URLs, API actions, or API keys in the sheet. The sheet is only the employee data source.
 
