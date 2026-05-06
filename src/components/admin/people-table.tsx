@@ -8,6 +8,7 @@ import { PersonForm } from "@/components/admin/person-form";
 import { Trash2, Plus, Search, CheckCircle2, XCircle, X, Check, Minus, ArrowUpAZ, ArrowDownZA, ArrowUpDown, ArrowDownUp, Group, CircleDot, CircleOff, ListFilter, Bookmark, BookmarkCheck, Users, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDeptIcon } from "@/lib/dept-icons";
+import { isOrgPlaceholder } from "@/lib/org-placeholders";
 import type { Person } from "@/types";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -230,7 +231,12 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     fetchPeople();
   }, [fetchPeople]);
 
-  const filtered = people.filter((p) => {
+  const visiblePeople = useMemo(
+    () => people.filter((person) => !isOrgPlaceholder(person.name, person.title)),
+    [people]
+  );
+
+  const filtered = visiblePeople.filter((p) => {
     // Status filter
     if (statusFilter === "active" && !p.isActive) return false;
     if (statusFilter === "inactive" && p.isActive) return false;
@@ -1095,7 +1101,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
       {/* Count footer */}
       {!loading && (
         <p className="text-xs text-muted-foreground tabular-nums">
-          Showing {visibleRows.length} of {people.length} people
+          Showing {visibleRows.length} of {visiblePeople.length} people
         </p>
       )}
 

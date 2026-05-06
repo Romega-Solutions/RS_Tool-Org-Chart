@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { isOrgPlaceholder } from "@/lib/org-placeholders";
 import {
   RefreshCw,
   Upload,
@@ -173,7 +174,9 @@ export default function PhotosPage() {
       if (peopleRes.ok) {
         const allPeople = await peopleRes.json();
         setMissingPhotos(
-          allPeople.filter((p: { photoUrl: string | null }) => !p.photoUrl)
+          allPeople.filter((p: { name: string; title: string; photoUrl: string | null }) =>
+            !p.photoUrl && !isOrgPlaceholder(p.name, p.title)
+          )
         );
       }
     } catch (err) {
