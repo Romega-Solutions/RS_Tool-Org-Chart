@@ -33,11 +33,12 @@ Production deploys through GitHub Actions to the VPS/Easypanel app. The deploy w
 
 ## Latest Checkpoint Deploy
 
-Checkpoint `297e416 feat(integrations): checkpoint org chart n8n mcp readiness` has been pushed to `master` and deployed by GitHub Actions run `25420023889`.
+Checkpoint `aa26ea8 fix(auth): checkpoint base path redirects` has been pushed to `master` and deployed by GitHub Actions run `25443129282`.
 
 The deploy included:
 
 - `/org-chart/` redirect fix. Live base URL now redirects to `/org-chart/login?next=%2Fchart` instead of `/org-chart/org-chart/chart`.
+- Login redirect fix. Successful live login now lands on `/org-chart/chart` instead of `/org-chart/org-chart/chart`.
 - API-key protected endpoint fix. Valid `X-API-Key` access works for protected routes such as `/api/departments`.
 - Expanded product-flow Playwright coverage for route redirects and API-key protected endpoint access.
 - Combined n8n workflow: `n8n-workflows/orgchart-mcp-tools.json`.
@@ -69,6 +70,16 @@ Easypanel deployment -> passed
 workflow live verification -> passed
 ```
 
+GitHub Actions verification on run `25443129282`:
+
+```txt
+lint -> passed
+build -> passed
+Playwright Chromium tests -> passed
+Easypanel deployment -> passed
+workflow live verification -> passed
+```
+
 Live checks after deploy:
 
 ```txt
@@ -80,6 +91,29 @@ https://tools.romega-solutions.com/org-chart/api/departments with X-API-Key -> 2
 ```
 
 The n8n `read_audit_log` tool returned real audit entries after using a Header Auth credential.
+
+## May 7 Live Product QA
+
+Live QA was run against `https://tools.romega-solutions.com/org-chart` using disposable data.
+
+Passed checks:
+
+- Login lands on `/org-chart/chart` with no doubled `/org-chart/org-chart` path.
+- Chart renders with Duane Vargas visible and the dashed secondary reporting connector present.
+- Raw placeholder titles such as `TBA - ...` stay hidden in the chart.
+- `/admin/team` hides org placeholder records such as `Tech/AI Team`, `HR Team`, `Market Intelligence Team`, `Marketing Team`, and `Sales Team`.
+- `/admin/photos` hides the same placeholder records.
+- Disposable people create/edit/delete works through the live API/session.
+- Disposable photo upload returns a managed `/uploads/photos/...` asset and the asset is readable.
+- Photo crop/zoom saves a new managed WebP photo and keeps it assigned to the person.
+- Chart displays the disposable person after photo assignment.
+- Excel export downloads successfully.
+- Print/PDF route loads and includes Duane Vargas.
+- Mobile chart renders with 28 nodes and no horizontal overflow at a 390px viewport.
+- Sync Now uses the saved sheet URL and returns `created: 0`, `updated: 31`, `errors: 0`, `total: 31`.
+- Cleanup unused photos returns no failures and no leftover disposable QA records were found.
+
+Operational note: after the first connector check returned zero secondary edges, Sync Now was run and populated Duane Vargas with `secondaryReportsTo`. The rerun showed one secondary edge.
 
 ## n8n and MCP
 
@@ -147,8 +181,6 @@ Do not run `sync_google_sheet` or Sync Now while the tab is empty.
 
 ## Remaining Work
 
-1. Populate the new Google Sheet tab with headers and real team data.
-2. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL.
-3. Run the daily Google Sheets review flow.
-4. Only run actual sync after the sheet data has been reviewed.
-5. Re-run full live product smoke for chart search, export, print, photos, and mobile after data/photo updates.
+1. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL after any n8n workflow edits.
+2. Run the daily Google Sheets review flow on schedule.
+3. Re-run full live product smoke after any future sheet schema, auth, photo, export, or routing change.

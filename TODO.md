@@ -1,7 +1,7 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, and n8n/MCP workflow assets. Latest checkpoint `297e416` is pushed and live.
-> Last updated: 2026-05-06
+> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, n8n/MCP workflow assets, sheet sync, managed photos, and live product QA. Latest checkpoint `aa26ea8` is pushed and live.
+> Last updated: 2026-05-07
 
 ---
 
@@ -18,6 +18,7 @@
 - [x] Full Playwright suite is now deterministic: 47 passing tests, no skips
 - [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
 - [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
+- [x] May 7 live product QA passed for login, chart render, Duane secondary connector, hidden placeholder records, disposable people CRUD, photo upload/display, crop/zoom, Excel export, print view, mobile layout, Sync Now, and cleanup unused photos
 
 ### Core Features
 - [x] 3 chart views (top-down, horizontal, department grid)
@@ -133,17 +134,19 @@
 - `API_KEY` is also present in the GitHub `VPS_HOST` environment for future workflow use.
 - n8n workflow JSON now includes MCP tools and daily Google Sheets review.
 - New Google Sheet tab `gid=947755283` was selected for review/sync isolation from the old tab.
-- The new tab exports HTTP 200 but is currently empty until headers/data are added.
+- The new tab exports HTTP 200 and is now populated with team data used by Sync Now.
 
-### May 6 checkpoint deploy
+### May 7 live QA and latest checkpoint
 
-- [x] 🟢 Created checkpoint commit `297e416 feat(integrations): checkpoint org chart n8n mcp readiness`
+- [x] 🟢 Created checkpoint commit `aa26ea8 fix(auth): checkpoint base path redirects`
 - [x] 🟢 Pushed `master` to GitHub
-- [x] 🟢 GitHub Actions deploy run `25420023889` completed successfully
-- [x] 🟢 Verified `https://tools.romega-solutions.com/org-chart/` redirects to `/org-chart/login?next=%2Fchart`
-- [x] 🟢 Verified `/org-chart/chart` returns HTTP 200 without the doubled `/org-chart/org-chart` path
+- [x] 🟢 GitHub Actions deploy run `25443129282` completed successfully
+- [x] 🟢 Verified `https://tools.romega-solutions.com/org-chart/login` returns HTTP 200
+- [x] 🟢 Verified live login lands on `/org-chart/chart` without the doubled `/org-chart/org-chart` path
 - [x] 🟢 Verified `/org-chart/api/people?includeInactive=true` returns HTTP 200
-- [x] 🟢 Verified `/org-chart/api/departments` returns HTTP 200 with `X-API-Key`
+- [x] 🟢 Verified live chart renders with Duane's dashed secondary connector after Sync Now
+- [x] 🟢 Verified `/admin/team` and `/admin/photos` hide org placeholder records
+- [x] 🟢 Verified disposable live people CRUD, photo upload, crop/zoom, photo display, Excel export, print view, mobile chart layout, Sync Now, and cleanup unused photos
 
 ### Domain consolidation
 
@@ -155,9 +158,9 @@
 
 ### For Mark (data)
 
-- [ ] 🟡 Populate the new Google Sheet tab with headers/data before running sync
+- [x] 🟢 Populate the new Google Sheet tab with headers/data before running sync
 - [x] 🟢 Configure Google Sheets URL for n8n review using `gid=947755283`
-- [ ] 🟢 Import sheet-mapped Drive photos into live `/admin/photos` after sync review
+- [x] 🟢 Import sheet-mapped Drive photos into live `/admin/photos` after sync review
 
 ---
 

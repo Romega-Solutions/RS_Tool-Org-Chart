@@ -11,7 +11,7 @@ The app manages people, departments, photos, audit history, chart views, exports
 | Production URL | `https://tools.romega-solutions.com/org-chart` |
 | Easypanel fallback URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
-| Latest verification | `297e416` deployed through GitHub Actions; live `/org-chart` routes and API-key endpoints verified |
+| Latest verification | `aa26ea8` deployed through GitHub Actions; full live product QA passed on 2026-05-07 |
 | Test suite | GitHub Actions lint, build, and Playwright Chromium suite passing |
 | Production notes | Live passwords have been rotated. n8n/MCP setup is documented. API-key protected endpoints are live. |
 
@@ -83,14 +83,14 @@ Must finish before calling the rollout stable:
 - [x] Deploy the `/org-chart/` redirect fix so the base URL no longer redirects to `/org-chart/org-chart/chart`.
 - [x] Deploy the API-key protected-endpoint fix so n8n/MCP can use protected routes consistently.
 - [x] Re-run live route/API smoke checks for `/org-chart/`, chart redirect, people API, and API-key protected departments API.
-- [ ] Re-run full live product smoke checks for chart search, export, print, photos, and mobile after the next data/photo update.
+- [x] Re-run full live product smoke checks for login, chart render, Duane secondary connector, team placeholders, people CRUD, photos, crop/zoom, export, print, Sync Now, cleanup, and mobile layout after the latest data/photo update.
 
 Data follow-up:
 
-- [ ] Import production team photos from the sheet into managed `/admin/photos` storage.
-- [ ] Confirm real team data and reporting lines.
-- [ ] Populate the new Google Sheet tab before running sync.
-- [ ] Configure Google Sheets sync if the live sheet should stay authoritative.
+- [x] Import production team photos from the sheet into managed `/admin/photos` storage.
+- [x] Confirm real team data and reporting lines through live chart QA.
+- [x] Populate the new Google Sheet tab before running sync.
+- [x] Configure Google Sheets sync so the live sheet can stay authoritative.
 
 ## CI/CD
 
