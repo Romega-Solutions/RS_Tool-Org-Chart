@@ -101,14 +101,30 @@ jobs:
 
       - name: Verify live site
         env:
-          LIVE_URL: https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host
+          LIVE_URL: https://tools.romega-solutions.com
         run: |
           set -euo pipefail
 
-          echo "Checking $LIVE_URL"
-          html="$(curl --fail --silent --show-error --location --max-time 30 "$LIVE_URL")"
-          echo "$html" | grep -q "<title>Org Chart - Romega Solutions</title>"
-          echo "Live site returned expected title."
+          echo "Checking $LIVE_URL/org-chart/login"
+          html=""
+          for attempt in $(seq 1 20); do
+            if html="$(curl --fail --silent --show-error --location --max-time 30 "$LIVE_URL/org-chart/login")"; then
+              if echo "$html" | grep -q "<title>Org Chart - Romega Solutions</title>"; then
+                echo "Live site returned expected title on attempt $attempt."
+                break
+              fi
+              echo "Live site responded but title was not ready yet. Attempt $attempt/20."
+            else
+              echo "Live site not ready yet. Attempt $attempt/20."
+            fi
+
+            if [ "$attempt" = "20" ]; then
+              echo "::error::Live site did not return the expected title after waiting."
+              exit 1
+            fi
+
+            sleep 15
+          done
 
           account_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/org-chart/account")"
           if [ "$account_status" != "200" ] && [ "$account_status" != "307" ] && [ "$account_status" != "308" ]; then
