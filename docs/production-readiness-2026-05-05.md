@@ -115,6 +115,14 @@ Passed checks:
 
 Operational note: after the first connector check returned zero secondary edges, Sync Now was run and populated Duane Vargas with `secondaryReportsTo`. The rerun showed one secondary edge.
 
+Weekly smoke is available with:
+
+```txt
+pnpm qa:weekly-live
+```
+
+The weekly script checks the public login page, people API, protected departments/audit APIs, the Google Sheet CSV, and n8n MCP endpoint registration status.
+
 ## n8n and MCP
 
 Workflow file:
@@ -181,6 +189,7 @@ Do not run `sync_google_sheet` or Sync Now while the tab is empty.
 
 ## Remaining Work
 
-1. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL after any n8n workflow edits.
-2. Run the daily Google Sheets review flow on schedule.
-3. Re-run full live product smoke after any future sheet schema, auth, photo, export, or routing change.
+1. Activate/fix the n8n production MCP webhook if MCP clients need live access. Current external probe returns HTTP 404 for the configured production MCP URL.
+2. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL after activation or workflow edits.
+3. Run the daily Google Sheets review flow on schedule.
+4. Re-run full live product smoke after any future sheet schema, auth, photo, export, or routing change.

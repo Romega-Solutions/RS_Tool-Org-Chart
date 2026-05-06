@@ -58,6 +58,14 @@ pnpm build
 npx playwright test --browser=chromium
 ```
 
+Weekly live smoke:
+
+```bash
+pnpm qa:weekly-live
+```
+
+See [docs/weekly-live-qa.md](docs/weekly-live-qa.md) for the production API, Google Sheet, and n8n MCP checks.
+
 Current expected E2E result:
 
 ```text

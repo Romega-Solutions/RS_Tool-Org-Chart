@@ -189,7 +189,7 @@ Use Photos -> Clean Unused after a bulk re-import if duplicate unassigned files 
 
 Do not put MCP tool names, REST URLs, API actions, or API keys in the sheet. The sheet is only the employee data source.
 
-The new tab currently exports successfully but may be empty. Do not run `sync_google_sheet` or Sync Now while the tab is empty.
+The new tab exports successfully and is populated with the current team data. Do not run `sync_google_sheet` or Sync Now if the tab is ever cleared or being rebuilt.
 
 ## Troubleshooting
 
@@ -238,4 +238,6 @@ Known verified behavior:
 - `GET /org-chart/api/people?includeInactive=true` returns live people JSON.
 - `read_audit_log` returns audit entries when configured with the Header Auth credential.
 - `gid=947755283` CSV export returns HTTP 200.
-- The tab must be populated before sync is safe.
+- `gid=947755283` is populated with current team data.
+- `pnpm qa:weekly-live` verifies the public login page, people API, departments API, audit API, Google Sheet CSV, and MCP endpoint registration status.
+- Current external MCP probe result: the production MCP URL returns HTTP 404, which means the n8n production MCP webhook is not registered/active at that URL from outside n8n. Activate the workflow and retest the MCP Server Trigger production URL before treating MCP production access as live.

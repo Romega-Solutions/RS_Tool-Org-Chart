@@ -19,6 +19,7 @@
 - [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
 - [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
 - [x] May 7 live product QA passed for login, chart render, Duane secondary connector, hidden placeholder records, disposable people CRUD, photo upload/display, crop/zoom, Excel export, print view, mobile layout, Sync Now, and cleanup unused photos
+- [x] Weekly live QA script added for public route, protected API, Google Sheet CSV, and n8n MCP endpoint checks
 
 ### Core Features
 - [x] 3 chart views (top-down, horizontal, department grid)
@@ -147,6 +148,8 @@
 - [x] 🟢 Verified live chart renders with Duane's dashed secondary connector after Sync Now
 - [x] 🟢 Verified `/admin/team` and `/admin/photos` hide org placeholder records
 - [x] 🟢 Verified disposable live people CRUD, photo upload, crop/zoom, photo display, Excel export, print view, mobile chart layout, Sync Now, and cleanup unused photos
+- [x] 🟢 Verified underlying n8n tool target APIs: departments, audit log, and people endpoints return HTTP 200 with `X-API-Key`
+- [ ] 🟡 Activate or repair the n8n production MCP URL. External MCP initialize currently returns HTTP 404, meaning the production webhook is not registered/active at the configured URL.
 
 ### Domain consolidation
 
