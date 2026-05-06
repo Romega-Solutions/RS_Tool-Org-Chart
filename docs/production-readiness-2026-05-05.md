@@ -31,19 +31,21 @@ Production deploys through GitHub Actions to the VPS/Easypanel app. The deploy w
 - Selected a new Google Sheet tab (`gid=947755283`) to avoid overwriting the old tab.
 - Documented n8n env, Header Auth credential, MCP URLs, and troubleshooting.
 
-## Current Local Changes Awaiting Deploy
+## Latest Checkpoint Deploy
 
-These are verified locally but not live until the next checkpoint commit/push/deploy:
+Checkpoint `297e416 feat(integrations): checkpoint org chart n8n mcp readiness` has been pushed to `master` and deployed by GitHub Actions run `25420023889`.
 
-- `/org-chart/` redirect fix. Current live behavior still redirects to `/org-chart/org-chart/chart`; local code fixes this by redirecting to `/chart` inside the Next base-path app.
-- API-key protected endpoint fix. Local code accepts either `API_KEY` or `ORGCHART_API_KEY` and verifies the key before CSRF bypass. This makes protected routes like `/api/departments` work consistently for n8n/MCP.
+The deploy included:
+
+- `/org-chart/` redirect fix. Live base URL now redirects to `/org-chart/login?next=%2Fchart` instead of `/org-chart/org-chart/chart`.
+- API-key protected endpoint fix. Valid `X-API-Key` access works for protected routes such as `/api/departments`.
 - Expanded product-flow Playwright coverage for route redirects and API-key protected endpoint access.
 - Combined n8n workflow: `n8n-workflows/orgchart-mcp-tools.json`.
-- Docs refresh for README, TODO, and n8n setup.
+- README, TODO, and n8n setup docs refresh.
 
 ## Verification Evidence
 
-Local verification after the current fixes:
+Local verification before the checkpoint:
 
 ```txt
 pnpm lint
@@ -57,12 +59,24 @@ Expected local product-flow result:
 3 passed
 ```
 
-Live checks observed during setup:
+GitHub Actions verification on run `25420023889`:
 
 ```txt
-https://tools.romega-solutions.com/org-chart/chart -> 200, redirects anonymous users to login
+lint -> passed
+build -> passed
+Playwright Chromium tests -> passed
+Easypanel deployment -> passed
+workflow live verification -> passed
+```
+
+Live checks after deploy:
+
+```txt
+tools.romega-solutions.com DNS -> 51.83.97.146
+https://tools.romega-solutions.com/org-chart/ -> 200, redirects to /org-chart/login?next=%2Fchart
+https://tools.romega-solutions.com/org-chart/chart -> 200, redirects anonymous users to /org-chart/login?next=%2Fchart
 https://tools.romega-solutions.com/org-chart/api/people?includeInactive=true -> 200
-https://tools.romega-solutions.com/org-chart/api/departments with X-API-Key -> 200 after the local API-key fix is deployed
+https://tools.romega-solutions.com/org-chart/api/departments with X-API-Key -> 200
 ```
 
 The n8n `read_audit_log` tool returned real audit entries after using a Header Auth credential.
@@ -116,20 +130,19 @@ https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUo
 Recommended headers:
 
 ```txt
-No.,Name,Role/Position,Team,Reports To,Photo,Work Email
+No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status
 ```
+
+The `Photo` column can use Google Drive file links for review. After sheet sync applies those links, use `/admin/photos` -> `Import External` to download them into managed WebP storage so the photo gallery, chart, export, and print flows all use `/uploads/photos/...` URLs.
+
+The optional `Status` column controls active visibility. `Active` keeps people active. `Resigned`, `Inactive`, `Offboarded`, and `Ended` set `isActive=false` on sync without deleting the person record or audit history.
 
 Do not run `sync_google_sheet` or Sync Now while the tab is empty.
 
 ## Remaining Work
 
-1. Create checkpoint commit and push the current local fixes/docs.
-2. Watch the GitHub deploy workflow until live verification completes.
-3. Recheck:
-   - `https://tools.romega-solutions.com/org-chart/`
-   - `GET /org-chart/api/departments` with `X-API-Key`
-   - n8n MCP `list_departments`
-   - n8n MCP `read_audit_log`
-4. Populate the new Google Sheet tab with headers and real team data.
-5. Run the daily review flow.
-6. Only run actual sync after the sheet data has been reviewed.
+1. Populate the new Google Sheet tab with headers and real team data.
+2. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL.
+3. Run the daily Google Sheets review flow.
+4. Only run actual sync after the sheet data has been reviewed.
+5. Re-run full live product smoke for chart search, export, print, photos, and mobile after data/photo updates.

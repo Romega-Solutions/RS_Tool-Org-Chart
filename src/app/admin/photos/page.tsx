@@ -17,6 +17,7 @@ import {
   UserPlus,
   Check,
   Search,
+  CloudDownload,
 } from "lucide-react";
 import {
   Dialog,
@@ -133,6 +134,8 @@ export default function PhotosPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [uploadSkipped, setUploadSkipped] = useState<string[]>([]);
+  const [importingExternal, setImportingExternal] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -224,6 +227,27 @@ export default function PhotosPage() {
       setUploading(false);
       setUploadProgress(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function importExternalPhotos() {
+    setImportingExternal(true);
+    setImportNotice(null);
+    try {
+      const res = await fetch(apiPath("/api/photos/import-external"), { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.error ?? `Import failed (${res.status})`);
+      }
+      const summary = body?.summary ?? { imported: 0, skipped: 0, errors: 0 };
+      setImportNotice(
+        `Imported ${summary.imported ?? 0} external photos. Skipped ${summary.skipped ?? 0}. Errors ${summary.errors ?? 0}.`
+      );
+      await fetchPhotos();
+    } catch (err) {
+      setImportNotice(err instanceof Error ? err.message : "Could not import external photos.");
+    } finally {
+      setImportingExternal(false);
     }
   }
 
@@ -464,6 +488,18 @@ export default function PhotosPage() {
                 onChange={handleFileInput}
               />
               <Button
+                variant="outline"
+                size="sm"
+                onClick={importExternalPhotos}
+                disabled={importingExternal || uploading}
+                className="gap-2 cursor-pointer"
+              >
+                <CloudDownload className={`w-4 h-4 ${importingExternal ? "animate-pulse" : ""}`} />
+                <span className="hidden sm:inline">
+                  {importingExternal ? "Importing..." : "Import External"}
+                </span>
+              </Button>
+              <Button
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -482,6 +518,12 @@ export default function PhotosPage() {
       {/* Stats (shown when loaded) */}
       {!loading && !error && (
         <StatsBar photos={photos} missingCount={missingPhotos.length} onMissingClick={() => setMissingOpen(true)} />
+      )}
+
+      {importNotice && (
+        <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          {importNotice}
+        </div>
       )}
 
       {/* Content area */}

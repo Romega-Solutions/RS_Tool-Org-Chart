@@ -156,7 +156,7 @@ https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUo
 Recommended headers:
 
 ```txt
-No.,Name,Role/Position,Team,Reports To,Photo,Work Email
+No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status
 ```
 
 Required by the app sync:
@@ -173,7 +173,12 @@ Optional:
 Reports To
 Photo
 Work Email
+Status
 ```
+
+`Photo` can contain a Google Drive share link, Google Drive open link, direct image URL, or uploaded filename. Sheet sync stores the external URL on the person first. To move those images into app-managed storage, open `/admin/photos` and run `Import External`; the app downloads the images, converts them to WebP, saves them under `/uploads/photos`, and updates each person to the managed local URL.
+
+`Status` is optional. Use `Active` for current people. Use `Resigned`, `Inactive`, `Offboarded`, or `Ended` to set `isActive=false` during sync. Blank status leaves the person's current active flag unchanged.
 
 Do not put MCP tool names, REST URLs, API actions, or API keys in the sheet. The sheet is only the employee data source.
 

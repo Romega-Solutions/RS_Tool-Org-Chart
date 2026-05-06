@@ -62,6 +62,113 @@ test.describe.serial("Product QA flow", () => {
     }
   });
 
+  test("imports external sheet photos into managed photo storage", async ({ page }) => {
+    const qaName = `Photo Import QA ${Date.now()}`;
+    const externalPhotoUrl = `data:image/png;base64,${png1x1.toString("base64")}`;
+    let personId: number | null = null;
+    let importedUrl: string | null = null;
+
+    await login(page, "admin", "admin123");
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Photo Import QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          photoUrl: externalPhotoUrl,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const importRes = await page.request.post(appPath("/api/photos/import-external"));
+      expect(importRes.ok()).toBeTruthy();
+      const importJson = await importRes.json();
+      expect(importJson.summary.imported).toBeGreaterThanOrEqual(1);
+      expect(importJson.results.some((result: { personId: number; status: string }) => (
+        result.personId === personId && result.status === "imported"
+      ))).toBeTruthy();
+
+      const personRes = await page.request.get(appPath(`/api/people/${personId}`));
+      expect(personRes.ok()).toBeTruthy();
+      const person = await personRes.json();
+      importedUrl = person.photoUrl;
+      expect(importedUrl).toMatch(/^\/uploads\/photos\/.+\.webp$/);
+
+      const photosRes = await page.request.get(appPath("/api/photos"));
+      expect(photosRes.ok()).toBeTruthy();
+      const photos = await photosRes.json();
+      expect(photos.some((photo: { url: string; usedBy: { id: number } | null }) => (
+        photo.url === importedUrl && photo.usedBy?.id === personId
+      ))).toBeTruthy();
+
+      await page.goto(appPath("/admin/photos"));
+      await expect(page.getByRole("button", { name: /Import External/ })).toBeVisible();
+      await expect(page.locator("[data-slot='card']").filter({ hasText: qaName })).toBeVisible();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+      if (importedUrl) {
+        const filename = importedUrl.split("/").pop();
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync reads sheet status and deactivates resigned people", async ({ page }) => {
+    const qaName = `Status Sync QA ${Date.now()}`;
+    let personId: number | null = null;
+
+    await login(page, "admin", "admin123");
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Status Sync QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          isActive: true,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const csv = [
+        "Name,Role/Position,Team,Status",
+        `${qaName},Status Sync QA,${departments[0].name},Resigned`,
+      ].join("\n");
+      const syncRes = await page.request.post(appPath("/api/sync"), {
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(syncRes.ok()).toBeTruthy();
+
+      const personRes = await page.request.get(appPath(`/api/people/${personId}`));
+      expect(personRes.ok()).toBeTruthy();
+      const person = await personRes.json();
+      expect(person.isActive).toBe(false);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
+  });
+
   test("covers disposable CRUD, photos, chart views, export, print, audit, permissions, and mobile smoke", async ({ page, browser }) => {
     test.setTimeout(120_000);
 

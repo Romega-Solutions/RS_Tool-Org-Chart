@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
-import sharp from "sharp";
 import { getUserFromRequest } from "@/lib/auth";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const ALLOWED_EXT = /\.(jpg|jpeg|png|gif|webp)$/i;
-const MAX_UPLOAD_DIR_SIZE = 500 * 1024 * 1024; // 500 MB disk quota
+import {
+  ALLOWED_PHOTO_EXT,
+  ALLOWED_PHOTO_TYPES,
+  MAX_PHOTO_FILE_SIZE,
+  saveProfilePhoto,
+} from "@/lib/photo-storage";
 
 // Simple in-memory rate limiter: max 30 uploads per minute per user
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -24,20 +22,6 @@ function checkRateLimit(username: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX) return false;
   entry.count++;
   return true;
-}
-
-async function getDirSize(dir: string): Promise<number> {
-  try {
-    const files = await fs.readdir(dir);
-    let total = 0;
-    for (const f of files) {
-      const stat = await fs.stat(path.join(dir, f));
-      if (stat.isFile()) total += stat.size;
-    }
-    return total;
-  } catch {
-    return 0;
-  }
 }
 
 export async function POST(request: Request) {
@@ -62,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   // Validate file type
-  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXT.test(file.name)) {
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type) && !ALLOWED_PHOTO_EXT.test(file.name)) {
     return NextResponse.json(
       { error: "Unsupported file type. Allowed: JPG, PNG, GIF, WebP" },
       { status: 400 }
@@ -70,44 +54,19 @@ export async function POST(request: Request) {
   }
 
   // Validate file size
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > MAX_PHOTO_FILE_SIZE) {
     return NextResponse.json(
-      { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+      { error: `File too large. Maximum size is ${MAX_PHOTO_FILE_SIZE / 1024 / 1024}MB` },
       { status: 400 }
     );
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
-  await fs.mkdir(uploadDir, { recursive: true });
-
-  // Check disk quota
-  const currentSize = await getDirSize(uploadDir);
-  if (currentSize > MAX_UPLOAD_DIR_SIZE) {
-    return NextResponse.json(
-      { error: "Storage limit reached. Delete some photos to free space." },
-      { status: 507 }
-    );
-  }
-
-  // Process image
   const buffer = Buffer.from(await file.arrayBuffer());
-  let resized: Buffer;
   try {
-    resized = await sharp(buffer)
-      .resize(200, 200, { fit: "cover" })
-      .webp({ quality: 80 })
-      .toBuffer();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid image file. Could not process." },
-      { status: 400 }
-    );
+    const url = await saveProfilePhoto(buffer, file.name);
+    return NextResponse.json({ url });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid image file. Could not process.";
+    return NextResponse.json({ error: message }, { status: message.startsWith("Storage") ? 507 : 400 });
   }
-
-  // Strip original extension and use .webp
-  const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-  const filename = `${Date.now()}-${baseName}.webp`;
-  await fs.writeFile(path.join(uploadDir, filename), resized);
-
-  return NextResponse.json({ url: `/uploads/photos/${filename}` });
 }

@@ -1,6 +1,6 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, and n8n/MCP workflow assets. Current local fixes still need checkpoint deploy.
+> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, and n8n/MCP workflow assets. Latest checkpoint `297e416` is pushed and live.
 > Last updated: 2026-05-06
 
 ---
@@ -24,6 +24,7 @@
 - [x] Full CRUD admin for people and departments
 - [x] CSV import (10MB limit)
 - [x] Google Sheets sync (configure URL in Settings → "Sync Now")
+- [x] Google Sheets status sync for resigned/inactive people
 - [x] Audit logging
 - [x] Role-based auth (Editor/Viewer) with bcrypt + JWT
 - [x] Export: Excel (styled with ExcelJS), PNG (HD 2x, dotted bg, theme-aware), PDF, print
@@ -69,6 +70,7 @@
 - [x] Assign unused photos to people from gallery (person picker dialog with search)
 - [x] Missing Photos dialog from clickable stat card (replaces separate panel)
 - [x] Click-to-assign from Missing Photos — upload + auto-assign in one step
+- [x] Import external sheet/Drive photo URLs into managed `/admin/photos` storage
 - [x] Stats bar: Total Photos, Assigned, Unused, Missing + coverage progress bar
 - [x] Empty state: dashed drop zone with inset shadow
 - [x] Skeleton loading, error state with retry
@@ -133,12 +135,15 @@
 - New Google Sheet tab `gid=947755283` was selected for review/sync isolation from the old tab.
 - The new tab exports HTTP 200 but is currently empty until headers/data are added.
 
-### Current local changes awaiting checkpoint deploy
+### May 6 checkpoint deploy
 
-- [ ] 🔴 Deploy `/org-chart/` redirect fix so it no longer redirects to `/org-chart/org-chart/chart`.
-- [ ] 🔴 Deploy API-key protected endpoint fix so routes like `/api/departments` accept valid `X-API-Key` consistently.
-- [ ] 🔴 Deploy updated n8n MCP + Google Sheets review JSON.
-- [ ] 🔴 Deploy README/TODO/n8n docs refresh.
+- [x] 🟢 Created checkpoint commit `297e416 feat(integrations): checkpoint org chart n8n mcp readiness`
+- [x] 🟢 Pushed `master` to GitHub
+- [x] 🟢 GitHub Actions deploy run `25420023889` completed successfully
+- [x] 🟢 Verified `https://tools.romega-solutions.com/org-chart/` redirects to `/org-chart/login?next=%2Fchart`
+- [x] 🟢 Verified `/org-chart/chart` returns HTTP 200 without the doubled `/org-chart/org-chart` path
+- [x] 🟢 Verified `/org-chart/api/people?includeInactive=true` returns HTTP 200
+- [x] 🟢 Verified `/org-chart/api/departments` returns HTTP 200 with `X-API-Key`
 
 ### Domain consolidation
 
@@ -152,7 +157,7 @@
 
 - [ ] 🟡 Populate the new Google Sheet tab with headers/data before running sync
 - [x] 🟢 Configure Google Sheets URL for n8n review using `gid=947755283`
-- [ ] 🟢 Upload team photos
+- [ ] 🟢 Import sheet-mapped Drive photos into live `/admin/photos` after sync review
 
 ---
 

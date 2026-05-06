@@ -4,6 +4,7 @@ import { people, departments, settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
 import { requireEditor } from "@/lib/auth";
+import { normalizeDrivePhotoUrl } from "@/lib/photo-storage";
 
 // Default department colors for auto-creation
 const DEPT_COLORS: Record<string, string> = {
@@ -36,6 +37,7 @@ function mapRow(raw: Record<string, string>): {
   reportsTo: string;
   photo: string;
   email: string;
+  isActive: boolean | null;
 } {
   const get = (...keys: string[]) => {
     for (const k of keys) {
@@ -54,6 +56,14 @@ function mapRow(raw: Record<string, string>): {
     return "";
   };
 
+  const parseStatus = (value: string) => {
+    const status = value.trim().toLowerCase();
+    if (!status) return null;
+    if (["active", "current", "employed", "yes", "true", "1"].includes(status)) return true;
+    if (["resigned", "inactive", "offboarded", "ended", "terminated", "no", "false", "0"].includes(status)) return false;
+    return null;
+  };
+
   return {
     name: get("name", "Name", "Full Name", "full_name"),
     title: get("title", "role/position", "Role/Position", "role", "position", "job_title"),
@@ -61,6 +71,7 @@ function mapRow(raw: Record<string, string>): {
     reportsTo: get("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
     email: get("email", "work email", "Work Email", "work_email"),
+    isActive: parseStatus(get("status", "Status", "is_active", "Is Active", "active", "Active")),
   };
 }
 
@@ -73,16 +84,8 @@ function parsePrimaryDepartment(raw: string): string {
 /** Convert photo value to a usable URL — handles Google Drive links, direct URLs, and filenames */
 function normalizePhotoUrl(raw: string): string {
   const trimmed = raw.trim();
-  // Google Drive share link → direct image URL
-  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (driveMatch) {
-    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-  }
-  // Google Drive open link
-  const openMatch = trimmed.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-  if (openMatch) {
-    return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
-  }
+  const normalizedDriveUrl = normalizeDrivePhotoUrl(trimmed);
+  if (normalizedDriveUrl !== trimmed) return normalizedDriveUrl;
   // Already a URL
   if (trimmed.startsWith("http") || trimmed.startsWith("/")) {
     return trimmed;
@@ -184,6 +187,7 @@ export async function POST(request: Request) {
         title: row.title,
         departmentId: deptId,
         ...(photoUrl && { photoUrl }),
+        ...(row.isActive !== null && { isActive: row.isActive }),
         updatedAt: new Date().toISOString(),
       }).where(eq(people.id, existingId)).run();
       results.push({ row: i + 1, name: row.name, status: "updated" });
@@ -193,6 +197,7 @@ export async function POST(request: Request) {
         title: row.title,
         departmentId: deptId,
         photoUrl,
+        isActive: row.isActive ?? true,
       }).returning().get();
       nameToId.set(row.name.toLowerCase(), inserted.id);
       results.push({ row: i + 1, name: row.name, status: "created" });

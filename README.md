@@ -11,9 +11,9 @@ The app manages people, departments, photos, audit history, chart views, exports
 | Production URL | `https://tools.romega-solutions.com/org-chart` |
 | Easypanel fallback URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
-| Latest verification | Local `/org-chart` lint, build, and Playwright QA passing |
-| Test suite | Playwright Chromium product-flow spec passing with route and API-key coverage |
-| Production notes | Live passwords have been rotated. n8n/MCP setup is documented; API-key protected endpoint fix is local until the next checkpoint deploy. |
+| Latest verification | `297e416` deployed through GitHub Actions; live `/org-chart` routes and API-key endpoints verified |
+| Test suite | GitHub Actions lint, build, and Playwright Chromium suite passing |
+| Production notes | Live passwords have been rotated. n8n/MCP setup is documented. API-key protected endpoints are live. |
 
 Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs/production-readiness-2026-05-05.md).
 
@@ -22,7 +22,7 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 - Interactive org chart with top-down, horizontal, and department-grid views.
 - Admin CRUD for people and departments.
 - People table with status filters, sorting, saved views, bulk actions, and CSV export.
-- Photo management with upload, WebP conversion, gallery assignment, missing-photo workflow, and delete cleanup.
+- Photo management with upload, external Drive-photo import, WebP conversion, gallery assignment, missing-photo workflow, and delete cleanup.
 - Export to styled Excel, PNG, print/PDF view, and CSV.
 - Audit log for create, update, delete, toggle, and password-change activity.
 - Editor/viewer role model with JWT session cookies.
@@ -80,13 +80,14 @@ Must finish before calling the rollout stable:
   - `viewer / viewer123`
 - [x] Confirm the new credentials work.
 - [x] Configure and verify `tools.romega-solutions.com/org-chart`.
-- [ ] Deploy the local `/org-chart/` redirect fix so the base URL no longer redirects to `/org-chart/org-chart/chart`.
-- [ ] Deploy the local API-key protected-endpoint fix so n8n/MCP can use protected routes consistently.
-- [ ] Re-run live smoke checks for chart, search, export, print, photos, mobile, and API-key protected endpoints.
+- [x] Deploy the `/org-chart/` redirect fix so the base URL no longer redirects to `/org-chart/org-chart/chart`.
+- [x] Deploy the API-key protected-endpoint fix so n8n/MCP can use protected routes consistently.
+- [x] Re-run live route/API smoke checks for `/org-chart/`, chart redirect, people API, and API-key protected departments API.
+- [ ] Re-run full live product smoke checks for chart search, export, print, photos, and mobile after the next data/photo update.
 
 Data follow-up:
 
-- [ ] Upload production team photos.
+- [ ] Import production team photos from the sheet into managed `/admin/photos` storage.
 - [ ] Confirm real team data and reporting lines.
 - [ ] Populate the new Google Sheet tab before running sync.
 - [ ] Configure Google Sheets sync if the live sheet should stay authoritative.
@@ -159,6 +160,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/chart-data` | Any user | Full org chart tree, departments, and settings. |
 | `GET` | `/api/audit` | Any user | Audit log. Supports `?page=1&limit=50`. |
 | `GET` | `/api/photos` | Any user | List uploaded photos and assignment status. |
+| `POST` | `/api/photos/import-external` | Editor | Download external person photo URLs, convert to WebP, save to managed photo storage, and reassign people to the local uploaded files. |
 | `DELETE` | `/api/photos/:filename` | Editor | Delete photo and clear linked person photo reference. |
 | `POST` | `/api/upload` | Editor | Upload image. Max 5MB, WebP output, rate limited. |
 
@@ -169,7 +171,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/settings` | Any user | Get app settings. |
 | `PATCH` | `/api/settings` | Editor | Update branding/settings. |
 | `POST` | `/api/import` | Editor | CSV import. Max 10MB. |
-| `POST` | `/api/sync` | Editor | Google Sheets sync. |
+| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` and deactivates resigned or inactive people without deleting them. |
 | `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
 
 ### Authentication
