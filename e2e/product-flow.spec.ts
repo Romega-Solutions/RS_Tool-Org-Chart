@@ -14,6 +14,12 @@ async function login(page: Page, username: string, password: string) {
   await page.context().addCookies([{ name: "orgchart_token", value: token!, domain: "localhost", path: "/" }]);
 }
 
+function integrationHeaders() {
+  const apiKey = process.env.API_KEY ?? process.env.ORGCHART_API_KEY;
+  expect(apiKey).toBeTruthy();
+  return { "X-API-Key": apiKey! };
+}
+
 test.describe.serial("Product QA flow", () => {
   test("base path root redirects to chart without duplicating the app prefix", async ({ page }) => {
     await page.goto(appPath("/"));
@@ -300,6 +306,187 @@ test.describe.serial("Product QA flow", () => {
       if (localPhotoUrl) {
         const filename = localPhotoUrl.split("/").pop();
         if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync replaces managed photo only when the sheet photo source changes", async ({ page }) => {
+    const qaName = `Changed Sheet Photo QA ${Date.now()}`;
+    const headers = integrationHeaders();
+    const firstExternalPhotoUrl = `data:image/png;base64,${png1x1.toString("base64")}`;
+    const secondExternalPhotoUrl = `data:image/png;base64,${Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACHxwTyAAAADElEQVR42mP8z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+      "base64",
+    ).toString("base64")}`;
+    let personId: number | null = null;
+    let managedPhotoUrl: string | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const firstCsv = [
+        "Name,Role/Position,Team,Photo,Status",
+        `${qaName},Changed Sheet Photo QA,${departments[0].name},"${firstExternalPhotoUrl}",Active`,
+      ].join("\n");
+      const firstSyncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(firstCsv)}` },
+      });
+      expect(firstSyncRes.ok()).toBeTruthy();
+
+      let peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      let allPeople = await peopleRes.json();
+      let person = allPeople.find((entry: { name: string }) => entry.name === qaName);
+      personId = person?.id ?? null;
+      expect(personId).toBeTruthy();
+
+      const importRes = await page.request.post(appPath("/api/photos/import-external"), {
+        headers,
+        data: { personIds: [personId] },
+      });
+      expect(importRes.ok()).toBeTruthy();
+      const importJson = await importRes.json();
+      expect(importJson.summary.imported).toBe(1);
+
+      peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      allPeople = await peopleRes.json();
+      person = allPeople.find((entry: { name: string }) => entry.name === qaName);
+      managedPhotoUrl = person.photoUrl;
+      expect(managedPhotoUrl).toMatch(/^\/uploads\/photos\/.+\.webp$/);
+
+      const samePhotoRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(firstCsv)}` },
+      });
+      expect(samePhotoRes.ok()).toBeTruthy();
+
+      peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      allPeople = await peopleRes.json();
+      person = allPeople.find((entry: { name: string }) => entry.name === qaName);
+      expect(person.photoUrl).toBe(managedPhotoUrl);
+
+      const changedCsv = [
+        "Name,Role/Position,Team,Photo,Status",
+        `${qaName},Changed Sheet Photo QA,${departments[0].name},"${secondExternalPhotoUrl}",Active`,
+      ].join("\n");
+      const changedSyncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(changedCsv)}` },
+      });
+      expect(changedSyncRes.ok()).toBeTruthy();
+
+      peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      allPeople = await peopleRes.json();
+      person = allPeople.find((entry: { name: string }) => entry.name === qaName);
+      expect(person.photoUrl).toBe(secondExternalPhotoUrl);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
+      }
+      if (managedPhotoUrl) {
+        const filename = managedPhotoUrl.split("/").pop();
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`), { headers }).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync preserves secondary reporting when the sheet omits the secondary column", async ({ page }) => {
+    const managerName = `Secondary Manager QA ${Date.now()}`;
+    const personName = `Secondary Preserve QA ${Date.now()}`;
+    const headers = integrationHeaders();
+    let managerId: number | null = null;
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const firstCsv = [
+        "Name,Role/Position,Team,Status,Secondary Reports To",
+        `${managerName},Secondary Manager QA,${departments[0].name},Active,`,
+        `${personName},Secondary Preserve QA,${departments[0].name},Active,${managerName}`,
+      ].join("\n");
+      const firstSyncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(firstCsv)}` },
+      });
+      expect(firstSyncRes.ok()).toBeTruthy();
+
+      let peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      let allPeople = await peopleRes.json();
+      const manager = allPeople.find((entry: { name: string }) => entry.name === managerName);
+      let person = allPeople.find((entry: { name: string }) => entry.name === personName);
+      managerId = manager?.id ?? null;
+      personId = person?.id ?? null;
+      expect(managerId).toBeTruthy();
+      expect(personId).toBeTruthy();
+      expect(JSON.parse(person.projectIds).secondaryReportsTo).toContain(managerId);
+
+      const secondCsv = [
+        "Name,Role/Position,Team,Status",
+        `${managerName},Secondary Manager QA,${departments[0].name},Active`,
+        `${personName},Secondary Preserve QA,${departments[0].name},Active`,
+      ].join("\n");
+      const secondSyncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(secondCsv)}` },
+      });
+      expect(secondSyncRes.ok()).toBeTruthy();
+
+      peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      allPeople = await peopleRes.json();
+      person = allPeople.find((entry: { name: string }) => entry.name === personName);
+      expect(JSON.parse(person.projectIds).secondaryReportsTo).toContain(managerId);
+    } finally {
+      if (personId) await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
+      if (managerId) await page.request.delete(appPath(`/api/people/${managerId}`), { headers }).catch(() => undefined);
+    }
+  });
+
+  test("sync maps technical team aliases to the existing technical department", async ({ page }) => {
+    const qaName = `Tech Alias QA ${Date.now()}`;
+    const headers = integrationHeaders();
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      const technicalDept = departments.find((department: { name: string }) => (
+        ["tech", "technical"].includes(department.name.toLowerCase())
+      ));
+      expect(technicalDept).toBeTruthy();
+      const sheetAlias = technicalDept.name.toLowerCase() === "tech" ? "Technical" : "Tech";
+
+      const csv = [
+        "Name,Role/Position,Team,Status",
+        `${qaName},Tech Alias QA,${sheetAlias},Active`,
+      ].join("\n");
+      const syncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(syncRes.ok()).toBeTruthy();
+
+      const peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"), { headers });
+      expect(peopleRes.ok()).toBeTruthy();
+      const people = await peopleRes.json();
+      const person = people.find((entry: { name: string }) => entry.name === qaName);
+      personId = person?.id ?? null;
+      expect(personId).toBeTruthy();
+      expect(person.departmentName).toBe(technicalDept.name);
+
+      const afterDepartmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      const afterDepartments = await afterDepartmentsRes.json();
+      expect(afterDepartments.filter((department: { name: string }) => department.name === sheetAlias)).toHaveLength(0);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
       }
     }
   });

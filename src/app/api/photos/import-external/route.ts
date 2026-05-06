@@ -5,6 +5,7 @@ import { requireEditor } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { fetchExternalPhoto, saveProfilePhoto } from "@/lib/photo-storage";
+import { setSheetPhotoSource } from "@/lib/secondary-reporting";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     : null;
 
   const candidates = db
-    .select({ id: people.id, name: people.name, photoUrl: people.photoUrl })
+    .select({ id: people.id, name: people.name, photoUrl: people.photoUrl, projectIds: people.projectIds })
     .from(people)
     .all()
     .filter((person) => {
@@ -55,7 +56,11 @@ export async function POST(request: Request) {
       const buffer = await fetchExternalPhoto(source);
       const photoUrl = await saveProfilePhoto(buffer, person.name);
       db.update(people)
-        .set({ photoUrl, updatedAt: new Date().toISOString() })
+        .set({
+          photoUrl,
+          projectIds: setSheetPhotoSource(person.projectIds, source),
+          updatedAt: new Date().toISOString(),
+        })
         .where(eq(people.id, person.id))
         .run();
       logChange("updated", "person", person.id, person.name, actor.username, { photoUrl, importedPhotoFrom: source });

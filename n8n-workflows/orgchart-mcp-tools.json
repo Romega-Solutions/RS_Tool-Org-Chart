@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "content": "## RS Org Chart MCP Tools + Google Sheets Review\n\nSet these n8n environment variables before activating:\n\nORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart\nORGCHART_API_KEY=<your API key>\nORGCHART_SHEET_CSV_URL=<published Google Sheet CSV URL>\nORGCHART_REVIEW_EMAIL=<review recipient email>\n\nActivate the workflow, then copy the production MCP URL from the MCP Server Trigger node. The daily Google Sheets review checks for differences and emails a summary. It does not auto-apply changes."
+        "content": "## RS Org Chart MCP Tools + Google Sheets Review\n\nThis workflow is designed to run inside the Romega Easypanel n8n container.\n\nBrowser/public app URL:\nhttps://tools.romega-solutions.com/org-chart\n\nInternal n8n-to-org-chart API base:\nhttp://romega-projects_rs_tool-org-chart:80/org-chart\n\nSet these n8n environment variables before activating:\n\nORGCHART_API_KEY=<your API key>\nORGCHART_SHEET_CSV_URL=<published Google Sheet CSV URL>\nORGCHART_REVIEW_EMAIL=<review recipient email>\n\nAfter import, select the Gmail credential for Email Review Summary. Activate the workflow, then copy the production MCP URL from the MCP Server Trigger node. The daily Google Sheets review checks for differences and emails a summary. It does not auto-apply changes."
       },
       "id": "eb706d99-6f82-46e9-9c37-91cae57652ac",
       "name": "Setup Note",
@@ -30,7 +30,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people?includeInactive=true' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people?includeInactive=true",
         "sendHeaders": true,
         "toolDescription": "List all org chart people, including inactive records. Use this before create, update, delete, or reassign operations to find person IDs.",
         "parametersHeaders": {
@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/chart-data' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/chart-data",
         "sendHeaders": true,
         "toolDescription": "Get the rendered org chart tree, departments, and settings for read-only analysis.",
         "parametersHeaders": {
@@ -78,7 +78,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/departments' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/departments",
         "sendHeaders": true,
         "toolDescription": "List departments. Use this to find departmentId before creating or moving people.",
         "parametersHeaders": {
@@ -102,7 +102,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people",
         "method": "POST",
         "sendBody": true,
         "sendHeaders": true,
@@ -164,7 +164,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/{personId}' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people/{personId}",
         "method": "PATCH",
         "sendBody": true,
         "sendHeaders": true,
@@ -231,7 +231,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/reassign' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people/reassign",
         "method": "PATCH",
         "sendBody": true,
         "sendHeaders": true,
@@ -278,7 +278,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/{personId}' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people/{personId}",
         "method": "DELETE",
         "sendHeaders": true,
         "toolDescription": "Delete a person by ID. Destructive. Use list_people first and only call after confirmation.",
@@ -312,7 +312,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/sync' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/sync",
         "method": "POST",
         "sendHeaders": true,
         "toolDescription": "Run the configured Google Sheets sync. Use only when the sheet is reviewed and should be applied.",
@@ -337,7 +337,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/audit?limit=50&page=1' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/audit?limit=50&page=1",
         "sendHeaders": true,
         "toolDescription": "Read recent audit log entries for org chart changes.",
         "parametersHeaders": {
@@ -407,7 +407,7 @@
     },
     {
       "parameters": {
-        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people?includeInactive=true' }}",
+        "url": "http://romega-projects_rs_tool-org-chart:80/org-chart/api/people?includeInactive=true",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

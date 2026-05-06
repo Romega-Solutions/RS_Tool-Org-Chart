@@ -23,13 +23,19 @@ Use the public app URL for browser and external clients:
 https://tools.romega-solutions.com/org-chart
 ```
 
-If n8n times out calling the public domain from inside Easypanel, try the Easypanel app hostname:
+n8n runs inside Easypanel and should call the org chart app through the internal Docker service URL:
+
+```txt
+http://romega-projects_rs_tool-org-chart:80/org-chart
+```
+
+That internal URL only works from containers on the same Easypanel Docker network. It is not a browser URL.
+
+Fallback public app URL:
 
 ```txt
 https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart
 ```
-
-Internal Docker service names such as `http://romega-projects_rs_tool-org-chart:80/...` only work from containers on the same Docker network. They are not browser URLs.
 
 ## Required n8n Environment
 
@@ -43,11 +49,12 @@ N8N_EDITOR_BASE_URL=https://n8n-romega-n8n.ikuuwb.easypanel.host/
 N8N_HOST=0.0.0.0
 N8N_PORT=5678
 N8N_PROTOCOL=https
-ORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart
 ORGCHART_API_KEY=<org chart API key>
 ORGCHART_SHEET_CSV_URL=https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
 ORGCHART_REVIEW_EMAIL=mark@romega-solutions.com
 ```
+
+The import-ready workflow uses direct internal org chart URLs for HTTP/tool nodes, so `ORGCHART_BASE_URL` is not required for that workflow. Keep `ORGCHART_API_KEY` in n8n env because the tool nodes send it as `X-API-Key`.
 
 If n8n nodes show `access to env vars denied`, either:
 
@@ -121,6 +128,8 @@ read_audit_log
 
 6. Activate the workflow after the test URL works.
 
+7. Open `Email Review Summary` and select the Gmail credential. The live workflow currently uses the existing `Gmail account` credential. If this is missing after import, the MCP tools can still work, but n8n may refuse to publish the scheduled review workflow.
+
 ## MCP URLs
 
 Test URL:
@@ -138,6 +147,15 @@ https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
 The test URL only works while n8n is listening for a test event. The production URL only works after the workflow is active.
 
 A browser GET is not a real MCP test. Use an MCP client to initialize/list tools/call tools.
+
+Known live verification on 2026-05-07:
+
+```txt
+Production MCP initialize -> HTTP 200
+tools/list -> 9 tools
+list_departments -> returned live department JSON
+read_audit_log -> returned live audit entries
+```
 
 ## Google Sheet Setup
 
@@ -179,11 +197,15 @@ Org Chart Team
 
 `Photo` can contain a Google Drive share link, Google Drive open link, direct image URL, or uploaded filename. Sheet sync stores the external URL on the person first. To move those images into app-managed storage, open `/admin/photos` and run `Import External`; the app downloads the images, converts them to WebP, saves them under `/uploads/photos`, and updates each person to the managed local URL. Later syncs preserve an existing local `/uploads/photos/...` value when the sheet still points at an external URL, so you do not need to re-import every time.
 
+Photo sync tracks the last sheet photo source after an external image is imported. If the sheet still points at the same source, sync keeps the managed WebP. If the sheet photo source changes later, sync replaces the managed WebP reference with the new external source so `/admin/photos` can import the new image.
+
 `Status` is optional. Use `Active` for current people. Use `Resigned`, `Inactive`, `Offboarded`, or `Ended` to set `isActive=false` during sync. Blank status leaves the person's current active flag unchanged.
 
-`Org Chart Team` is optional but recommended when `Team` contains multiple departments. The app can display one department per person, so sync prefers `Org Chart Team` / `Primary Team` over `Team`. Example: `Team = HR/Finance & Tech`, `Org Chart Team = Technical`.
+`Org Chart Team` is optional but recommended when `Team` contains multiple departments. The app can display one department per person, so sync prefers `Org Chart Team` / `Primary Team` over `Team`. Example: `Team = HR/Finance & Tech`, `Org Chart Team = Technical`. Sync also maps common department aliases such as `Tech` and `Technical` to the existing technical department instead of creating duplicate departments.
 
-`Secondary Reports To` is optional. Use it when one person should keep one primary tree position but also show a dashed secondary connector to another manager or team placeholder, for example `Duane Vargas -> HR Team`.
+`Reports To` is optional. If the column is present, sync treats it as authoritative for reporting lines and clears the manager when the cell is blank. If the column is omitted entirely, existing reporting lines are left unchanged.
+
+`Secondary Reports To` is optional. Use it when one person should keep one primary tree position but also show a dashed secondary connector to another manager or team placeholder, for example `Duane Vargas -> HR Team`. If the column is omitted entirely, existing secondary connectors are left unchanged. If the column is present with a blank cell, that person's secondary connectors are cleared.
 
 Use Photos -> Clean Unused after a bulk re-import if duplicate unassigned files are left in managed storage.
 
@@ -205,13 +227,7 @@ Then restart n8n.
 
 ### `connect ETIMEDOUT 51.83.97.146:443`
 
-n8n can reach the app from outside sometimes, but the n8n container may time out calling the same VPS public IP. Try this base URL in n8n:
-
-```txt
-https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart
-```
-
-If n8n and org chart are on the same Docker network, the internal service URL may work inside n8n:
+n8n can reach the app from outside sometimes, but the n8n container may time out calling the same VPS public IP. Use the internal service URL in n8n:
 
 ```txt
 http://romega-projects_rs_tool-org-chart:80/org-chart
@@ -237,7 +253,7 @@ Known verified behavior:
 
 - `GET /org-chart/api/people?includeInactive=true` returns live people JSON.
 - `read_audit_log` returns audit entries when configured with the Header Auth credential.
+- Production MCP URL initializes, lists 9 tools, and successfully calls `list_departments` and `read_audit_log`.
 - `gid=947755283` CSV export returns HTTP 200.
 - `gid=947755283` is populated with current team data.
-- `pnpm qa:weekly-live` verifies the public login page, people API, departments API, audit API, Google Sheet CSV, and MCP endpoint registration status.
-- Current external MCP probe result: the production MCP URL returns HTTP 404, which means the n8n production MCP webhook is not registered/active at that URL from outside n8n. Activate the workflow and retest the MCP Server Trigger production URL before treating MCP production access as live.
+- `pnpm qa:weekly-live` verifies the public login page, people API, departments API, audit API, Google Sheet CSV, and MCP initialize plus `tools/list`.

@@ -30,7 +30,7 @@ ORGCHART_MCP_URL=https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
 - Departments API works with `X-API-Key`.
 - Audit API works with `X-API-Key`.
 - Google Sheet CSV is reachable, populated, and has required columns.
-- n8n production MCP endpoint responds to a JSON-RPC initialize probe.
+- n8n production MCP endpoint responds to JSON-RPC initialize and `tools/list`.
 
 The MCP probe reports `warn` rather than failing when the endpoint returns `404`, because that usually means the n8n workflow is inactive or the production MCP webhook is not registered. In that case, open n8n, activate the workflow, and retest the MCP Server Trigger production URL.
 
@@ -51,3 +51,12 @@ read_audit_log
 ```
 
 Then run the n8n daily Google Sheets review workflow once from n8n and confirm it either sends the review email or reaches `No Sheet Changes`.
+
+Current live production MCP status as of 2026-05-07:
+
+```txt
+initialize -> HTTP 200
+tools/list -> 9 tools
+list_departments -> returned live departments
+read_audit_log -> returned live audit entries
+```

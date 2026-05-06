@@ -146,12 +146,12 @@ async function checkSheetCsv() {
 
 async function checkMcpEndpoint() {
   const started = Date.now();
-  const body = {
+  const initializeBody = {
     jsonrpc: "2.0",
     id: 1,
     method: "initialize",
     params: {
-      protocolVersion: "2025-06-18",
+      protocolVersion: "2024-11-05",
       capabilities: {},
       clientInfo: { name: "org-chart-weekly-live-qa", version: "1.0.0" },
     },
@@ -163,21 +163,74 @@ async function checkMcpEndpoint() {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(initializeBody),
   });
-  const ms = Date.now() - started;
 
   if (response.status === 404) {
+    const ms = Date.now() - started;
     record("n8n-mcp", "warn", "HTTP 404; production MCP webhook is not registered/active at configured URL.", ms);
     return;
   }
 
   if (!response.ok) {
+    const ms = Date.now() - started;
     record("n8n-mcp", "fail", `HTTP ${response.status}`, ms);
     return;
   }
 
-  record("n8n-mcp", "pass", `HTTP ${response.status}`, ms);
+  const sessionId = response.headers.get("mcp-session-id");
+  if (!sessionId) {
+    const ms = Date.now() - started;
+    record("n8n-mcp", "fail", `HTTP ${response.status}; missing Mcp-Session-Id`, ms);
+    return;
+  }
+
+  await fetch(mcpUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "Mcp-Session-Id": sessionId,
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+      params: {},
+    }),
+  });
+
+  const toolsResponse = await fetch(mcpUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "Mcp-Session-Id": sessionId,
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/list",
+      params: {},
+    }),
+  });
+  const ms = Date.now() - started;
+
+  if (!toolsResponse.ok) {
+    record("n8n-mcp", "fail", `tools/list HTTP ${toolsResponse.status}`, ms);
+    return;
+  }
+
+  const text = await toolsResponse.text();
+  const match = text.match(/^data:\s*(.+)$/m);
+  const payload = match ? JSON.parse(match[1]) : null;
+  const tools = payload?.result?.tools;
+
+  if (!Array.isArray(tools) || tools.length === 0) {
+    record("n8n-mcp", "fail", "tools/list returned no tools.", ms);
+    return;
+  }
+
+  record("n8n-mcp", "pass", `HTTP ${response.status}; tools=${tools.length}`, ms);
 }
 
 function record(name, status, detail, ms = "") {

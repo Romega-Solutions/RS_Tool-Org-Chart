@@ -28,6 +28,8 @@ Production deploys through GitHub Actions to the VPS/Easypanel app. The deploy w
 - Configured `API_KEY` for headless org chart API access.
 - Added `API_KEY` to the GitHub `VPS_HOST` environment for future workflow use.
 - Created combined n8n MCP + Google Sheets review workflow JSON.
+- Activated the production n8n MCP workflow and verified read-only tools.
+- Updated live n8n HTTP/tool nodes to call the org chart over the internal Easypanel service URL.
 - Selected a new Google Sheet tab (`gid=947755283`) to avoid overwriting the old tab.
 - Documented n8n env, Header Auth credential, MCP URLs, and troubleshooting.
 
@@ -90,7 +92,7 @@ https://tools.romega-solutions.com/org-chart/api/people?includeInactive=true -> 
 https://tools.romega-solutions.com/org-chart/api/departments with X-API-Key -> 200
 ```
 
-The n8n `read_audit_log` tool returned real audit entries after using a Header Auth credential.
+The n8n `read_audit_log` tool returned real audit entries after using the production MCP URL and internal Easypanel service URL.
 
 ## May 7 Live Product QA
 
@@ -141,10 +143,21 @@ Prod: https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
 Required n8n env:
 
 ```txt
-ORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart
 ORGCHART_API_KEY=<org chart API key>
 ORGCHART_SHEET_CSV_URL=https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
 ORGCHART_REVIEW_EMAIL=mark@romega-solutions.com
+```
+
+The live n8n workflow uses this internal org chart service URL for HTTP/tool nodes:
+
+```txt
+http://romega-projects_rs_tool-org-chart:80/org-chart
+```
+
+That URL is only valid from n8n/Easypanel containers. Browser and external clients should use:
+
+```txt
+https://tools.romega-solutions.com/org-chart
 ```
 
 If n8n blocks `$env`, either use direct URLs plus Header Auth credentials, or set:
@@ -177,11 +190,15 @@ No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status,Org Chart Team,Se
 
 The `Photo` column can use Google Drive file links for review. After sheet sync applies those links, use `/admin/photos` -> `Import External` to download them into managed WebP storage so the photo gallery, chart, export, and print flows all use `/uploads/photos/...` URLs. Later syncs preserve existing managed WebP URLs when the sheet still references external images.
 
+Photo sync records the last sheet photo source when an external image is imported. Same-source sheet syncs keep the managed WebP. Changed sheet photo sources replace the managed reference with the new source so the new image can be imported deliberately.
+
 The optional `Status` column controls active visibility. `Active` keeps people active. `Resigned`, `Inactive`, `Offboarded`, and `Ended` set `isActive=false` on sync without deleting the person record or audit history.
 
-The optional `Org Chart Team` column controls the single department shown by the app when the source `Team` has multiple departments. Sync prefers `Org Chart Team` over `Team`.
+The optional `Org Chart Team` column controls the single department shown by the app when the source `Team` has multiple departments. Sync prefers `Org Chart Team` over `Team` and maps common aliases such as `Tech` and `Technical` to the existing technical department.
 
-The optional `Secondary Reports To` column creates dashed secondary connectors for matrix responsibilities without duplicating the person as a second node.
+The optional `Reports To` column is authoritative only when present. Blank cells clear the manager; omitted columns leave existing reporting lines unchanged.
+
+The optional `Secondary Reports To` column creates dashed secondary connectors for matrix responsibilities without duplicating the person as a second node. Blank cells clear secondary connectors only when the column is present; omitted columns preserve existing secondary connectors.
 
 Use `/admin/photos` -> `Clean Unused` after duplicate imports to remove unassigned managed photo files.
 
@@ -189,7 +206,6 @@ Do not run `sync_google_sheet` or Sync Now while the tab is empty.
 
 ## Remaining Work
 
-1. Activate/fix the n8n production MCP webhook if MCP clients need live access. Current external probe returns HTTP 404 for the configured production MCP URL.
-2. Re-test n8n MCP `list_departments` and `read_audit_log` from the active production MCP URL after activation or workflow edits.
-3. Run the daily Google Sheets review flow on schedule.
-4. Re-run full live product smoke after any future sheet schema, auth, photo, export, or routing change.
+1. Run the daily Google Sheets review flow on schedule.
+2. Re-run full live product smoke after any future sheet schema, auth, photo, export, or routing change.
+3. Keep `n8n-workflows/orgchart-mcp-tools.json` aligned with live n8n before re-importing, especially internal service URLs and Gmail credential selection.

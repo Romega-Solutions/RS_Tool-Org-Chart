@@ -20,6 +20,8 @@ const RATE_WINDOW = 60_000;
 const RATE_MAX = 200;
 
 function rateLimit(request: NextRequest): NextResponse | null {
+  if (process.env.E2E_DISABLE_RATE_LIMIT === "true") return null;
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip")
     || "unknown";

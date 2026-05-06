@@ -1,6 +1,6 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, n8n/MCP workflow assets, sheet sync, managed photos, and live product QA. Latest checkpoint `aa26ea8` is pushed and live.
+> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, n8n/MCP workflow assets, sheet sync, managed photos, and live product QA. Latest checkpoint `d682c49` is pushed and live.
 > Last updated: 2026-05-07
 
 ---
@@ -15,11 +15,12 @@
 - [x] Product QA pass completed against disposable local data
 - [x] Permanent product-flow Playwright spec added for CRUD, photos, chart views/search, export, print, audit, permissions, and mobile smoke
 - [x] Photo-gallery assignment tests made deterministic with disposable fixtures
-- [x] Full Playwright suite is now deterministic: 47 passing tests, no skips
+- [x] Full Playwright suite is now deterministic: 58 passing tests, no skips
 - [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
 - [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
 - [x] May 7 live product QA passed for login, chart render, Duane secondary connector, hidden placeholder records, disposable people CRUD, photo upload/display, crop/zoom, Excel export, print view, mobile layout, Sync Now, and cleanup unused photos
 - [x] Weekly live QA script added for public route, protected API, Google Sheet CSV, and n8n MCP endpoint checks
+- [x] Weekly live QA MCP check now verifies production MCP initialize plus `tools/list`
 
 ### Core Features
 - [x] 3 chart views (top-down, horizontal, department grid)
@@ -27,6 +28,7 @@
 - [x] CSV import (10MB limit)
 - [x] Google Sheets sync (configure URL in Settings → "Sync Now")
 - [x] Google Sheets status sync for resigned/inactive people
+- [x] Google Sheets sync hardening for managed WebP photo source changes, omitted secondary-reporting columns, and technical department aliases
 - [x] Audit logging
 - [x] Role-based auth (Editor/Viewer) with bcrypt + JWT
 - [x] Export: Excel (styled with ExcelJS), PNG (HD 2x, dotted bg, theme-aware), PDF, print
@@ -134,6 +136,7 @@
 - `API_KEY` is configured for live headless/API access.
 - `API_KEY` is also present in the GitHub `VPS_HOST` environment for future workflow use.
 - n8n workflow JSON now includes MCP tools and daily Google Sheets review.
+- Production n8n MCP workflow is active and uses the Easypanel internal org chart service URL from n8n.
 - New Google Sheet tab `gid=947755283` was selected for review/sync isolation from the old tab.
 - The new tab exports HTTP 200 and is now populated with team data used by Sync Now.
 
@@ -149,7 +152,9 @@
 - [x] 🟢 Verified `/admin/team` and `/admin/photos` hide org placeholder records
 - [x] 🟢 Verified disposable live people CRUD, photo upload, crop/zoom, photo display, Excel export, print view, mobile chart layout, Sync Now, and cleanup unused photos
 - [x] 🟢 Verified underlying n8n tool target APIs: departments, audit log, and people endpoints return HTTP 200 with `X-API-Key`
-- [ ] 🟡 Activate or repair the n8n production MCP URL. External MCP initialize currently returns HTTP 404, meaning the production webhook is not registered/active at the configured URL.
+- [x] 🟢 Verified production n8n MCP URL initializes, lists 9 tools, and calls `list_departments` and `read_audit_log`
+- [x] 🟢 Fixed live n8n workflow HTTP/tool node URLs to use `http://romega-projects_rs_tool-org-chart:80/org-chart` from inside Easypanel
+- [x] 🟢 Fixed live n8n Gmail credential binding for the scheduled sheet review email node
 
 ### Domain consolidation
 
@@ -179,4 +184,4 @@
 | **Deployment** | GitHub Actions → VPS/Easypanel live deploy |
 | **Production Domain** | tools.romega-solutions.com/org-chart |
 | **Security** | 3-layer DDoS, CSRF, rate limiting, HTTPS, Fail2ban |
-| **Tests** | Playwright e2e (47 tests, no skips) |
+| **Tests** | Playwright e2e (58 tests, no skips) |

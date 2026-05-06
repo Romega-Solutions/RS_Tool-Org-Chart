@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import Papa from "papaparse";
 import { requireEditor } from "@/lib/auth";
 import { normalizeDrivePhotoUrl } from "@/lib/photo-storage";
-import { setSecondaryReportsTo } from "@/lib/secondary-reporting";
+import { getSheetPhotoSource, setSecondaryReportsTo, setSheetPhotoSource } from "@/lib/secondary-reporting";
 
 // Default department colors for auto-creation
 const DEPT_COLORS: Record<string, string> = {
@@ -40,7 +40,15 @@ function mapRow(raw: Record<string, string>): {
   photo: string;
   email: string;
   isActive: boolean | null;
+  hasPhotoColumn: boolean;
+  hasReportsToColumn: boolean;
+  hasSecondaryReportsToColumn: boolean;
 } {
+  const hasColumn = (...keys: string[]) => Object.keys(raw).some((key) => {
+    const lower = key.toLowerCase().trim();
+    return keys.some((candidate) => lower === candidate.toLowerCase());
+  });
+
   const get = (...keys: string[]) => {
     for (const k of keys) {
       const val = raw[k] ?? raw[k.toLowerCase()] ?? raw[k.toUpperCase()];
@@ -75,6 +83,9 @@ function mapRow(raw: Record<string, string>): {
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
     email: get("email", "work email", "Work Email", "work_email"),
     isActive: parseStatus(get("status", "Status", "is_active", "Is Active", "active", "Active")),
+    hasPhotoColumn: hasColumn("photo_filename", "photo", "photo_url"),
+    hasReportsToColumn: hasColumn("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
+    hasSecondaryReportsToColumn: hasColumn("secondary reports to", "dotted reports to", "secondary manager", "also reports to"),
   };
 }
 
@@ -82,6 +93,32 @@ function mapRow(raw: Record<string, string>): {
 function parsePrimaryDepartment(raw: string): string {
   const parts = raw.split(/\s*&\s*/);
   return parts[0].trim();
+}
+
+function normalizeDepartmentName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function departmentAliases(name: string): string[] {
+  const normalized = normalizeDepartmentName(name);
+  const aliases = new Set([normalized]);
+
+  if (["tech", "technical", "technology", "tech/ai", "tech ai"].includes(normalized)) {
+    aliases.add("tech");
+    aliases.add("technical");
+  }
+
+  if (["market intelligence", "marketing intelligence"].includes(normalized)) {
+    aliases.add("market intelligence");
+    aliases.add("marketing intelligence");
+  }
+
+  if (["hr", "finance", "hr/finance", "hr finance"].includes(normalized)) {
+    aliases.add("hr/finance");
+    aliases.add("hr finance");
+  }
+
+  return [...aliases];
 }
 
 /** Convert photo value to a usable URL — handles Google Drive links, direct URLs, and filenames */
@@ -104,7 +141,11 @@ function splitManagerNames(raw: string): string[] {
     .filter(Boolean);
 }
 
-function shouldUpdatePhotoUrl(existingPhotoUrl: string | null, nextPhotoUrl: string | null): nextPhotoUrl is string {
+function shouldUpdatePhotoUrl(
+  existingPhotoUrl: string | null,
+  nextPhotoUrl: string | null,
+  previousSheetPhotoSource: string | null,
+): nextPhotoUrl is string {
   if (!nextPhotoUrl) return false;
   if (!existingPhotoUrl) return true;
   if (existingPhotoUrl === nextPhotoUrl) return false;
@@ -112,7 +153,11 @@ function shouldUpdatePhotoUrl(existingPhotoUrl: string | null, nextPhotoUrl: str
   const hasManagedPhoto = existingPhotoUrl.startsWith("/uploads/photos/");
   const sheetPhotoIsExternal = /^(https?:\/\/|data:)/i.test(nextPhotoUrl);
 
-  return !(hasManagedPhoto && sheetPhotoIsExternal);
+  if (hasManagedPhoto && sheetPhotoIsExternal) {
+    return previousSheetPhotoSource !== nextPhotoUrl && previousSheetPhotoSource !== null;
+  }
+
+  return true;
 }
 
 export async function POST(request: Request) {
@@ -174,7 +219,11 @@ export async function POST(request: Request) {
   for (const p of existing) nameToId.set(p.name.toLowerCase(), p.id);
   const deptRows = db.select().from(departments).all();
   const deptByName = new Map<string, number>();
-  for (const d of deptRows) deptByName.set(d.name.toLowerCase(), d.id);
+  for (const d of deptRows) {
+    for (const alias of departmentAliases(d.name)) {
+      deptByName.set(alias, d.id);
+    }
+  }
   let nextDeptOrder = deptRows.length;
 
   for (let i = 0; i < rows.length; i++) {
@@ -186,7 +235,7 @@ export async function POST(request: Request) {
 
     // Handle multi-department — use primary
     const deptName = parsePrimaryDepartment(row.department);
-    let deptId = deptByName.get(deptName.toLowerCase());
+    let deptId = deptByName.get(normalizeDepartmentName(deptName));
 
     // Auto-create department if it doesn't exist
     if (!deptId) {
@@ -197,7 +246,9 @@ export async function POST(request: Request) {
         displayOrder: nextDeptOrder++,
       }).returning().get();
       deptId = inserted.id;
-      deptByName.set(deptName.toLowerCase(), deptId);
+      for (const alias of departmentAliases(deptName)) {
+        deptByName.set(alias, deptId);
+      }
     }
 
     const existingId = nameToId.get(row.name.toLowerCase());
@@ -205,10 +256,16 @@ export async function POST(request: Request) {
 
     if (existingId) {
       const existingPerson = existing.find((p) => p.id === existingId);
+      const previousSheetPhotoSource = getSheetPhotoSource(existingPerson?.projectIds ?? null);
+      const shouldUpdatePhoto = shouldUpdatePhotoUrl(existingPerson?.photoUrl ?? null, photoUrl, previousSheetPhotoSource);
+      const updateProjectIds = row.hasPhotoColumn && photoUrl && (shouldUpdatePhoto || previousSheetPhotoSource)
+        ? setSheetPhotoSource(existingPerson?.projectIds ?? null, photoUrl)
+        : existingPerson?.projectIds ?? null;
       db.update(people).set({
         title: row.title,
         departmentId: deptId,
-        ...(shouldUpdatePhotoUrl(existingPerson?.photoUrl ?? null, photoUrl) && { photoUrl }),
+        ...(shouldUpdatePhoto && { photoUrl }),
+        projectIds: updateProjectIds,
         ...(row.isActive !== null && { isActive: row.isActive }),
         updatedAt: new Date().toISOString(),
       }).where(eq(people.id, existingId)).run();
@@ -219,6 +276,7 @@ export async function POST(request: Request) {
         title: row.title,
         departmentId: deptId,
         photoUrl,
+        projectIds: photoUrl ? setSheetPhotoSource(null, photoUrl) : null,
         isActive: row.isActive ?? true,
       }).returning().get();
       nameToId.set(row.name.toLowerCase(), inserted.id);
@@ -230,14 +288,18 @@ export async function POST(request: Request) {
   for (const row of rows) {
     const personId = nameToId.get(row.name.toLowerCase());
 
-    if (row.reportsTo) {
-      const managerId = nameToId.get(row.reportsTo.toLowerCase());
-      if (personId && managerId && personId !== managerId) {
-        db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
+    if (personId && row.hasReportsToColumn) {
+      if (row.reportsTo) {
+        const managerId = nameToId.get(row.reportsTo.toLowerCase());
+        if (managerId && personId !== managerId) {
+          db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
+        }
+      } else {
+        db.update(people).set({ reportsTo: null }).where(eq(people.id, personId)).run();
       }
     }
 
-    if (personId) {
+    if (personId && row.hasSecondaryReportsToColumn) {
       const person = db.select().from(people).where(eq(people.id, personId)).get();
       const secondaryReportsTo = splitManagerNames(row.secondaryReportsTo)
         .map((name) => nameToId.get(name.toLowerCase()))

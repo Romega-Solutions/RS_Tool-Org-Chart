@@ -21,18 +21,7 @@ export function parseSecondaryReportsTo(projectIds: string | null | undefined): 
 }
 
 export function setSecondaryReportsTo(projectIds: string | null | undefined, reportsToIds: number[]) {
-  let metadata: Record<string, unknown> = {};
-
-  if (projectIds) {
-    try {
-      const parsed = JSON.parse(projectIds) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        metadata = parsed as Record<string, unknown>;
-      }
-    } catch {
-      metadata = {};
-    }
-  }
+  const metadata = parseProjectMetadata(projectIds);
 
   if (reportsToIds.length > 0) {
     metadata.secondaryReportsTo = reportsToIds;
@@ -41,4 +30,38 @@ export function setSecondaryReportsTo(projectIds: string | null | undefined, rep
   }
 
   return Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null;
+}
+
+export function getSheetPhotoSource(projectIds: string | null | undefined): string | null {
+  const metadata = parseProjectMetadata(projectIds);
+  return typeof metadata.sheetPhotoSource === "string" && metadata.sheetPhotoSource
+    ? metadata.sheetPhotoSource
+    : null;
+}
+
+export function setSheetPhotoSource(projectIds: string | null | undefined, source: string | null) {
+  const metadata = parseProjectMetadata(projectIds);
+
+  if (source) {
+    metadata.sheetPhotoSource = source;
+  } else {
+    delete metadata.sheetPhotoSource;
+  }
+
+  return Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null;
+}
+
+function parseProjectMetadata(projectIds: string | null | undefined): Record<string, unknown> {
+  if (!projectIds) return {};
+
+  try {
+    const parsed = JSON.parse(projectIds) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return {};
+  }
+
+  return {};
 }

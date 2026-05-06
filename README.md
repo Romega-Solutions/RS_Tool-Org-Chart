@@ -11,7 +11,7 @@ The app manages people, departments, photos, audit history, chart views, exports
 | Production URL | `https://tools.romega-solutions.com/org-chart` |
 | Easypanel fallback URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
-| Latest verification | `aa26ea8` deployed through GitHub Actions; full live product QA passed on 2026-05-07 |
+| Latest verification | `d682c49` deployed through GitHub Actions; live product QA and production n8n MCP read-only tools passed on 2026-05-07 |
 | Test suite | GitHub Actions lint, build, and Playwright Chromium suite passing |
 | Production notes | Live passwords have been rotated. n8n/MCP setup is documented. API-key protected endpoints are live. |
 
@@ -28,6 +28,7 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 - Editor/viewer role model with JWT session cookies.
 - API-key support for external integrations such as n8n or automation scripts.
 - n8n MCP workflow JSON for org chart tools plus daily Google Sheets review.
+- Google Sheets sync preserves good local WebP photos, inactive status, secondary reporting, and technical department aliases predictably.
 
 ## Quick Start
 
@@ -50,7 +51,7 @@ Change production passwords immediately after first login.
 
 ## Verification
 
-Use the repo-local Playwright CLI with Chromium.
+Use the repo-local Playwright CLI with Chromium. Build first; Playwright starts the standalone production server by default so the full suite avoids Next dev-server manifest churn.
 
 ```bash
 pnpm lint
@@ -69,11 +70,12 @@ See [docs/weekly-live-qa.md](docs/weekly-live-qa.md) for the production API, Goo
 Current expected E2E result:
 
 ```text
-47 passed
+58 passed
 0 skipped
 ```
 
 The suite runs serially because it uses shared local SQLite data and upload storage.
+Set `PLAYWRIGHT_WEB_SERVER_COMMAND="pnpm dev"` only when you specifically need to debug against the dev server.
 
 ## Production Checklist
 
@@ -130,11 +132,25 @@ For n8n, set these on the n8n app, not the org chart app:
 
 | Variable | Description |
 |---|---|
-| `ORGCHART_BASE_URL` | Org chart API base URL. Use the public domain or Easypanel fallback if the public domain times out from n8n. |
+| `ORGCHART_BASE_URL` | Optional override for org chart API base URL. Current n8n workflow uses direct internal Easypanel service URLs instead. |
 | `ORGCHART_API_KEY` | Same value as the org chart app `API_KEY`. Prefer n8n credentials if `$env` access is blocked. |
 | `ORGCHART_SHEET_CSV_URL` | Published CSV export URL for the selected Google Sheet tab. |
 | `ORGCHART_REVIEW_EMAIL` | Recipient for daily review summaries. |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE` | Set to `false` only if trusted n8n workflows need `$env` access. Otherwise use n8n credentials. |
+
+Current n8n production MCP URL:
+
+```txt
+https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
+```
+
+The live n8n workflow calls the org chart app over the Easypanel internal service URL:
+
+```txt
+http://romega-projects_rs_tool-org-chart:80/org-chart
+```
+
+That internal URL is only valid inside Easypanel containers. Browser and external clients should keep using `https://tools.romega-solutions.com/org-chart`.
 
 ## API Summary
 
