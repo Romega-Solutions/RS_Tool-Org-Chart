@@ -1,5 +1,5 @@
 "use client";
-import { apiPath, appPath } from "@/lib/paths";
+import { apiPath, routerPath } from "@/lib/paths";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,7 @@ export default function AccountPage() {
   }
 
   if (!user) {
-    router.replace(appPath("/login?next=/account"));
+    router.replace(routerPath("/login?next=/account"));
     return null;
   }
 
@@ -189,7 +189,7 @@ export default function AccountPage() {
 
       setTimeout(() => {
         logout();
-        router.replace(appPath("/login"));
+        router.replace(routerPath("/login"));
       }, 3000);
     } finally {
       setSubmitting(false);

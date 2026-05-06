@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { appPath } from "@/lib/paths";
+import { routerPath } from "@/lib/paths";
 
 interface Props {
   children: React.ReactNode;
@@ -16,10 +16,10 @@ export function ProtectedRoute({ children, requireEditor = false }: Props) {
   useEffect(() => {
     if (!loading && !user) {
       const next = `${window.location.pathname}${window.location.search}`;
-      router.replace(appPath(`/login?next=${encodeURIComponent(next)}`));
+      router.replace(routerPath(`/login?next=${encodeURIComponent(routerPath(next))}`));
     }
     if (!loading && requireEditor && user?.role !== "editor") {
-      router.replace(appPath("/chart"));
+      router.replace(routerPath("/chart"));
     }
   }, [user, loading, requireEditor, router]);
 

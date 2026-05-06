@@ -22,6 +22,29 @@ test.describe.serial("Product QA flow", () => {
     expect(page.url()).not.toContain("/org-chart/org-chart/");
   });
 
+  test("login form redirects without duplicating the app prefix", async ({ page }) => {
+    const user = { username: "admin", name: "Admin", role: "editor" };
+
+    await page.route("**/org-chart/api/auth/login", (route) => {
+      route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Set-Cookie": "orgchart_token=test-token; Path=/; HttpOnly; SameSite=Lax",
+        },
+        body: JSON.stringify(user),
+      });
+    });
+
+    await page.goto(appPath("/login?next=/view"));
+    await page.getByLabel("Username").fill("admin");
+    await page.getByLabel("Password").fill("deterministic-test-password");
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    await expect(page).toHaveURL(/\/org-chart\/view$/, { timeout: 15_000 });
+    expect(page.url()).not.toContain("/org-chart/org-chart/");
+  });
+
   test("API key can access protected integration endpoints", async ({ page }) => {
     const apiKey = process.env.API_KEY ?? process.env.ORGCHART_API_KEY;
     expect(apiKey).toBeTruthy();
