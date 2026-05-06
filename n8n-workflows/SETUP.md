@@ -156,7 +156,7 @@ https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUo
 Recommended headers:
 
 ```txt
-No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status,Org Chart Team
+No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status,Org Chart Team,Secondary Reports To
 ```
 
 Required by the app sync:
@@ -182,6 +182,8 @@ Org Chart Team
 `Status` is optional. Use `Active` for current people. Use `Resigned`, `Inactive`, `Offboarded`, or `Ended` to set `isActive=false` during sync. Blank status leaves the person's current active flag unchanged.
 
 `Org Chart Team` is optional but recommended when `Team` contains multiple departments. The app can display one department per person, so sync prefers `Org Chart Team` / `Primary Team` over `Team`. Example: `Team = HR/Finance & Tech`, `Org Chart Team = Technical`.
+
+`Secondary Reports To` is optional. Use it when one person should keep one primary tree position but also show a dashed secondary connector to another manager or team placeholder, for example `Duane Vargas -> HR Team`.
 
 Use Photos -> Clean Unused after a bulk re-import if duplicate unassigned files are left in managed storage.
 

@@ -1,4 +1,5 @@
 import type { TreeNode, Person, Department } from "@/types";
+import { parseSecondaryReportsTo } from "@/lib/secondary-reporting";
 
 export function buildTree(people: Person[], departments: Department[]): TreeNode[] {
   const deptMap = new Map<number, Department>();
@@ -6,7 +7,12 @@ export function buildTree(people: Person[], departments: Department[]): TreeNode
 
   const nodeMap = new Map<number, TreeNode>();
   for (const p of people) {
-    nodeMap.set(p.id, { ...p, children: [], department: deptMap.get(p.departmentId) });
+    nodeMap.set(p.id, {
+      ...p,
+      children: [],
+      department: deptMap.get(p.departmentId),
+      secondaryReportsTo: parseSecondaryReportsTo(p.projectIds),
+    });
   }
 
   function hasCycle(startId: number): boolean {

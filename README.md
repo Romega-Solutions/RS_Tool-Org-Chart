@@ -172,7 +172,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/settings` | Any user | Get app settings. |
 | `PATCH` | `/api/settings` | Editor | Update branding/settings. |
 | `POST` | `/api/import` | Editor | CSV import. Max 10MB. |
-| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state and `Org Chart Team` / `Primary Team` for multi-team department overrides. |
+| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state, `Org Chart Team` / `Primary Team` for multi-team department overrides, and `Secondary Reports To` for dashed secondary chart connectors. |
 | `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
 
 ### Authentication

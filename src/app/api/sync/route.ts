@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import Papa from "papaparse";
 import { requireEditor } from "@/lib/auth";
 import { normalizeDrivePhotoUrl } from "@/lib/photo-storage";
+import { setSecondaryReportsTo } from "@/lib/secondary-reporting";
 
 // Default department colors for auto-creation
 const DEPT_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ function mapRow(raw: Record<string, string>): {
   title: string;
   department: string;
   reportsTo: string;
+  secondaryReportsTo: string;
   photo: string;
   email: string;
   isActive: boolean | null;
@@ -69,6 +71,7 @@ function mapRow(raw: Record<string, string>): {
     title: get("title", "role/position", "Role/Position", "role", "position", "job_title"),
     department: get("org chart team", "Org Chart Team", "primary team", "Primary Team", "display team", "Display Team", "department", "team", "Team", "dept"),
     reportsTo: get("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
+    secondaryReportsTo: get("secondary reports to", "Secondary Reports To", "dotted reports to", "Dotted Reports To", "secondary manager", "Secondary Manager", "also reports to", "Also Reports To"),
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
     email: get("email", "work email", "Work Email", "work_email"),
     isActive: parseStatus(get("status", "Status", "is_active", "Is Active", "active", "Active")),
@@ -92,6 +95,13 @@ function normalizePhotoUrl(raw: string): string {
   }
   // Filename only
   return `/uploads/photos/${trimmed}`;
+}
+
+function splitManagerNames(raw: string): string[] {
+  return raw
+    .split(/\s*(?:,|;|\||\n)\s*/)
+    .map((name) => name.trim())
+    .filter(Boolean);
 }
 
 function shouldUpdatePhotoUrl(existingPhotoUrl: string | null, nextPhotoUrl: string | null): nextPhotoUrl is string {
@@ -218,12 +228,25 @@ export async function POST(request: Request) {
 
   // Second pass: set reports_to hierarchy
   for (const row of rows) {
+    const personId = nameToId.get(row.name.toLowerCase());
+
     if (row.reportsTo) {
-      const personId = nameToId.get(row.name.toLowerCase());
       const managerId = nameToId.get(row.reportsTo.toLowerCase());
       if (personId && managerId && personId !== managerId) {
         db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
       }
+    }
+
+    if (personId) {
+      const person = db.select().from(people).where(eq(people.id, personId)).get();
+      const secondaryReportsTo = splitManagerNames(row.secondaryReportsTo)
+        .map((name) => nameToId.get(name.toLowerCase()))
+        .filter((id): id is number => typeof id === "number" && id !== personId && id !== person?.reportsTo);
+
+      db.update(people)
+        .set({ projectIds: setSecondaryReportsTo(person?.projectIds ?? null, secondaryReportsTo) })
+        .where(eq(people.id, personId))
+        .run();
     }
   }
 

@@ -2,6 +2,7 @@ import { assetPath } from "@/lib/paths";
 /* eslint-disable @next/next/no-img-element */
 import { createElement } from "react";
 import { getDeptIcon } from "@/lib/dept-icons";
+import { getOrgPlaceholderLabel, isOrgPlaceholder } from "@/lib/org-placeholders";
 import type { TreeNode } from "@/types";
 
 interface Props {
@@ -107,22 +108,30 @@ export function PrintChartDocument({ tree, generatedAt }: Props) {
                 {dept.people.map((person) => (
                   <div
                     key={person.id}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 min-w-[10rem] max-w-[16rem]"
+                    className={
+                      isOrgPlaceholder(person.name, person.title)
+                        ? "flex items-center justify-center px-2.5 py-1 rounded-md bg-muted/70 border border-dashed border-border/70 min-w-[7.5rem] max-w-[12rem]"
+                        : "flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 min-w-[10rem] max-w-[16rem]"
+                    }
                   >
-                    {person.photoUrl ? (
-                      <img src={assetPath(person.photoUrl)} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-border" />
-                    ) : (
-                      <span
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                        style={{ backgroundColor: `${dept.color}15`, color: dept.color }}
-                      >
-                        {getInitials(person.name)}
-                      </span>
+                    {!isOrgPlaceholder(person.name, person.title) && (
+                      person.photoUrl ? (
+                        <img src={assetPath(person.photoUrl)} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-border" />
+                      ) : (
+                        <span
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                          style={{ backgroundColor: `${dept.color}15`, color: dept.color }}
+                        >
+                          {getInitials(person.name)}
+                        </span>
+                      )
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">{person.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{person.title}</p>
-                      {person.managerName && (
+                      <p className={isOrgPlaceholder(person.name, person.title) ? "text-[10px] font-semibold uppercase text-foreground truncate text-center" : "text-xs font-medium text-foreground truncate"}>
+                        {isOrgPlaceholder(person.name, person.title) ? getOrgPlaceholderLabel(person.name, person.title) : person.name}
+                      </p>
+                      {!isOrgPlaceholder(person.name, person.title) && <p className="text-[10px] text-muted-foreground truncate">{person.title}</p>}
+                      {!isOrgPlaceholder(person.name, person.title) && person.managerName && (
                         <p className="text-[9px] text-muted-foreground/60 truncate">→ {person.managerName}</p>
                       )}
                     </div>

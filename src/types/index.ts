@@ -30,6 +30,7 @@ export interface Setting {
 export interface TreeNode extends Person {
   children: TreeNode[];
   department?: Department;
+  secondaryReportsTo?: number[];
 }
 
 export interface ChartData {

@@ -39,6 +39,13 @@ const EDGE_STYLE = {
   opacity: 0.9,
 };
 
+const SECONDARY_EDGE_STYLE = {
+  stroke: "var(--chart-edge-stroke)",
+  strokeWidth: 1.4,
+  strokeDasharray: "6 5",
+  opacity: 0.65,
+};
+
 const nodeTypes = { person: PersonNode };
 
 interface ContextMenuState {
@@ -298,6 +305,34 @@ function layoutTree(roots: TreeNode[]) {
     }
 
     rootOffsetX = maxX + NODE_WIDTH;
+  }
+
+  const activeNodeIds = new Set(nodes.map((node) => node.id));
+  const existingEdgeIds = new Set(edges.map((edge) => `${edge.source}-${edge.target}`));
+  for (const person of personMap.values()) {
+    for (const secondaryParentId of person.secondaryReportsTo ?? []) {
+      const source = String(secondaryParentId);
+      const target = String(person.id);
+      if (
+        source === target ||
+        person.reportsTo === secondaryParentId ||
+        !activeNodeIds.has(source) ||
+        !activeNodeIds.has(target) ||
+        existingEdgeIds.has(`${source}-${target}`)
+      ) {
+        continue;
+      }
+
+      edges.push({
+        id: `secondary-${source}-${target}`,
+        source,
+        target,
+        type: "smoothstep",
+        style: SECONDARY_EDGE_STYLE,
+        className: "secondary-reporting-edge",
+      });
+      existingEdgeIds.add(`${source}-${target}`);
+    }
   }
 
   return { nodes, edges, personMap };
