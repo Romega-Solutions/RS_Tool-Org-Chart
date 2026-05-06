@@ -67,7 +67,7 @@ function mapRow(raw: Record<string, string>): {
   return {
     name: get("name", "Name", "Full Name", "full_name"),
     title: get("title", "role/position", "Role/Position", "role", "position", "job_title"),
-    department: get("department", "team", "Team", "dept"),
+    department: get("org chart team", "Org Chart Team", "primary team", "Primary Team", "display team", "Display Team", "department", "team", "Team", "dept"),
     reportsTo: get("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
     email: get("email", "work email", "Work Email", "work_email"),

@@ -171,7 +171,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/settings` | Any user | Get app settings. |
 | `PATCH` | `/api/settings` | Editor | Update branding/settings. |
 | `POST` | `/api/import` | Editor | CSV import. Max 10MB. |
-| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` and deactivates resigned or inactive people without deleting them. |
+| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state and `Org Chart Team` / `Primary Team` for multi-team department overrides. |
 | `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
 
 ### Authentication
@@ -215,7 +215,7 @@ All endpoints require session auth unless noted. Write operations require editor
 Runtime data is intentionally ignored by git:
 
 - SQLite DB: `data/orgchart.db`
-- Uploaded photos: `public/uploads/photos/`
+- Uploaded photos: `public/uploads/photos/`, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments.
 
 For QA, back up and restore those folders before running mutating product-flow tests against local data.
 

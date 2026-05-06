@@ -103,6 +103,10 @@ test.describe.serial("Product QA flow", () => {
       importedUrl = person.photoUrl;
       expect(importedUrl).toMatch(/^\/uploads\/photos\/.+\.webp$/);
 
+      const importedPhotoRes = await page.request.get(assetPath(importedUrl));
+      expect(importedPhotoRes.ok()).toBeTruthy();
+      expect(importedPhotoRes.headers()["content-type"]).toContain("image/webp");
+
       const photosRes = await page.request.get(appPath("/api/photos"));
       expect(photosRes.ok()).toBeTruthy();
       const photos = await photosRes.json();
@@ -162,6 +166,47 @@ test.describe.serial("Product QA flow", () => {
       expect(personRes.ok()).toBeTruthy();
       const person = await personRes.json();
       expect(person.isActive).toBe(false);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync uses Org Chart Team when sheet Team has multiple departments", async ({ page }) => {
+    const qaName = `Multi Team QA ${Date.now()}`;
+    let personId: number | null = null;
+
+    await login(page, "admin", "admin123");
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      const technicalDept = departments.find((department: { name: string }) => (
+        department.name.toLowerCase() === "technical" || department.name.toLowerCase() === "tech"
+      ));
+      expect(technicalDept).toBeTruthy();
+
+      const csv = [
+        "Name,Role/Position,Team,Org Chart Team,Status",
+        `${qaName},Multi Team QA,HR/Finance & Tech,${technicalDept.name},Active`,
+      ].join("\n");
+      const syncRes = await page.request.post(appPath("/api/sync"), {
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(syncRes.ok()).toBeTruthy();
+      const syncJson = await syncRes.json();
+      const result = syncJson.results.find((entry: { name: string }) => entry.name === qaName);
+      expect(result?.status).toBe("created");
+
+      const peopleRes = await page.request.get(appPath("/api/people?includeInactive=true"));
+      expect(peopleRes.ok()).toBeTruthy();
+      const people = await peopleRes.json();
+      const person = people.find((entry: { name: string }) => entry.name === qaName);
+      personId = person?.id ?? null;
+      expect(personId).toBeTruthy();
+      expect(person.departmentName).toBe(technicalDept.name);
     } finally {
       if (personId) {
         await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
