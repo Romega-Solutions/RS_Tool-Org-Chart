@@ -15,6 +15,53 @@ async function login(page: Page, username: string, password: string) {
 }
 
 test.describe.serial("Product QA flow", () => {
+  test("base path root redirects to chart without duplicating the app prefix", async ({ page }) => {
+    await page.goto(appPath("/"));
+
+    await expect(page).toHaveURL(/\/org-chart\/login\?next=%2Fchart$/);
+    expect(page.url()).not.toContain("/org-chart/org-chart/");
+  });
+
+  test("API key can access protected integration endpoints", async ({ page }) => {
+    const apiKey = process.env.API_KEY ?? process.env.ORGCHART_API_KEY;
+    expect(apiKey).toBeTruthy();
+
+    const headers = { "X-API-Key": apiKey! };
+    const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+    expect(departmentsRes.ok()).toBeTruthy();
+    const departments = await departmentsRes.json();
+    expect(departments.length).toBeGreaterThan(0);
+
+    const qaName = `API Key QA ${Date.now()}`;
+    let personId: number | null = null;
+
+    try {
+      const createRes = await page.request.post(appPath("/api/people"), {
+        headers,
+        data: {
+          name: qaName,
+          title: "Integration QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const patchRes = await page.request.patch(appPath(`/api/people/${personId}`), {
+        headers,
+        data: { title: "Integration QA Edited", isActive: true },
+      });
+      expect(patchRes.ok()).toBeTruthy();
+    } finally {
+      if (personId) {
+        const deleteRes = await page.request.delete(appPath(`/api/people/${personId}`), { headers });
+        expect(deleteRes.ok()).toBeTruthy();
+      }
+    }
+  });
+
   test("covers disposable CRUD, photos, chart views, export, print, audit, permissions, and mobile smoke", async ({ page, browser }) => {
     test.setTimeout(120_000);
 

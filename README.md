@@ -8,12 +8,12 @@ The app manages people, departments, photos, audit history, chart views, exports
 
 | Area | Status |
 |---|---|
-| Production URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host` |
-| Planned domain | `tools.romega-solutions.com/org-chart` |
+| Production URL | `https://tools.romega-solutions.com/org-chart` |
+| Easypanel fallback URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
 | Latest verification | Local `/org-chart` lint, build, and Playwright QA passing |
-| Test suite | Playwright Chromium: 47 passing tests, no skips |
-| Production blocker | Live rebuild still needs the Easypanel deploy webhook, then password rotation |
+| Test suite | Playwright Chromium product-flow spec passing with route and API-key coverage |
+| Production notes | Live passwords have been rotated. n8n/MCP setup is documented; API-key protected endpoint fix is local until the next checkpoint deploy. |
 
 Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs/production-readiness-2026-05-05.md).
 
@@ -27,6 +27,7 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 - Audit log for create, update, delete, toggle, and password-change activity.
 - Editor/viewer role model with JWT session cookies.
 - API-key support for external integrations such as n8n or automation scripts.
+- n8n MCP workflow JSON for org chart tools plus daily Google Sheets review.
 
 ## Quick Start
 
@@ -70,22 +71,24 @@ The suite runs serially because it uses shared local SQLite data and upload stor
 
 Must finish before calling the rollout stable:
 
-- [ ] Refresh/rebuild the active Easypanel deployment so `/org-chart/account` and `/org-chart/api/auth/change-password` are available live.
-- [ ] Verify live `/org-chart/account` and `/org-chart/api/auth/change-password`.
-- [ ] Change production passwords for `admin`, `editor`, and `viewer`.
-- [ ] Confirm the seeded passwords fail:
+- [x] Refresh/rebuild the active Easypanel deployment so `/org-chart/account` and `/org-chart/api/auth/change-password` are available live.
+- [x] Verify live `/org-chart/account` and `/org-chart/api/auth/change-password`.
+- [x] Change production passwords for `admin`, `editor`, and `viewer`.
+- [x] Confirm the seeded passwords fail:
   - `admin / admin123`
   - `editor / editor123`
   - `viewer / viewer123`
-- [ ] Confirm the new credentials work.
-- [ ] Re-run live smoke checks for chart, search, export, print, photos, and mobile.
-- [ ] Configure `tools.romega-solutions.com/org-chart`.
-- [ ] Update live references after the custom domain is verified.
+- [x] Confirm the new credentials work.
+- [x] Configure and verify `tools.romega-solutions.com/org-chart`.
+- [ ] Deploy the local `/org-chart/` redirect fix so the base URL no longer redirects to `/org-chart/org-chart/chart`.
+- [ ] Deploy the local API-key protected-endpoint fix so n8n/MCP can use protected routes consistently.
+- [ ] Re-run live smoke checks for chart, search, export, print, photos, mobile, and API-key protected endpoints.
 
 Data follow-up:
 
 - [ ] Upload production team photos.
 - [ ] Confirm real team data and reporting lines.
+- [ ] Populate the new Google Sheet tab before running sync.
 - [ ] Configure Google Sheets sync if the live sheet should stay authoritative.
 
 ## CI/CD
@@ -109,13 +112,24 @@ The deploy job only runs after CI passes.
 | Variable | Required | Description |
 |---|---|---|
 | `SESSION_SECRET` | Production required | JWT signing key. Production startup fails without it. Use at least 32 random characters. |
+| `NEXT_PUBLIC_BASE_PATH` | Production required | App base path. Production uses `/org-chart`. |
 | `CRON_SECRET` | Optional | Bearer token for `/api/sync/cron`. |
 | `SYNC_INTERVAL` | Optional | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off`. |
 | `API_KEY` | Optional | External integration key. Grants editor access through `X-API-Key`. |
 
+For n8n, set these on the n8n app, not the org chart app:
+
+| Variable | Description |
+|---|---|
+| `ORGCHART_BASE_URL` | Org chart API base URL. Use the public domain or Easypanel fallback if the public domain times out from n8n. |
+| `ORGCHART_API_KEY` | Same value as the org chart app `API_KEY`. Prefer n8n credentials if `$env` access is blocked. |
+| `ORGCHART_SHEET_CSV_URL` | Published CSV export URL for the selected Google Sheet tab. |
+| `ORGCHART_REVIEW_EMAIL` | Recipient for daily review summaries. |
+| `N8N_BLOCK_ENV_ACCESS_IN_NODE` | Set to `false` only if trusted n8n workflows need `$env` access. Otherwise use n8n credentials. |
+
 ## API Summary
 
-All endpoints require session auth unless noted. Write operations require editor access.
+All endpoints require session auth unless noted. Write operations require editor access. External integrations can send `X-API-Key` when `API_KEY` is configured.
 
 ### People
 
@@ -206,6 +220,8 @@ For QA, back up and restore those folders before running mutating product-flow t
 ## Deployment Notes
 
 The current app is deployed through GitHub Actions to the VPS/Easypanel app.
+
+The Easypanel domain route for `tools.romega-solutions.com` should point to the app service over HTTP port `80`; Easypanel maps the running Next.js service to that port in production.
 
 Older Docker Compose and hardening scripts remain in the repo for fresh-server setup or recovery, but the active production path is the GitHub Actions deploy workflow.
 

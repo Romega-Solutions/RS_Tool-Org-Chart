@@ -1,0 +1,683 @@
+{
+  "name": "RS Org Chart MCP Tools + Google Sheets Review",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "rs-org-chart"
+      },
+      "id": "7a933a4c-fb0c-4fa1-a70c-4ea9a6a21611",
+      "name": "MCP Server Trigger",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "rs-org-chart"
+    },
+    {
+      "parameters": {
+        "content": "## RS Org Chart MCP Tools + Google Sheets Review\n\nSet these n8n environment variables before activating:\n\nORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart\nORGCHART_API_KEY=<your API key>\nORGCHART_SHEET_CSV_URL=<published Google Sheet CSV URL>\nORGCHART_REVIEW_EMAIL=<review recipient email>\n\nActivate the workflow, then copy the production MCP URL from the MCP Server Trigger node. The daily Google Sheets review checks for differences and emails a summary. It does not auto-apply changes."
+      },
+      "id": "eb706d99-6f82-46e9-9c37-91cae57652ac",
+      "name": "Setup Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -340,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people?includeInactive=true' }}",
+        "sendHeaders": true,
+        "toolDescription": "List all org chart people, including inactive records. Use this before create, update, delete, or reassign operations to find person IDs.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "id": "362df8a3-00d2-41cb-8188-d609f6b5f3a2",
+      "name": "list_people",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/chart-data' }}",
+        "sendHeaders": true,
+        "toolDescription": "Get the rendered org chart tree, departments, and settings for read-only analysis.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "id": "45c0291f-3139-4f51-8971-f2118af30bc0",
+      "name": "get_chart_data",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -180,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/departments' }}",
+        "sendHeaders": true,
+        "toolDescription": "List departments. Use this to find departmentId before creating or moving people.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "id": "c78f994b-d438-44af-9f5c-9fdf91ecbd25",
+      "name": "list_departments",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        60,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people' }}",
+        "method": "POST",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"{name}\",\n  \"title\": \"{title}\",\n  \"departmentId\": {departmentId},\n  \"reportsTo\": {reportsTo},\n  \"displayOrder\": {displayOrder}\n}",
+        "toolDescription": "Create a person. Required: name, title, departmentId. reportsTo should be a manager person ID or null. displayOrder can usually be 9999.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "name",
+              "type": "string",
+              "description": "Full name of the person."
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "description": "Job title."
+            },
+            {
+              "name": "departmentId",
+              "type": "number",
+              "description": "Department ID from list_departments."
+            },
+            {
+              "name": "reportsTo",
+              "type": "number",
+              "description": "Manager person ID, or null if top-level."
+            },
+            {
+              "name": "displayOrder",
+              "type": "number",
+              "description": "Sibling display order. Use 9999 when unsure."
+            }
+          ]
+        }
+      },
+      "id": "17b90dc9-241f-44d0-86ba-7d1908bc0e1a",
+      "name": "create_person",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/{personId}' }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"{name}\",\n  \"title\": \"{title}\",\n  \"departmentId\": {departmentId},\n  \"reportsTo\": {reportsTo},\n  \"isActive\": {isActive}\n}",
+        "toolDescription": "Update a person. Use list_people first to get personId and current values. Send all fields to avoid accidental blanks.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "personId",
+              "type": "number",
+              "description": "Person ID from list_people."
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "Full name. Use the existing name if unchanged."
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "description": "Job title. Use the existing title if unchanged."
+            },
+            {
+              "name": "departmentId",
+              "type": "number",
+              "description": "Department ID."
+            },
+            {
+              "name": "reportsTo",
+              "type": "number",
+              "description": "Manager person ID, or null if top-level."
+            },
+            {
+              "name": "isActive",
+              "type": "boolean",
+              "description": "true for active, false for inactive."
+            }
+          ]
+        }
+      },
+      "id": "72c95a28-f12e-4932-91ec-1ea992dc8f00",
+      "name": "update_person",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        540,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/reassign' }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"personId\": {personId},\n  \"reportsTo\": {reportsTo}\n}",
+        "toolDescription": "Move a person under a different manager. Use list_people first to get personId and reportsTo manager ID.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "personId",
+              "type": "number",
+              "description": "Person ID to move."
+            },
+            {
+              "name": "reportsTo",
+              "type": "number",
+              "description": "New manager person ID, or null if top-level."
+            }
+          ]
+        }
+      },
+      "id": "5d6d3e55-b904-4ac7-9be8-9ef85e9bc60c",
+      "name": "reassign_person",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people/{personId}' }}",
+        "method": "DELETE",
+        "sendHeaders": true,
+        "toolDescription": "Delete a person by ID. Destructive. Use list_people first and only call after confirmation.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "personId",
+              "type": "number",
+              "description": "Person ID to delete."
+            }
+          ]
+        }
+      },
+      "id": "71fbc72c-6ad0-4764-a261-6378f0d45e3b",
+      "name": "delete_person",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        1020,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/sync' }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "toolDescription": "Run the configured Google Sheets sync. Use only when the sheet is reviewed and should be applied.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "id": "e9a047dd-b584-4e78-aacf-5e31b7dd9220",
+      "name": "sync_google_sheet",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        1260,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/audit?limit=50&page=1' }}",
+        "sendHeaders": true,
+        "toolDescription": "Read recent audit log entries for org chart changes.",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "id": "caa31a9f-7e21-4606-adb8-c86b5098a8b1",
+      "name": "read_audit_log",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        1500,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "18c77a85-a5fe-4f65-a76d-580950492e31",
+      "name": "Daily Google Sheets Review",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ORGCHART_SHEET_CSV_URL || 'https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283' }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "be9c2b29-57f5-4e50-9cc9-ea4bba406c42",
+      "name": "Fetch Google Sheet CSV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -180,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.ORGCHART_BASE_URL || 'https://tools.romega-solutions.com/org-chart') + '/api/people?includeInactive=true' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ORGCHART_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ec7a9469-1e97-42d0-a96f-e37d363aa7e0",
+      "name": "Fetch Current Org Chart",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function parseCsvLine(line) {\n  const values = [];\n  let current = '';\n  let inQuotes = false;\n\n  for (let i = 0; i < line.length; i++) {\n    const char = line[i];\n    const next = line[i + 1];\n\n    if (char === '\"' && inQuotes && next === '\"') {\n      current += '\"';\n      i++;\n    } else if (char === '\"') {\n      inQuotes = !inQuotes;\n    } else if (char === ',' && !inQuotes) {\n      values.push(current.trim());\n      current = '';\n    } else {\n      current += char;\n    }\n  }\n\n  values.push(current.trim());\n  return values;\n}\n\nfunction normalize(value) {\n  return String(value || '').trim().toLowerCase();\n}\n\nconst sheetItem = $('Fetch Google Sheet CSV').first();\nconst csvText = sheetItem.json.data || sheetItem.json.body || '';\nconst lines = csvText.trim().split(/\\r?\\n/).filter(Boolean);\nconst header = parseCsvLine(lines[0] || '').map(normalize);\n\nfunction column(...names) {\n  for (const name of names) {\n    const idx = header.indexOf(normalize(name));\n    if (idx >= 0) return idx;\n  }\n  return -1;\n}\n\nconst nameIdx = column('Name');\nconst titleIdx = column('Role/Position', 'Role', 'Position', 'Title');\nconst teamIdx = column('Team', 'Department');\nconst emailIdx = column('Work Email', 'Email');\n\nconst sheetPeople = [];\nfor (let i = 1; i < lines.length; i++) {\n  const values = parseCsvLine(lines[i]);\n  const name = values[nameIdx] || '';\n  if (!name) continue;\n  sheetPeople.push({\n    name,\n    title: titleIdx >= 0 ? values[titleIdx] : '',\n    team: teamIdx >= 0 ? values[teamIdx] : '',\n    email: emailIdx >= 0 ? values[emailIdx] : ''\n  });\n}\n\nconst orgItem = $('Fetch Current Org Chart').first();\nlet orgPeople = [];\nif (Array.isArray(orgItem.json)) {\n  orgPeople = orgItem.json;\n} else if (Array.isArray(orgItem.json.data)) {\n  orgPeople = orgItem.json.data;\n} else if (Array.isArray(orgItem.json.body)) {\n  orgPeople = orgItem.json.body;\n} else {\n  orgPeople = Object.values(orgItem.json).find((value) => Array.isArray(value)) || [];\n}\n\nconst orgActive = orgPeople.filter((person) => person.isActive !== false && person.isActive !== 0);\nconst orgNames = new Set(orgActive.map((person) => normalize(person.name)));\nconst sheetNames = new Set(sheetPeople.map((person) => normalize(person.name)));\n\nconst newHires = sheetPeople.filter((person) => !orgNames.has(normalize(person.name)));\nconst departures = orgActive.filter((person) => !sheetNames.has(normalize(person.name)) && normalize(person.name) !== 'robbie galoso');\n\nconst titleChanges = [];\nfor (const sheetPerson of sheetPeople) {\n  const match = orgActive.find((orgPerson) => normalize(orgPerson.name) === normalize(sheetPerson.name));\n  if (match && normalize(match.title) !== normalize(sheetPerson.title)) {\n    titleChanges.push({\n      name: sheetPerson.name,\n      oldTitle: match.title,\n      newTitle: sheetPerson.title\n    });\n  }\n}\n\nconst totalChanges = newHires.length + departures.length + titleChanges.length;\nlet summary = `Org Chart Sync Report - ${new Date().toLocaleDateString()}\\n`;\nsummary += `=======================================\\n\\n`;\nsummary += `Sheet people: ${sheetPeople.length}\\n`;\nsummary += `Active org chart people: ${orgActive.length}\\n\\n`;\n\nif (totalChanges === 0) {\n  summary += 'No changes detected. Org chart is up to date.';\n} else {\n  summary += `${totalChanges} change(s) detected:\\n\\n`;\n\n  if (newHires.length) {\n    summary += `NEW HIRES (${newHires.length}):\\n`;\n    newHires.forEach((person) => summary += `  + ${person.name} - ${person.title} (${person.team})\\n`);\n    summary += '\\n';\n  }\n\n  if (departures.length) {\n    summary += `DEPARTURES (${departures.length}):\\n`;\n    departures.forEach((person) => summary += `  - ${person.name} - ${person.title} (${person.departmentName || person.department || '?'})\\n`);\n    summary += '\\n';\n  }\n\n  if (titleChanges.length) {\n    summary += `TITLE/ROLE CHANGES (${titleChanges.length}):\\n`;\n    titleChanges.forEach((change) => summary += `  ~ ${change.name}: \"${change.oldTitle}\" -> \"${change.newTitle}\"\\n`);\n    summary += '\\n';\n  }\n}\n\nreturn [{\n  json: {\n    totalChanges,\n    summary,\n    newHiresCount: newHires.length,\n    departuresCount: departures.length,\n    titleChangesCount: titleChanges.length,\n    sheetPeopleCount: sheetPeople.length,\n    orgPeopleActiveCount: orgActive.length\n  }\n}];"
+      },
+      "id": "7b9843ac-eb99-426b-80ad-ff369731465b",
+      "name": "Compare Sheet vs Org Chart",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-changes",
+              "leftValue": "={{ $json.totalChanges }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "ad56fb62-3e3b-4dfd-8837-f9aa1b0d0683",
+      "name": "Any Sheet Changes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        540,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.ORGCHART_REVIEW_EMAIL || 'mark@romega-solutions.com' }}",
+        "subject": "=Org Chart: {{ $json.totalChanges }} change(s) detected - Review needed",
+        "message": "={{ $json.summary }}\n\n---\nThis is an automated review from the RS Org Chart n8n workflow.\nThe Google Sheet may have changed, but the org chart has NOT been changed yet.\n\nTo apply reviewed changes, use the org chart admin Sync Now button or the MCP sync_google_sheet tool.\n\n- RS Automation (n8n)",
+        "options": {}
+      },
+      "id": "46d75910-4c39-4b4a-823b-20a6e2349a37",
+      "name": "Email Review Summary",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        780,
+        540
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail OAuth2 - Romega"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "33d0dd2c-7548-4bb4-a053-9d84c45db330",
+      "name": "No Sheet Changes",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        780,
+        740
+      ]
+    }
+  ],
+  "connections": {
+    "list_people": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_chart_data": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_departments": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_person": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_person": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reassign_person": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "delete_person": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sync_google_sheet": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_audit_log": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Google Sheets Review": {
+      "main": [
+        [
+          {
+            "node": "Fetch Google Sheet CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Google Sheet CSV": {
+      "main": [
+        [
+          {
+            "node": "Fetch Current Org Chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Current Org Chart": {
+      "main": [
+        [
+          {
+            "node": "Compare Sheet vs Org Chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Sheet vs Org Chart": {
+      "main": [
+        [
+          {
+            "node": "Any Sheet Changes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Sheet Changes?": {
+      "main": [
+        [
+          {
+            "node": "Email Review Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Sheet Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

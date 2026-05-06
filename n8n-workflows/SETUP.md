@@ -1,112 +1,229 @@
-# n8n Workflow: Org Chart Google Sheet Sync (Human-in-the-Loop)
+# n8n Setup: Org Chart MCP Tools and Google Sheets Review
 
-## What It Does
+This repo includes an import-ready n8n workflow:
 
-```
-Every day at 8am:
-  1. Fetches the Google Sheet (employee list)
-  2. Fetches the current org chart data via API
-  3. Compares them — finds new hires, departures, title changes
-  4. If changes found → emails Mark with a summary
-  5. Mark reviews and manually approves via the Org Chart admin UI
-  6. If no changes → does nothing
+```txt
+n8n-workflows/orgchart-mcp-tools.json
 ```
 
-**Human in the loop:** Changes are NEVER auto-applied. The workflow only notifies. Mark decides whether to sync.
+It combines:
 
----
+- MCP Server Trigger for AI/client access.
+- MCP tools for org chart API actions.
+- Daily Google Sheets review automation.
+- Human-in-the-loop email summary for sheet changes.
 
-## Setup Steps
+The workflow does not auto-apply Google Sheet changes unless the `sync_google_sheet` MCP tool is called or the org chart app's Sync Now action is used.
 
-### 1. Import the Workflow
+## Current Live URLs
 
-1. Open n8n: `https://n8n-romega-n8n.ikuuwb.easypanel.host/`
-2. Go to **Workflows** → **Add Workflow** → **Import from File**
-3. Select `orgchart-sync-workflow.json`
-4. The workflow loads with 6 nodes
+Use the public app URL for browser and external clients:
 
-### 2. Configure the Org Chart URL
-
-In the **"Fetch Current Org Chart"** node:
-- Replace `http://localhost:3000` with the production org chart URL
-- e.g., `https://orgchart.romega-solutions.com/api/people`
-
-### 3. Configure Email
-
-In the **"Email Mark for Review"** node:
-- Verify the `sendTo` is correct (`mark@romega-solutions.com`)
-- Configure SMTP credentials in n8n if not already set up
-  - Or switch to a Gmail node / Slack node if preferred
-
-### 4. Activate
-
-- Toggle the workflow **Active**
-- It will run daily at 8:00 AM
-
----
-
-## How the Comparison Works
-
-| Change Type | How It's Detected |
-|---|---|
-| **New hire** | Name in Google Sheet but not in org chart (active people) |
-| **Departure** | Name in org chart but not in Google Sheet (Robbie is excluded) |
-| **Title change** | Same name, different title |
-
----
-
-## When Mark Gets an Email
-
-The email looks like:
-
-```
-Org Chart Sync Report — 4/23/2026
-=======================================
-
-3 change(s) detected:
-
-NEW HIRES (1):
-  + Jane Doe — Marketing Intern (Marketing)
-
-DEPARTURES (1):
-  - Mickey Co — Marketing Intern (Marketing)
-
-TITLE/ROLE CHANGES (1):
-  ~ Duane Vargas: "HR Business Partner" → "AI Lead/Recruiter"
-
----
-To apply: Log into Org Chart admin → Settings → Sync Now
+```txt
+https://tools.romega-solutions.com/org-chart
 ```
 
-### To Apply Changes
+If n8n times out calling the public domain from inside Easypanel, try the Easypanel app hostname:
 
-**Option A — Use the built-in sync** (if sheet columns match):
-1. Go to Org Chart → Settings → Google Sheets Sync
-2. Paste the published CSV URL
-3. Click "Sync Now"
+```txt
+https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart
+```
 
-**Option B — Manual update:**
-1. Go to Org Chart → Admin → People
-2. Add/edit/deactivate people based on the email
+Internal Docker service names such as `http://romega-projects_rs_tool-org-chart:80/...` only work from containers on the same Docker network. They are not browser URLs.
 
----
+## Required n8n Environment
 
-## Google Sheet Requirements
+Set these on the n8n Easypanel app:
 
-The Google Sheet at `gid=0` must remain the source of truth with columns:
-- `No.` — Row number
-- `Name` — Full name
-- `Role/Position` — Job title
-- `Team` — Department
-- `Work Email` — Email address
+```txt
+GENERIC_TIMEZONE=Asia/Manila
+TZ=Asia/Manila
+WEBHOOK_URL=https://n8n-romega-n8n.ikuuwb.easypanel.host/
+N8N_EDITOR_BASE_URL=https://n8n-romega-n8n.ikuuwb.easypanel.host/
+N8N_HOST=0.0.0.0
+N8N_PORT=5678
+N8N_PROTOCOL=https
+ORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart
+ORGCHART_API_KEY=<org chart API key>
+ORGCHART_SHEET_CSV_URL=https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
+ORGCHART_REVIEW_EMAIL=mark@romega-solutions.com
+```
 
-The workflow parses these columns automatically.
+If n8n nodes show `access to env vars denied`, either:
 
----
+1. Prefer n8n credentials for secrets and direct URLs in nodes, or
+2. Set this on the n8n app and restart n8n:
 
-## Notes
+```txt
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
 
-- Robbie Galoso is excluded from departure detection (he's leadership, not in the IC sheet)
-- The workflow does NOT auto-apply changes — it only notifies
-- To change the schedule: edit the "Daily 8am Check" node
-- To add Slack notifications: replace the email node with a Slack node
+Only enable environment access when trusted users can edit workflows.
+
+## Org Chart API Credential
+
+Create an n8n credential:
+
+```txt
+Credential type: Header Auth
+Credential name: Org Chart API Key
+Header name: X-API-Key
+Header value: <org chart API key>
+```
+
+In each org chart HTTP/tool node:
+
+```txt
+Authentication: Generic Credential Type
+Generic Auth Type: Header Auth
+Credential: Org Chart API Key
+Send Headers: Off
+```
+
+Do not use both a Header Auth credential and a manual `X-API-Key` header in the same node.
+
+## Import Workflow
+
+1. Open n8n:
+
+```txt
+https://n8n-romega-n8n.ikuuwb.easypanel.host/
+```
+
+2. Import:
+
+```txt
+n8n-workflows/orgchart-mcp-tools.json
+```
+
+3. Open the MCP Server Trigger.
+
+4. Confirm:
+
+```txt
+Path: rs-org-chart
+Authentication: None
+```
+
+5. Ensure these MCP tool nodes are connected:
+
+```txt
+list_people
+get_chart_data
+list_departments
+create_person
+update_person
+reassign_person
+delete_person
+sync_google_sheet
+read_audit_log
+```
+
+6. Activate the workflow after the test URL works.
+
+## MCP URLs
+
+Test URL:
+
+```txt
+https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp-test/rs-org-chart
+```
+
+Production URL:
+
+```txt
+https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
+```
+
+The test URL only works while n8n is listening for a test event. The production URL only works after the workflow is active.
+
+A browser GET is not a real MCP test. Use an MCP client to initialize/list tools/call tools.
+
+## Google Sheet Setup
+
+Use the new tab:
+
+```txt
+https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/edit?gid=947755283#gid=947755283
+```
+
+CSV export URL:
+
+```txt
+https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
+```
+
+Recommended headers:
+
+```txt
+No.,Name,Role/Position,Team,Reports To,Photo,Work Email
+```
+
+Required by the app sync:
+
+```txt
+Name
+Role/Position
+Team
+```
+
+Optional:
+
+```txt
+Reports To
+Photo
+Work Email
+```
+
+Do not put MCP tool names, REST URLs, API actions, or API keys in the sheet. The sheet is only the employee data source.
+
+The new tab currently exports successfully but may be empty. Do not run `sync_google_sheet` or Sync Now while the tab is empty.
+
+## Troubleshooting
+
+### `access to env vars denied`
+
+Use direct node values and n8n credentials, or set:
+
+```txt
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
+
+Then restart n8n.
+
+### `connect ETIMEDOUT 51.83.97.146:443`
+
+n8n can reach the app from outside sometimes, but the n8n container may time out calling the same VPS public IP. Try this base URL in n8n:
+
+```txt
+https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart
+```
+
+If n8n and org chart are on the same Docker network, the internal service URL may work inside n8n:
+
+```txt
+http://romega-projects_rs_tool-org-chart:80/org-chart
+```
+
+That internal URL will not resolve in a browser.
+
+### `webhook is not registered`
+
+The production MCP URL only registers when the workflow is active.
+
+### `Workflow could not be started`
+
+Check the execution details. The most common causes are:
+
+- A remaining `$env` expression in a sub-node while env access is blocked.
+- Missing Header Auth credential.
+- A tool node URL still pointing to a domain that times out from n8n.
+
+## Verification Snapshot
+
+Known verified behavior:
+
+- `GET /org-chart/api/people?includeInactive=true` returns live people JSON.
+- `read_audit_log` returns audit entries when configured with the Header Auth credential.
+- `gid=947755283` CSV export returns HTTP 200.
+- The tab must be populated before sync is safe.

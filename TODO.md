@@ -1,7 +1,7 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Deployed with CI/CD and full QA coverage. Production is blocked by default live passwords and a stale active deployment missing the account password route.
-> Last updated: 2026-05-05
+> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, and n8n/MCP workflow assets. Current local fixes still need checkpoint deploy.
+> Last updated: 2026-05-06
 
 ---
 
@@ -51,6 +51,7 @@
 - [x] Actor tracking wired into audit log
 - [x] Audit log viewer page (/admin/audit) with pagination
 - [x] n8n workflow for Google Sheets sync (human-in-the-loop)
+- [x] Combined n8n MCP + Google Sheets review workflow JSON
 - [x] Photo management page (/admin/photos) with upload/delete/assign
 - [x] Delete cascade warning for people with direct reports
 
@@ -117,54 +118,40 @@
 
 ## Remaining
 
-### Shift handoff — 2026-05-05
+### May 6 production/domain/n8n update
 
-- Live password rotation was attempted but not completed because the active deployment returns `404` for `/account` and `POST /api/auth/change-password`.
-- The repo already contains those account-management routes, so refresh/rebuild Easypanel first and verify `/account` returns `200`.
-- No new live passwords were set. The unused generated local credential file was deleted.
-- After the route is live, rotate `admin`, `editor`, and `viewer`, then verify old default logins fail and new credentials work.
-- `tools.romega-solutions.com` currently has no DNS record. Current Easypanel host resolves to `51.83.97.146`.
-- Treat `tools.romega-solutions.com/org-chart` as a routing task, not just DNS. The app uses root-absolute paths (`/api`, `/uploads`, `/assets`), so either configure proxy rewrites carefully or add app-side base-path support and rerun full QA.
+- `tools.romega-solutions.com` DNS points to `51.83.97.146`.
+- Easypanel routes `tools.romega-solutions.com` to the org chart app over HTTP port `80`.
+- Public org chart URL is `https://tools.romega-solutions.com/org-chart`.
+- Easypanel fallback URL is `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart`.
+- Live account routes are available.
+- Live passwords for `admin`, `editor`, and `viewer` were rotated.
+- Old default passwords were verified to fail.
+- `API_KEY` is configured for live headless/API access.
+- `API_KEY` is also present in the GitHub `VPS_HOST` environment for future workflow use.
+- n8n workflow JSON now includes MCP tools and daily Google Sheets review.
+- New Google Sheet tab `gid=947755283` was selected for review/sync isolation from the old tab.
+- The new tab exports HTTP 200 but is currently empty until headers/data are added.
 
-### Resume update — 2026-05-06
+### Current local changes awaiting checkpoint deploy
 
-- Manual GitHub Actions deploy dispatch ran successfully, but live `/account` and `/api/auth/change-password` still returned `404` afterward.
-- Root-only live verification is not enough; the workflow now verifies `/account` and `POST /api/auth/change-password`.
-- The deploy workflow now requires `EASYPANEL_DEPLOY_WEBHOOK` in the `VPS_HOST` GitHub environment so Easypanel performs an actual rebuild/redeploy after source sync.
-- The last remaining skipped gallery test was replaced with disposable upload data.
-- Local verification passed: `pnpm lint` and `npx playwright test --browser=chromium` with `47 passed` and no skips.
-
-### Path support update — 2026-05-06
-
-- The app now has proper Next.js `basePath` support for `/org-chart`.
-- Browser API calls, uploaded-photo URLs, static assets, export/print links, and Playwright tests were updated to use the app base path.
-- Root `/` redirects to `/org-chart/chart`; legacy page paths such as `/chart` redirect under `/org-chart`.
-- Local verification passed under `/org-chart`: `pnpm lint`, `pnpm build`, and `npx playwright test --browser=chromium` with `47 passed`.
-- GitHub deploy verification now checks `/org-chart/account` and `POST /org-chart/api/auth/change-password`.
-
-### Production blocker
-
-- [ ] 🔴 Add `EASYPANEL_DEPLOY_WEBHOOK` to the `VPS_HOST` GitHub environment secrets
-- [ ] 🔴 Refresh/rebuild the active Easypanel deployment so `/org-chart/account` and `/org-chart/api/auth/change-password` are available live
-- [ ] 🔴 Change default live account passwords for `admin`, `editor`, and `viewer`
-- [ ] 🔴 Confirm default logins fail after password changes:
-  - `admin / admin123`
-  - `editor / editor123`
-  - `viewer / viewer123`
-- [ ] 🔴 Confirm new credentials work and rerun live smoke checks
+- [ ] 🔴 Deploy `/org-chart/` redirect fix so it no longer redirects to `/org-chart/org-chart/chart`.
+- [ ] 🔴 Deploy API-key protected endpoint fix so routes like `/api/departments` accept valid `X-API-Key` consistently.
+- [ ] 🔴 Deploy updated n8n MCP + Google Sheets review JSON.
+- [ ] 🔴 Deploy README/TODO/n8n docs refresh.
 
 ### Domain consolidation
 
-- [ ] 🟡 Configure final custom domain as `tools.romega-solutions.com/org-chart`
-- [ ] 🟡 Point `tools.romega-solutions.com` DNS to the current deployed app
-- [ ] 🟡 Add the custom domain in Easypanel and verify HTTPS
+- [x] 🟢 Configure final custom domain as `tools.romega-solutions.com/org-chart`
+- [x] 🟢 Point `tools.romega-solutions.com` DNS to the current deployed app
+- [x] 🟢 Add the custom domain in Easypanel and verify HTTPS
 - [x] 🟢 Decide whether `/` redirects to `/org-chart` or becomes a simple tools index for this repo: root redirects to `/org-chart/chart`
-- [ ] 🟡 Update README/TODO/live references after the custom domain is verified
+- [x] 🟢 Update README/TODO/live references after the custom domain is verified
 
 ### For Mark (data)
 
-- [ ] 🟡 Populate with real team data (CSV import or Google Sheets sync)
-- [ ] 🟢 Configure Google Sheets URL for live org data
+- [ ] 🟡 Populate the new Google Sheet tab with headers/data before running sync
+- [x] 🟢 Configure Google Sheets URL for n8n review using `gid=947755283`
 - [ ] 🟢 Upload team photos
 
 ---
@@ -179,6 +166,6 @@
 | **Package Manager** | pnpm |
 | **Auth** | JWT + bcrypt (Editor/Viewer roles) |
 | **Deployment** | GitHub Actions → VPS/Easypanel live deploy |
-| **Planned Domain** | tools.romega-solutions.com/org-chart |
+| **Production Domain** | tools.romega-solutions.com/org-chart |
 | **Security** | 3-layer DDoS, CSRF, rate limiting, HTTPS, Fail2ban |
 | **Tests** | Playwright e2e (47 tests, no skips) |

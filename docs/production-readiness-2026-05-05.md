@@ -2,124 +2,134 @@
 
 ## Current Status
 
-The org chart app is deployed and the repository is clean on `master`.
+The org chart app is live on the custom tools domain:
 
-- Live URL: `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host`
-- Latest pushed checkpoint: `c238515 chore(qa): make photo gallery tests deterministic checkpoint`
-- Latest GitHub Actions deploy run passed CI, deploy, and live verification.
-- Live site returns `200` with title `Org Chart - Romega Solutions`.
-- Follow-up live checks found the active deployment is stale for account management: `/account` and `/api/auth/change-password` return `404` even though those routes exist on `master`.
+```txt
+https://tools.romega-solutions.com/org-chart
+```
 
-## What Changed
+Fallback Easypanel URL:
 
-### CI/CD and Deployment
+```txt
+https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart
+```
 
-- Added a gated GitHub Actions deployment flow.
-- CI now runs install, lint, build, Playwright Chromium tests, deploy, and live title verification.
-- Updated workflow actions to current Node runtime versions.
-- Removed the old Node 20 forced-runtime annotation.
-- Suppressed only the `DEP0040` punycode warning emitted by setup tooling.
+Production deploys through GitHub Actions to the VPS/Easypanel app. The deploy workflow requires `EASYPANEL_DEPLOY_WEBHOOK` in the GitHub `VPS_HOST` environment so Easypanel rebuilds/redeploys after source sync.
 
-### Branch and Repo Cleanup
+## Completed Since Initial Readiness Pass
 
-- Deleted stale remote branches:
-  - `origin/feature/phase1-bug-fixes`
-  - `origin/copilot/bug-analysis`
-- Deleted stale local branch:
-  - `feature/phase3-photo-management`
-- Confirmed `master` is synced with `origin/master`.
+- Added `/org-chart` base-path support.
+- Configured `tools.romega-solutions.com` DNS to `51.83.97.146`.
+- Added the custom Easypanel domain route over HTTP port `80`.
+- Verified the custom domain serves the org chart app.
+- Rebuilt/redeployed Easypanel so account-management routes are live.
+- Rotated live passwords for `admin`, `editor`, and `viewer`.
+- Verified old default passwords fail.
+- Configured `API_KEY` for headless org chart API access.
+- Added `API_KEY` to the GitHub `VPS_HOST` environment for future workflow use.
+- Created combined n8n MCP + Google Sheets review workflow JSON.
+- Selected a new Google Sheet tab (`gid=947755283`) to avoid overwriting the old tab.
+- Documented n8n env, Header Auth credential, MCP URLs, and troubleshooting.
 
-### QA Coverage
+## Current Local Changes Awaiting Deploy
 
-- Added permanent product QA coverage for:
-  - people create/edit/delete
-  - photo upload, WebP conversion, assignment, table display, and gallery display
-  - chart rendering, search, and view switching
-  - Excel and PNG export downloads
-  - print-ready chart page
-  - audit entries
-  - viewer permission blocking
-  - mobile chart/photos smoke checks
-- Stabilized the Department sort test.
-- Set Playwright workers to `1` because the E2E suite shares SQLite and upload storage.
-- Replaced data-dependent skipped photo-gallery tests with deterministic disposable fixtures.
+These are verified locally but not live until the next checkpoint commit/push/deploy:
 
-## Verified
+- `/org-chart/` redirect fix. Current live behavior still redirects to `/org-chart/org-chart/chart`; local code fixes this by redirecting to `/chart` inside the Next base-path app.
+- API-key protected endpoint fix. Local code accepts either `API_KEY` or `ORGCHART_API_KEY` and verifies the key before CSRF bypass. This makes protected routes like `/api/departments` work consistently for n8n/MCP.
+- Expanded product-flow Playwright coverage for route redirects and API-key protected endpoint access.
+- Combined n8n workflow: `n8n-workflows/orgchart-mcp-tools.json`.
+- Docs refresh for README, TODO, and n8n setup.
 
-Local verification:
+## Verification Evidence
 
-- `pnpm lint` passed.
-- `npx playwright test --browser=chromium` passed with `47 passed` and no skipped tests.
+Local verification after the current fixes:
 
-GitHub Actions verification:
+```txt
+pnpm lint
+pnpm build
+NEXT_PUBLIC_BASE_PATH=/org-chart npx playwright test e2e/product-flow.spec.ts --browser=chromium
+```
 
-- Latest deploy workflow passed.
-- CI, deploy, and live verification steps completed successfully.
+Expected local product-flow result:
 
-Production smoke verification:
+```txt
+3 passed
+```
 
-- Live chart renders active org data.
-- Chart search works.
-- Department grid view works.
-- Admin photos page renders.
-- Excel export downloads.
-- PNG export downloads.
-- Print view renders.
-- Mobile chart smoke passes.
+Live checks observed during setup:
 
-Production data snapshot:
+```txt
+https://tools.romega-solutions.com/org-chart/chart -> 200, redirects anonymous users to login
+https://tools.romega-solutions.com/org-chart/api/people?includeInactive=true -> 200
+https://tools.romega-solutions.com/org-chart/api/departments with X-API-Key -> 200 after the local API-key fix is deployed
+```
 
-- 37 total people
-- 22 active people
-- 7 departments
-- 50 audit entries
-- 0 uploaded production photos
+The n8n `read_audit_log` tool returned real audit entries after using a Header Auth credential.
 
-## Remaining Blocker
+## n8n and MCP
 
-Default seeded credentials still work in production:
+Workflow file:
 
-- `admin / admin123`
-- `editor / editor123`
-- `viewer / viewer123`
+```txt
+n8n-workflows/orgchart-mcp-tools.json
+```
 
-This must be fixed before calling the rollout stable.
+MCP paths:
 
-Live rotation cannot be completed until the active Easypanel deployment exposes the base-path account-management routes:
+```txt
+Test: https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp-test/rs-org-chart
+Prod: https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
+```
 
-- `/org-chart/account`
-- `/org-chart/api/auth/change-password`
+Required n8n env:
 
-## Domain Direction
+```txt
+ORGCHART_BASE_URL=https://tools.romega-solutions.com/org-chart
+ORGCHART_API_KEY=<org chart API key>
+ORGCHART_SHEET_CSV_URL=https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
+ORGCHART_REVIEW_EMAIL=mark@romega-solutions.com
+```
 
-The current Easypanel URL is working, but the preferred long-term domain is:
+If n8n blocks `$env`, either use direct URLs plus Header Auth credentials, or set:
 
-`tools.romega-solutions.com/org-chart`
+```txt
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
 
-Reason:
+Restart n8n after changing env.
 
-- This app is part of the broader `RS_Tool` family.
-- A single tools domain can later host or route to other internal tools.
-- Future routes can follow the same pattern:
-  - `tools.romega-solutions.com/org-chart`
-  - `tools.romega-solutions.com/ticketing`
-  - `tools.romega-solutions.com/reports`
+## Google Sheets
 
-Recommended rollout:
+Use the new tab:
 
-1. Point `tools.romega-solutions.com` to the current org chart app first.
-2. Serve the org chart at `/org-chart`.
-3. Make `/` redirect to `/org-chart` or show a simple tools index later.
-4. Enable and verify HTTPS on the custom domain.
-5. Update README, TODO, and live references from the Easypanel URL to the custom domain after it is verified.
+```txt
+https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/edit?gid=947755283#gid=947755283
+```
 
-## Next Steps
+CSV export:
 
-1. Add `EASYPANEL_DEPLOY_WEBHOOK` to the `VPS_HOST` GitHub environment secrets.
-2. Run the GitHub Actions deploy workflow and verify `/org-chart/account` and `POST /org-chart/api/auth/change-password` pass live deep-route checks.
-3. Change all live default account passwords through `/org-chart/account` or `POST /org-chart/api/auth/change-password`.
-4. Re-test default logins and confirm they fail.
-5. Confirm the new admin/editor/viewer credentials work.
-6. Configure and verify `tools.romega-solutions.com/org-chart`.
-7. Re-run the live smoke checks.
-8. Mark the rollout stable after the password and domain tasks are closed.
+```txt
+https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
+```
+
+Recommended headers:
+
+```txt
+No.,Name,Role/Position,Team,Reports To,Photo,Work Email
+```
+
+Do not run `sync_google_sheet` or Sync Now while the tab is empty.
+
+## Remaining Work
+
+1. Create checkpoint commit and push the current local fixes/docs.
+2. Watch the GitHub deploy workflow until live verification completes.
+3. Recheck:
+   - `https://tools.romega-solutions.com/org-chart/`
+   - `GET /org-chart/api/departments` with `X-API-Key`
+   - n8n MCP `list_departments`
+   - n8n MCP `read_audit_log`
+4. Populate the new Google Sheet tab with headers and real team data.
+5. Run the daily review flow.
+6. Only run actual sync after the sheet data has been reviewed.

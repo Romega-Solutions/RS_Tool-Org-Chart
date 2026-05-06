@@ -3,11 +3,22 @@ import { timingSafeEqual } from "crypto";
 import { verifyToken, getTokenFromCookieHeader } from "@/lib/session";
 import type { AuthUser } from "@/types";
 
-const API_KEY = process.env.API_KEY || null;
-
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
+function getIntegrationApiKeys(): string[] {
+  return [process.env.API_KEY, process.env.ORGCHART_API_KEY]
+    .map((key) => key?.trim())
+    .filter((key): key is string => Boolean(key));
+}
+
+function hasValidApiKey(request: Request): boolean {
+  const apiKey = request.headers.get("x-api-key")?.trim();
+  if (!apiKey) return false;
+
+  return getIntegrationApiKeys().some((expected) => safeCompare(apiKey, expected));
 }
 
 // CSRF: verify Origin header for mutating requests when present.
@@ -17,8 +28,8 @@ export function checkCsrf(request: Request): NextResponse | null {
   const method = request.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return null;
 
-  // API key requests are exempt (machine-to-machine)
-  if (API_KEY && request.headers.get("x-api-key")) return null;
+  // Valid API key requests are exempt (machine-to-machine)
+  if (hasValidApiKey(request)) return null;
 
   // Only check if Origin is present — browsers always send it for cross-origin requests.
   // Same-origin requests may omit it (e.g., fetch without mode: "cors"), which is fine
@@ -39,11 +50,8 @@ export function checkCsrf(request: Request): NextResponse | null {
 // Supports both session cookies and X-API-Key header for external systems (n8n, AI agents)
 export async function getUserFromRequest(request: Request): Promise<AuthUser | null> {
   // 1. Check X-API-Key header (for n8n / external integrations)
-  if (API_KEY) {
-    const apiKey = request.headers.get("x-api-key");
-    if (apiKey && safeCompare(apiKey, API_KEY)) {
-      return { username: "api", name: "API Integration", role: "editor" };
-    }
+  if (hasValidApiKey(request)) {
+    return { username: "api", name: "API Integration", role: "editor" };
   }
 
   // 2. Fall back to session cookie
