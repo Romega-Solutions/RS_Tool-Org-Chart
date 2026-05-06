@@ -21,6 +21,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Save,
   Upload,
@@ -39,6 +40,69 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+
+type SyncReviewChange = {
+  name: string;
+  before?: string | string[] | null;
+  after?: string | string[] | null;
+  title?: string;
+  department?: string;
+  managedPhoto?: string;
+  sheetPhoto?: string;
+  message?: string;
+};
+
+type SyncReview = {
+  timestamp: string;
+  summary: {
+    created: number;
+    updated: number;
+    errors: number;
+    total: number;
+  };
+  changes: Record<string, SyncReviewChange[]>;
+};
+
+const SYNC_CHANGE_LABELS: Record<string, string> = {
+  created: "Created",
+  title: "Title Changes",
+  status: "Status Changes",
+  department: "Department Changes",
+  reporting: "Reports To Changes",
+  secondaryReporting: "Secondary Reports To Changes",
+  photo: "Photo Source Changes",
+  photoPreserved: "Protected Web Photos",
+  warnings: "Warnings",
+};
+
+function parseSyncReview(raw: string | undefined): SyncReview | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as SyncReview;
+    if (!parsed?.summary || !parsed?.changes) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function formatValue(value: string | string[] | null | undefined) {
+  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "None";
+  return value || "None";
+}
+
+function describeSyncChange(key: string, change: SyncReviewChange) {
+  if (key === "created") return `${change.title ?? "New person"} in ${change.department ?? "Unknown"}`;
+  if (key === "photoPreserved") return "Kept managed WebP photo";
+  if (key === "warnings") return change.message ?? "Review this row";
+  return `${formatValue(change.before)} → ${formatValue(change.after)}`;
+}
+
+function countMeaningfulSyncChanges(review: SyncReview) {
+  return Object.entries(review.changes)
+    .filter(([key]) => key !== "photoPreserved")
+    .reduce((total, [, items]) => total + items.length, 0);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Color field                                                        */
@@ -118,7 +182,7 @@ function SettingsSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export function SettingsForm() {
-  const { settings, loading, updateSettings } = useSettings();
+  const { settings, loading, updateSettings, refetch } = useSettings();
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -227,8 +291,7 @@ export function SettingsForm() {
       if (!res.ok) throw new Error(data.error ?? "Sync failed");
       const { summary } = data;
       toast.success(`Sync complete: ${summary.created} created, ${summary.updated} updated, ${summary.errors} errors`);
-      // Refresh settings to get updated last_sync_at
-      window.location.reload();
+      await refetch();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sync failed");
     } finally {
@@ -244,6 +307,8 @@ export function SettingsForm() {
   const lastSyncDisplay = lastSyncAt
     ? new Date(lastSyncAt).toLocaleString()
     : "Never synced";
+  const syncReview = parseSyncReview(settings.last_sync_summary);
+  const syncChangeCount = syncReview ? countMeaningfulSyncChanges(syncReview) : 0;
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-3xl mx-auto pb-20">
@@ -812,6 +877,66 @@ export function SettingsForm() {
               {syncing ? "Syncing..." : "Sync Now"}
             </Button>
           </div>
+          {syncReview && (
+            <div className="rounded-lg border border-border bg-muted/20">
+              <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Latest Sync Review</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(syncReview.timestamp).toLocaleString()} · {syncReview.summary.total} sheet rows processed
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={syncReview.summary.errors > 0 ? "border-destructive/40 text-destructive" : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"}
+                >
+                  {syncReview.summary.errors > 0 ? `${syncReview.summary.errors} errors` : `${syncChangeCount} changes`}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4">
+                {[
+                  ["Created", syncReview.summary.created],
+                  ["Updated Rows", syncReview.summary.updated],
+                  ["Errors", syncReview.summary.errors],
+                  ["Protected Photos", syncReview.changes.photoPreserved?.length ?? 0],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-md border border-border bg-background px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground">{label}</p>
+                    <p className="text-lg font-semibold tabular-nums">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3 border-t border-border px-4 py-4">
+                {Object.entries(SYNC_CHANGE_LABELS)
+                  .map(([key, label]) => ({ key, label, items: syncReview.changes[key] ?? [] }))
+                  .filter(({ items }) => items.length > 0)
+                  .map(({ key, label, items }) => (
+                    <div key={key} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-foreground">{label}</p>
+                        <span className="text-[11px] tabular-nums text-muted-foreground">{items.length}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {items.slice(0, 5).map((item, index) => (
+                          <div key={`${key}-${item.name}-${index}`} className="flex items-start justify-between gap-3 rounded-md bg-background px-3 py-2 text-xs">
+                            <span className="font-medium text-foreground">{item.name}</span>
+                            <span className="max-w-[60%] text-right text-muted-foreground">{describeSyncChange(key, item)}</span>
+                          </div>
+                        ))}
+                        {items.length > 5 && (
+                          <p className="px-3 text-[11px] text-muted-foreground">
+                            {items.length - 5} more not shown
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                {syncChangeCount === 0 && (syncReview.changes.photoPreserved?.length ?? 0) === 0 && (
+                  <p className="text-sm text-muted-foreground">No data changes found in the latest sync.</p>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

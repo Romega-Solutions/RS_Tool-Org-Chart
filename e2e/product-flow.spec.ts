@@ -491,6 +491,67 @@ test.describe.serial("Product QA flow", () => {
     }
   });
 
+  test("sync stores a visible review summary for the latest sheet changes", async ({ page }) => {
+    const qaName = `Sync Review QA ${Date.now()}`;
+    const headers = integrationHeaders();
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        headers,
+        data: {
+          name: qaName,
+          title: "Sync Review QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          isActive: true,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const csv = [
+        "Name,Role/Position,Team,Status",
+        `${qaName},Sync Review QA Updated,${departments[0].name},Offboarded`,
+      ].join("\n");
+      const syncRes = await page.request.post(appPath("/api/sync"), {
+        headers,
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(syncRes.ok()).toBeTruthy();
+
+      const settingsRes = await page.request.get(appPath("/api/settings"), { headers });
+      expect(settingsRes.ok()).toBeTruthy();
+      const settings = await settingsRes.json();
+      expect(settings.last_sync_summary).toBeTruthy();
+      const review = JSON.parse(settings.last_sync_summary);
+      expect(review.summary.total).toBe(1);
+      expect(review.changes.status).toHaveLength(1);
+      expect(review.changes.status[0]).toMatchObject({
+        name: qaName,
+        before: "Active",
+        after: "Inactive",
+      });
+
+      await login(page, "admin", "admin123");
+      await page.goto(appPath("/admin/settings"));
+      await expect(page.getByText("Latest Sync Review")).toBeVisible();
+      await expect(page.getByText("Status Changes")).toBeVisible();
+      await expect(page.getByText(qaName).first()).toBeVisible();
+      await expect(page.getByText("Active → Inactive")).toBeVisible();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
+      }
+    }
+  });
+
   test("cleanup unused photos deletes only unassigned files", async ({ page }) => {
     const qaName = `Cleanup Photo QA ${Date.now()}`;
     let personId: number | null = null;
