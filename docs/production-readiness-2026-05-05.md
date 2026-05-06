@@ -133,11 +133,13 @@ Recommended headers:
 No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status,Org Chart Team
 ```
 
-The `Photo` column can use Google Drive file links for review. After sheet sync applies those links, use `/admin/photos` -> `Import External` to download them into managed WebP storage so the photo gallery, chart, export, and print flows all use `/uploads/photos/...` URLs.
+The `Photo` column can use Google Drive file links for review. After sheet sync applies those links, use `/admin/photos` -> `Import External` to download them into managed WebP storage so the photo gallery, chart, export, and print flows all use `/uploads/photos/...` URLs. Later syncs preserve existing managed WebP URLs when the sheet still references external images.
 
 The optional `Status` column controls active visibility. `Active` keeps people active. `Resigned`, `Inactive`, `Offboarded`, and `Ended` set `isActive=false` on sync without deleting the person record or audit history.
 
 The optional `Org Chart Team` column controls the single department shown by the app when the source `Team` has multiple departments. Sync prefers `Org Chart Team` over `Team`.
+
+Use `/admin/photos` -> `Clean Unused` after duplicate imports to remove unassigned managed photo files.
 
 Do not run `sync_google_sheet` or Sync Now while the tab is empty.
 

@@ -643,6 +643,8 @@ export function SettingsForm() {
                   ["Audit log", "GET", "/api/audit", "?page=1&limit=50", "Public"],
                   ["Photos", "GET", "/api/photos", "", "Public"],
                   ["Delete photo", "DELETE", "/api/photos/{filename}", "", "Editor"],
+                  ["Import external", "POST", "/api/photos/import-external", "", "Editor"],
+                  ["Clean unused", "POST", "/api/photos/cleanup-unused", "", "Editor"],
                 ],
               },
               {

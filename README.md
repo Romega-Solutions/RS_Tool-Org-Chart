@@ -161,6 +161,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `GET` | `/api/audit` | Any user | Audit log. Supports `?page=1&limit=50`. |
 | `GET` | `/api/photos` | Any user | List uploaded photos and assignment status. |
 | `POST` | `/api/photos/import-external` | Editor | Download external person photo URLs, convert to WebP, save to managed photo storage, and reassign people to the local uploaded files. |
+| `POST` | `/api/photos/cleanup-unused` | Editor | Delete uploaded photo files that are not assigned to any person. |
 | `DELETE` | `/api/photos/:filename` | Editor | Delete photo and clear linked person photo reference. |
 | `POST` | `/api/upload` | Editor | Upload image. Max 5MB, WebP output, rate limited. |
 
@@ -215,7 +216,7 @@ All endpoints require session auth unless noted. Write operations require editor
 Runtime data is intentionally ignored by git:
 
 - SQLite DB: `data/orgchart.db`
-- Uploaded photos: `public/uploads/photos/`, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments.
+- Uploaded photos: `public/uploads/photos/`, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments. Use Photos -> Clean Unused to remove duplicate files that are no longer assigned.
 
 For QA, back up and restore those folders before running mutating product-flow tests against local data.
 

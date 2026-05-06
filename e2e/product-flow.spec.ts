@@ -116,7 +116,11 @@ test.describe.serial("Product QA flow", () => {
 
       await page.goto(appPath("/admin/photos"));
       await expect(page.getByRole("button", { name: /Import External/ })).toBeVisible();
-      await expect(page.locator("[data-slot='card']").filter({ hasText: qaName })).toBeVisible();
+      await expect(page.getByRole("button", { name: /Clean Unused/ })).toBeVisible();
+      const photoCard = page.locator("[data-slot='card']").filter({ hasText: qaName });
+      await expect(photoCard).toBeVisible();
+      await photoCard.hover();
+      await expect(photoCard.getByRole("button", { name: /Crop/ })).toBeVisible();
     } finally {
       if (personId) {
         await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
@@ -210,6 +214,148 @@ test.describe.serial("Product QA flow", () => {
     } finally {
       if (personId) {
         await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync preserves an imported local photo when sheet still has an external photo URL", async ({ page }) => {
+    const qaName = `Preserve Photo QA ${Date.now()}`;
+    const externalPhotoUrl = `data:image/png;base64,${png1x1.toString("base64")}`;
+    let personId: number | null = null;
+    let localPhotoUrl: string | null = null;
+
+    await login(page, "admin", "admin123");
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const uploadRes = await page.request.post(appPath("/api/upload"), {
+        multipart: {
+          file: {
+            name: `preserve-photo-${Date.now()}.png`,
+            mimeType: "image/png",
+            buffer: png1x1,
+          },
+        },
+      });
+      expect(uploadRes.ok()).toBeTruthy();
+      localPhotoUrl = (await uploadRes.json()).url;
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Preserve Photo QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          photoUrl: localPhotoUrl,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const csv = [
+        "Name,Role/Position,Team,Photo,Status",
+        `${qaName},Preserve Photo QA,${departments[0].name},"${externalPhotoUrl}",Active`,
+      ].join("\n");
+      const syncRes = await page.request.post(appPath("/api/sync"), {
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}` },
+      });
+      expect(syncRes.ok()).toBeTruthy();
+
+      const personRes = await page.request.get(appPath(`/api/people/${personId}`));
+      expect(personRes.ok()).toBeTruthy();
+      const person = await personRes.json();
+      expect(person.photoUrl).toBe(localPhotoUrl);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+      if (localPhotoUrl) {
+        const filename = localPhotoUrl.split("/").pop();
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("cleanup unused photos deletes only unassigned files", async ({ page }) => {
+    const qaName = `Cleanup Photo QA ${Date.now()}`;
+    let personId: number | null = null;
+    let usedPhotoUrl: string | null = null;
+    let unusedPhotoUrl: string | null = null;
+
+    await login(page, "admin", "admin123");
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const uploadUsedRes = await page.request.post(appPath("/api/upload"), {
+        multipart: {
+          file: {
+            name: `cleanup-used-${Date.now()}.png`,
+            mimeType: "image/png",
+            buffer: png1x1,
+          },
+        },
+      });
+      expect(uploadUsedRes.ok()).toBeTruthy();
+      usedPhotoUrl = (await uploadUsedRes.json()).url;
+
+      const uploadUnusedRes = await page.request.post(appPath("/api/upload"), {
+        multipart: {
+          file: {
+            name: `cleanup-unused-${Date.now()}.png`,
+            mimeType: "image/png",
+            buffer: png1x1,
+          },
+        },
+      });
+      expect(uploadUnusedRes.ok()).toBeTruthy();
+      unusedPhotoUrl = (await uploadUnusedRes.json()).url;
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Cleanup Photo QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          photoUrl: usedPhotoUrl,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const cleanupRes = await page.request.post(appPath("/api/photos/cleanup-unused"));
+      expect(cleanupRes.ok()).toBeTruthy();
+      const cleanup = await cleanupRes.json();
+      expect(cleanup.deleted).toBeGreaterThanOrEqual(1);
+      expect(cleanup.failed).toEqual([]);
+
+      const photosRes = await page.request.get(appPath("/api/photos"));
+      expect(photosRes.ok()).toBeTruthy();
+      const photos = await photosRes.json();
+      expect(photos.some((photo: { url: string; usedBy: { id: number } | null }) => (
+        photo.url === usedPhotoUrl && photo.usedBy?.id === personId
+      ))).toBeTruthy();
+      expect(photos.some((photo: { url: string }) => photo.url === unusedPhotoUrl)).toBeFalsy();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+      if (usedPhotoUrl) {
+        const filename = usedPhotoUrl.split("/").pop();
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
+      }
+      if (unusedPhotoUrl) {
+        const filename = unusedPhotoUrl.split("/").pop();
+        if (filename) await page.request.delete(appPath(`/api/photos/${encodeURIComponent(filename)}`)).catch(() => undefined);
       }
     }
   });

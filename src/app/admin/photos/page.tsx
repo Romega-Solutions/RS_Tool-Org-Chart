@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -18,6 +19,9 @@ import {
   Check,
   Search,
   CloudDownload,
+  Eraser,
+  Crop,
+  ZoomIn,
 } from "lucide-react";
 import {
   Dialog,
@@ -136,6 +140,13 @@ export default function PhotosPage() {
   const [uploadSkipped, setUploadSkipped] = useState<string[]>([]);
   const [importingExternal, setImportingExternal] = useState(false);
   const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [cleaningUnused, setCleaningUnused] = useState(false);
+  const [cleanupNotice, setCleanupNotice] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<PhotoEntry | null>(null);
+  const [cropZoom, setCropZoom] = useState(1.25);
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+  const [cropOffsetY, setCropOffsetY] = useState(0);
+  const [cropSaving, setCropSaving] = useState(false);
   const [pendingUpload, setPendingUpload] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -251,6 +262,98 @@ export default function PhotosPage() {
     }
   }
 
+  async function cleanupUnusedPhotos() {
+    setCleaningUnused(true);
+    setCleanupNotice(null);
+    try {
+      const res = await fetch(apiPath("/api/photos/cleanup-unused"), { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.error ?? `Cleanup failed (${res.status})`);
+      }
+      setCleanupNotice(
+        `Deleted ${body?.deleted ?? 0} unused photos. Failed ${body?.failed?.length ?? 0}.`
+      );
+      await fetchPhotos();
+    } catch (err) {
+      setCleanupNotice(err instanceof Error ? err.message : "Could not clean up unused photos.");
+    } finally {
+      setCleaningUnused(false);
+    }
+  }
+
+  function openCropDialog(photo: PhotoEntry) {
+    setCropTarget(photo);
+    setCropZoom(1.25);
+    setCropOffsetX(0);
+    setCropOffsetY(0);
+  }
+
+  async function saveCroppedPhoto() {
+    if (!cropTarget) return;
+    setCropSaving(true);
+    try {
+      const imageUrl = assetPath(cropTarget.url);
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      const loaded = new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Could not load photo for cropping."));
+      });
+      image.src = imageUrl;
+      await loaded;
+
+      const size = 400;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not create crop canvas.");
+
+      const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight) * cropZoom;
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const drawX = (size - drawWidth) / 2 + cropOffsetX;
+      const drawY = (size - drawHeight) / 2 + cropOffsetY;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (result) resolve(result);
+          else reject(new Error("Could not save cropped photo."));
+        }, "image/webp", 0.9);
+      });
+
+      const formData = new FormData();
+      formData.append("file", new File([blob], `cropped-${cropTarget.filename}`, { type: "image/webp" }));
+      const uploadRes = await fetch(apiPath("/api/upload"), { method: "POST", body: formData });
+      const uploadBody = await uploadRes.json().catch(() => null);
+      if (!uploadRes.ok || !uploadBody?.url) {
+        throw new Error(uploadBody?.error ?? `Upload failed (${uploadRes.status})`);
+      }
+
+      if (cropTarget.usedBy) {
+        const patchRes = await fetch(apiPath(`/api/people/${cropTarget.usedBy.id}`), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: uploadBody.url }),
+        });
+        if (!patchRes.ok) throw new Error(`Could not assign cropped photo (${patchRes.status})`);
+      }
+
+      await fetch(apiPath(`/api/photos/${encodeURIComponent(cropTarget.filename)}`), { method: "DELETE" }).catch(() => undefined);
+      setCropTarget(null);
+      await fetchPhotos();
+    } catch (err) {
+      setCleanupNotice(err instanceof Error ? err.message : "Could not save cropped photo.");
+    } finally {
+      setCropSaving(false);
+    }
+  }
+
   function stageFiles(files: FileList | File[]) {
     const { valid, skipped } = filterValidFiles(files);
     if (skipped.length > 0) setUploadSkipped(skipped);
@@ -314,7 +417,7 @@ export default function PhotosPage() {
     setDeleting(true);
     try {
       const res = await fetch(
-        `/api/photos/${encodeURIComponent(deleteTarget.filename)}`,
+        apiPath(`/api/photos/${encodeURIComponent(deleteTarget.filename)}`),
         { method: "DELETE" }
       );
       if (res.ok) {
@@ -500,6 +603,18 @@ export default function PhotosPage() {
                 </span>
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={cleanupUnusedPhotos}
+                disabled={cleaningUnused || uploading || photos.every((photo) => photo.usedBy)}
+                className="gap-2 cursor-pointer"
+              >
+                <Eraser className={`w-4 h-4 ${cleaningUnused ? "animate-pulse" : ""}`} />
+                <span className="hidden sm:inline">
+                  {cleaningUnused ? "Cleaning..." : "Clean Unused"}
+                </span>
+              </Button>
+              <Button
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -523,6 +638,12 @@ export default function PhotosPage() {
       {importNotice && (
         <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
           {importNotice}
+        </div>
+      )}
+
+      {cleanupNotice && (
+        <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          {cleanupNotice}
         </div>
       )}
 
@@ -612,6 +733,15 @@ export default function PhotosPage() {
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 text-[11px] gap-1 cursor-pointer shadow-sm"
+                      onClick={() => openCropDialog(photo)}
+                    >
+                      <Crop className="w-3 h-3" />
+                      Crop
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 text-[11px] gap-1 cursor-pointer shadow-sm text-destructive hover:text-destructive"
                       onClick={() => setDeleteTarget(photo)}
                     >
@@ -661,6 +791,103 @@ export default function PhotosPage() {
           if (!open) setDeleteTarget(null);
         }}
       />
+
+      {/* Crop dialog */}
+      <Dialog
+        open={cropTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !cropSaving) setCropTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crop Photo</DialogTitle>
+          </DialogHeader>
+          {cropTarget && (
+            <div className="space-y-4">
+              <div className="mx-auto h-56 w-56 overflow-hidden rounded-xl border border-border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assetPath(cropTarget.url)}
+                  alt={cropTarget.usedBy?.name ?? cropTarget.filename}
+                  className="h-full w-full object-cover"
+                  style={{
+                    transform: `translate(${cropOffsetX}px, ${cropOffsetY}px) scale(${cropZoom})`,
+                    transformOrigin: "center",
+                  }}
+                />
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <ZoomIn className="h-3.5 w-3.5" />
+                    Zoom
+                    <span className="ml-auto tabular-nums">{cropZoom.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.05"
+                    value={cropZoom}
+                    onChange={(event) => setCropZoom(Number(event.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="crop_offset_x">Horizontal</Label>
+                    <input
+                      id="crop_offset_x"
+                      type="range"
+                      min="-120"
+                      max="120"
+                      step="1"
+                      value={cropOffsetX}
+                      onChange={(event) => setCropOffsetX(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="crop_offset_y">Vertical</Label>
+                    <input
+                      id="crop_offset_y"
+                      type="range"
+                      min="-120"
+                      max="120"
+                      step="1"
+                      value={cropOffsetY}
+                      onChange={(event) => setCropOffsetY(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCropTarget(null)}
+                  disabled={cropSaving}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={saveCroppedPhoto}
+                  disabled={cropSaving}
+                  className="cursor-pointer"
+                >
+                  {cropSaving ? "Saving..." : "Save Crop"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Upload confirmation dialog */}
       <Dialog
@@ -894,7 +1121,7 @@ export default function PhotosPage() {
                 <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={assignPhoto.url}
+                    src={assetPath(assignPhoto.url)}
                     alt={assignPhoto.filename}
                     className="w-full h-full object-cover"
                   />

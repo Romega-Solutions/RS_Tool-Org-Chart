@@ -87,11 +87,22 @@ function normalizePhotoUrl(raw: string): string {
   const normalizedDriveUrl = normalizeDrivePhotoUrl(trimmed);
   if (normalizedDriveUrl !== trimmed) return normalizedDriveUrl;
   // Already a URL
-  if (trimmed.startsWith("http") || trimmed.startsWith("/")) {
+  if (trimmed.startsWith("http") || trimmed.startsWith("/") || trimmed.startsWith("data:")) {
     return trimmed;
   }
   // Filename only
   return `/uploads/photos/${trimmed}`;
+}
+
+function shouldUpdatePhotoUrl(existingPhotoUrl: string | null, nextPhotoUrl: string | null): nextPhotoUrl is string {
+  if (!nextPhotoUrl) return false;
+  if (!existingPhotoUrl) return true;
+  if (existingPhotoUrl === nextPhotoUrl) return false;
+
+  const hasManagedPhoto = existingPhotoUrl.startsWith("/uploads/photos/");
+  const sheetPhotoIsExternal = /^(https?:\/\/|data:)/i.test(nextPhotoUrl);
+
+  return !(hasManagedPhoto && sheetPhotoIsExternal);
 }
 
 export async function POST(request: Request) {
@@ -183,10 +194,11 @@ export async function POST(request: Request) {
     const photoUrl = row.photo ? normalizePhotoUrl(row.photo) : null;
 
     if (existingId) {
+      const existingPerson = existing.find((p) => p.id === existingId);
       db.update(people).set({
         title: row.title,
         departmentId: deptId,
-        ...(photoUrl && { photoUrl }),
+        ...(shouldUpdatePhotoUrl(existingPerson?.photoUrl ?? null, photoUrl) && { photoUrl }),
         ...(row.isActive !== null && { isActive: row.isActive }),
         updatedAt: new Date().toISOString(),
       }).where(eq(people.id, existingId)).run();
