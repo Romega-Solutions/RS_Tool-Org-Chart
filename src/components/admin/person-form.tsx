@@ -125,7 +125,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
     setSaveError(null);
     setSaving(true);
 
-    const url = person ? `/api/people/${person.id}` : "/api/people";
+    const url = apiPath(person ? `/api/people/${person.id}` : "/api/people");
     const method = person ? "PATCH" : "POST";
 
     try {
@@ -215,6 +215,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
                   alt="Preview"
                   width={48}
                   height={48}
+                  unoptimized
                   className="size-12 rounded-full object-cover border"
                 />
               ) : (

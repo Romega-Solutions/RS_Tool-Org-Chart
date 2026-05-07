@@ -91,6 +91,77 @@ test.describe.serial("Product QA flow", () => {
     }
   });
 
+  test("people edit form saves through the configured app base path", async ({ page }) => {
+    const qaName = `Edit Base Path QA ${Date.now()}`;
+    const driveShareUrl = "https://drive.google.com/file/d/1d-ittEfrRJh_C4YQXpYL2xHVX6H5Cx_y/view?usp=sharing";
+    let personId: number | null = null;
+    const patchUrls: string[] = [];
+    const optimizedPreviewUrls: string[] = [];
+
+    await login(page, "admin", "admin123");
+    await page.route("https://drive.google.com/**", (route) => {
+      route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "image/png" },
+        body: png1x1,
+      });
+    });
+    page.on("request", (request) => {
+      const url = request.url();
+      if (request.method() === "PATCH" && url.includes(`/api/people/${personId}`)) {
+        patchUrls.push(url);
+      }
+      if (url.includes("/_next/image") && url.includes("drive.google.com")) {
+        optimizedPreviewUrls.push(url);
+      }
+    });
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+      expect(departments.length).toBeGreaterThan(0);
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Base Path QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      await page.goto(appPath("/admin/team"));
+      await page.getByPlaceholder("Search by name, title, or department...").fill(qaName);
+      await page.locator("tbody tr").filter({ hasText: qaName }).first().locator("td").nth(1).click();
+
+      const dialog = page.getByRole("dialog", { name: "Edit Person" });
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel("Title *").fill("Base Path QA Edited");
+      await dialog.getByPlaceholder("or paste image / Google Drive URL").fill(driveShareUrl);
+      await dialog.getByRole("button", { name: "Save" }).click();
+
+      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+      expect(patchUrls.length).toBeGreaterThan(0);
+      expect(patchUrls[0]).toContain(appPath(`/api/people/${personId}`));
+      expect(patchUrls[0]).not.toContain("/org-chart/org-chart/");
+      expect(optimizedPreviewUrls).toEqual([]);
+
+      const personRes = await page.request.get(appPath(`/api/people/${personId}`));
+      expect(personRes.ok()).toBeTruthy();
+      const updatedPerson = await personRes.json();
+      expect(updatedPerson.title).toBe("Base Path QA Edited");
+      expect(updatedPerson.photoUrl).toBe("https://drive.google.com/uc?export=view&id=1d-ittEfrRJh_C4YQXpYL2xHVX6H5Cx_y");
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
+  });
+
   test("imports external sheet photos into managed photo storage", async ({ page }) => {
     const qaName = `Photo Import QA ${Date.now()}`;
     const externalPhotoUrl = `data:image/png;base64,${png1x1.toString("base64")}`;
