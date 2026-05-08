@@ -44,11 +44,32 @@ test.describe.serial("Product QA flow", () => {
 
     await page.goto(appPath("/login?next=/view"));
     await page.getByLabel("Username").fill("admin");
-    await page.getByLabel("Password").fill("deterministic-test-password");
+    await page.getByRole("textbox", { name: "Password" }).fill("deterministic-test-password");
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/org-chart\/view$/, { timeout: 15_000 });
     expect(page.url()).not.toContain("/org-chart/org-chart/");
+  });
+
+  test("login page offers a temporary view-only visitor prompt", async ({ page }) => {
+    await page.goto(appPath("/login"));
+
+    const prompt = page.getByRole("status", { name: "View-only visitor access" });
+    await expect(prompt).toBeVisible();
+    await expect(prompt).toContainText("New to Romega?");
+    await expect(prompt).toContainText("Use view-only access for onboarding.");
+
+    await expect(prompt).toBeHidden({ timeout: 8_000 });
+
+    await page.goto(appPath("/login"));
+    await page.getByRole("button", { name: "Use view-only access" }).click();
+
+    await expect(page.getByLabel("Username")).toHaveValue("visitor");
+    await expect(page.getByRole("textbox", { name: "Password" })).toHaveValue("");
+
+    const help = page.getByRole("button", { name: "Where do I get the password?" });
+    await help.hover();
+    await expect(page.getByText("Message the onboarding team if the password is not yet known.")).toBeVisible();
   });
 
   test("API key can access protected integration endpoints", async ({ page }) => {
@@ -89,6 +110,46 @@ test.describe.serial("Product QA flow", () => {
         expect(deleteRes.ok()).toBeTruthy();
       }
     }
+  });
+
+  test("visitor account can view but cannot edit employee data", async ({ page }) => {
+    await login(page, "visitor", "HelloRomega321");
+
+    const meRes = await page.request.get(appPath("/api/auth/me"));
+    expect(meRes.ok()).toBeTruthy();
+    await expect(meRes.json()).resolves.toEqual({
+      username: "visitor",
+      name: "Visitor",
+      role: "viewer",
+    });
+
+    const chartRes = await page.request.get(appPath("/api/chart-data"));
+    expect(chartRes.ok()).toBeTruthy();
+
+    const departmentsRes = await page.request.get(appPath("/api/departments"));
+    expect(departmentsRes.ok()).toBeTruthy();
+    const departments = await departmentsRes.json();
+    expect(departments.length).toBeGreaterThan(0);
+
+    const forbiddenCreate = await page.request.post(appPath("/api/people"), {
+      data: {
+        name: `Visitor Forbidden QA ${Date.now()}`,
+        title: "Should Not Save",
+        departmentId: departments[0].id,
+        reportsTo: null,
+        displayOrder: 9999,
+      },
+    });
+    expect(forbiddenCreate.status()).toBe(403);
+
+    const forbiddenSettings = await page.request.patch(appPath("/api/settings"), {
+      data: { chart_title: "Visitor Should Not Save" },
+    });
+    expect(forbiddenSettings.status()).toBe(403);
+
+    await page.goto(appPath("/admin/settings"));
+    await expect(page).toHaveURL(/\/org-chart\/chart$/);
+    await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible();
   });
 
   test("people edit form saves through the configured app base path", async ({ page }) => {

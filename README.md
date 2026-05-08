@@ -48,8 +48,10 @@ Default local accounts are seeded on first run:
 | `admin` | `admin123` | Editor |
 | `editor` | `editor123` | Editor |
 | `viewer` | `viewer123` | Viewer |
+| `visitor` | `HelloRomega321` | Viewer |
 
 Change production passwords immediately after first login.
+Use `visitor` as the shared read-only account for employees and onboarding users who only need chart access.
 
 ## Verification
 
@@ -90,6 +92,7 @@ Must finish before calling the rollout stable:
   - `admin / admin123`
   - `editor / editor123`
   - `viewer / viewer123`
+- [x] Add `visitor` as a seeded read-only viewer account for employee and onboarding access.
 - [x] Confirm the new credentials work.
 - [x] Configure and verify `tools.romega-solutions.com/org-chart`.
 - [x] Deploy the `/org-chart/` redirect fix so the base URL no longer redirects to `/org-chart/org-chart/chart`.

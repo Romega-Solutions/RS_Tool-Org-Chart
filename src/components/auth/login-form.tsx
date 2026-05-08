@@ -7,9 +7,14 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { routerPath } from "@/lib/paths";
 
-export function LoginForm() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+interface LoginFormProps {
+  username: string;
+  password: string;
+  onUsernameChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+}
+
+export function LoginForm({ username, password, onUsernameChange, onPasswordChange }: LoginFormProps) {
   const [error, setError] = useState("");
   const { login } = useAuth();
   const router = useRouter();
@@ -34,7 +39,7 @@ export function LoginForm() {
         <Input
           id="username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => onUsernameChange(e.target.value)}
           placeholder="Enter username"
           required
           className="h-11 bg-muted/40 dark:!bg-black/20 border-t-border border-l-border border-b-background border-r-background dark:border-t-black/40 dark:border-l-black/40 dark:border-b-white/[0.06] dark:border-r-white/[0.06] shadow-[inset_0_2px_5px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_2px_5px_rgba(0,0,0,0.3)] focus-visible:bg-background dark:focus-visible:!bg-background/80 transition-all duration-200"
@@ -46,7 +51,7 @@ export function LoginForm() {
           id="password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => onPasswordChange(e.target.value)}
           placeholder="Enter password"
           required
           className="h-11 bg-muted/40 dark:!bg-black/20 border-t-border border-l-border border-b-background border-r-background dark:border-t-black/40 dark:border-l-black/40 dark:border-b-white/[0.06] dark:border-r-white/[0.06] shadow-[inset_0_2px_5px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_2px_5px_rgba(0,0,0,0.3)] focus-visible:bg-background dark:focus-visible:!bg-background/80 transition-all duration-200"

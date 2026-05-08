@@ -35,7 +35,7 @@
 - [x] Role-based auth (Editor/Viewer) with bcrypt + JWT
 - [x] Export: Excel (styled with ExcelJS), PNG (HD 2x, dotted bg, theme-aware), PDF, print
 - [x] Dark/light mode, keyboard navigation, undo/redo
-- [x] Seeded default accounts (admin/editor/viewer)
+- [x] Seeded default accounts (admin/editor/viewer/visitor)
 - [x] Next.js 16 compatibility (middleware → proxy migration)
 
 ### Phase 1 — Bug Fixes ✅ (merged PR #1)
@@ -135,6 +135,7 @@
 - Live account routes are available.
 - Live passwords for `admin`, `editor`, and `viewer` were rotated.
 - Old default passwords were verified to fail.
+- `visitor` is a seeded read-only viewer account for employees and onboarding users.
 - `API_KEY` is configured for live headless/API access.
 - `API_KEY` is also present in the GitHub `VPS_HOST` environment for future workflow use.
 - n8n workflow JSON now includes MCP tools and daily Google Sheets review.

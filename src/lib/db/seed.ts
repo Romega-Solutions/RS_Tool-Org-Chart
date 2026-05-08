@@ -67,6 +67,7 @@ const DEFAULT_USERS = [
   { username: "admin", name: "Admin", password: "admin123", role: "editor" as const },
   { username: "editor", name: "Editor", password: "editor123", role: "editor" as const },
   { username: "viewer", name: "Viewer", password: "viewer123", role: "viewer" as const },
+  { username: "visitor", name: "Visitor", password: "HelloRomega321", role: "viewer" as const },
 ];
 
 export function seedSettings() {
