@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { people, departments, settings } from "@/lib/db/schema";
-import { eq, asc } from "drizzle-orm";
 import { buildTree } from "@/lib/tree";
-import { requireAuth } from "@/lib/auth";
+import { isPublicViewCodeValid } from "@/lib/public-view-link";
 import { settingsRowsToMap } from "@/lib/settings-map";
-import type { Person, Department, Setting } from "@/types";
+import type { Department, Person, Setting } from "@/types";
 
 export async function GET(request: Request) {
-  const [, err] = await requireAuth(request);
-  if (err) return err;
+  const code = new URL(request.url).searchParams.get("code");
+  if (!isPublicViewCodeValid(code)) {
+    return NextResponse.json({ error: "Public view link is invalid or expired" }, { status: 403 });
+  }
+
   const allPeople = db.select().from(people).where(eq(people.isActive, true)).orderBy(asc(people.displayOrder)).all() as Person[];
   const allDepts = db.select().from(departments).orderBy(asc(departments.displayOrder)).all() as Department[];
   const allSettings = db.select().from(settings).all() as Setting[];

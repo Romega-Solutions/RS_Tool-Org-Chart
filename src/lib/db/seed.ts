@@ -2,6 +2,9 @@ import { db } from "./client";
 import { settings, departments, people, users } from "./schema";
 import { count, eq } from "drizzle-orm";
 import { hashSync } from "bcryptjs";
+import { createPublicViewLink } from "@/lib/public-view-link";
+
+const DEFAULT_PUBLIC_VIEW_LINK = createPublicViewLink();
 
 const DEFAULT_SETTINGS = [
   { key: "org_name", value: "Romega Solutions" },
@@ -14,6 +17,9 @@ const DEFAULT_SETTINGS = [
   { key: "support_email", value: "" },
   { key: "sheets_url", value: "https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/edit?usp=sharing" },
   { key: "last_sync_at", value: "" },
+  { key: "public_view_code", value: DEFAULT_PUBLIC_VIEW_LINK.code },
+  { key: "public_view_code_hash", value: DEFAULT_PUBLIC_VIEW_LINK.hash },
+  { key: "public_view_expires_at", value: DEFAULT_PUBLIC_VIEW_LINK.expiresAt },
 ];
 
 const DEPARTMENTS = [

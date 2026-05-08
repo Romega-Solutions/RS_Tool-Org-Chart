@@ -63,6 +63,12 @@ type SyncReview = {
   changes: Record<string, SyncReviewChange[]>;
 };
 
+type PublicViewLinkInfo = {
+  code: string;
+  url: string;
+  expiresAt: string;
+};
+
 const SYNC_CHANGE_LABELS: Record<string, string> = {
   created: "Created",
   title: "Title Changes",
@@ -192,6 +198,9 @@ export function SettingsForm() {
   const [syncing, setSyncing] = useState(false);
   const [previewingSync, setPreviewingSync] = useState(false);
   const [syncPreview, setSyncPreview] = useState<SyncReview | null>(null);
+  const [publicLink, setPublicLink] = useState<PublicViewLinkInfo | null>(null);
+  const [publicLinkLoading, setPublicLinkLoading] = useState(false);
+  const [publicLinkRotating, setPublicLinkRotating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -199,6 +208,31 @@ export function SettingsForm() {
       setForm({ ...settings });
     }
   }, [loading, settings]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    let cancelled = false;
+    setPublicLinkLoading(true);
+    fetch(apiPath("/api/public-view-link"))
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load public link");
+        return res.json() as Promise<PublicViewLinkInfo>;
+      })
+      .then((data) => {
+        if (!cancelled) setPublicLink(data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Failed to load public view link");
+      })
+      .finally(() => {
+        if (!cancelled) setPublicLinkLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading]);
 
   // Track unsaved changes
   const hasChanges = useMemo(() => {
@@ -279,6 +313,22 @@ export function SettingsForm() {
     setCopiedApi(label);
     toast.success(`${label} copied`);
     setTimeout(() => setCopiedApi(null), 2000);
+  }
+
+  async function handleRotatePublicLink() {
+    setPublicLinkRotating(true);
+    try {
+      const res = await fetch(apiPath("/api/public-view-link/rotate"), { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to rotate public link");
+      setPublicLink(data);
+      await navigator.clipboard.writeText(data.url);
+      toast.success("Public view link rotated and copied");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to rotate public link");
+    } finally {
+      setPublicLinkRotating(false);
+    }
   }
 
   function getBaseUrl() {
@@ -607,6 +657,65 @@ export function SettingsForm() {
               ) : (
                 <Copy className="w-4 h-4" />
               )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Public View Link */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-rs-primary-500/10 flex items-center justify-center shrink-0">
+              <Link2 className="w-4.5 h-4.5 text-rs-primary-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Public View Link</CardTitle>
+              <CardDescription>
+                Share a login-free read-only chart link for onboarding. The code expires after 90 days.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Current Link</Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={publicLinkLoading ? "Loading..." : publicLink?.url ?? "Not available"}
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 cursor-pointer"
+                disabled={!publicLink?.url || publicLinkLoading}
+                onClick={() => publicLink?.url && handleCopyApi(publicLink.url, "Public view link")}
+                aria-label="Copy public view link"
+              >
+                {copiedApi === "Public view link" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Expires: {publicLink?.expiresAt ? new Date(publicLink.expiresAt).toLocaleDateString() : "Not available"}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">
+              Rotate immediately if the link was shared too broadly. Old links stop working after rotation.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              disabled={publicLinkRotating}
+              onClick={handleRotatePublicLink}
+            >
+              {publicLinkRotating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              {publicLinkRotating ? "Rotating..." : "Rotate Link"}
             </Button>
           </div>
         </CardContent>

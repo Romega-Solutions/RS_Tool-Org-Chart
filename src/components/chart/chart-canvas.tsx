@@ -24,6 +24,8 @@ import { getTreeStats } from "@/lib/tree";
 
 interface Props {
   isEditor: boolean;
+  dataEndpoint?: string;
+  showExport?: boolean;
 }
 
 function findPersonById(tree: TreeNode[], personId: number): TreeNode | null {
@@ -56,8 +58,8 @@ function isDescendant(tree: TreeNode[], ancestorId: number, nodeId: number): boo
   return tree.some(walk);
 }
 
-export function ChartCanvas({ isEditor }: Props) {
-  const { data, loading, error, refetch } = useChartData();
+export function ChartCanvas({ isEditor, dataEndpoint, showExport = true }: Props) {
+  const { data, loading, error, refetch } = useChartData(dataEndpoint);
   const { push, undo, redo, canUndo, canRedo } = useUndo();
   const [view, setView] = useState<ViewMode>("top-down");
   const [selectedPerson, setSelectedPerson] = useState<TreeNode | null>(null);
@@ -602,7 +604,7 @@ export function ChartCanvas({ isEditor }: Props) {
       {/* Action buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
         {isEditor && <ImportDialog onImportComplete={refetch} />}
-        <ExportMenu />
+        {showExport && <ExportMenu />}
       </div>
 
       {/* Feedback toast */}

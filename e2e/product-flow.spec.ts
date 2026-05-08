@@ -152,6 +152,55 @@ test.describe.serial("Product QA flow", () => {
     await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible();
   });
 
+  test("admin can rotate a generated public view link for login-free chart access", async ({ page }) => {
+    await login(page, "admin", "admin123");
+
+    const linkRes = await page.request.get(appPath("/api/public-view-link"));
+    expect(linkRes.ok()).toBeTruthy();
+    const linkInfo = await linkRes.json();
+    expect(linkInfo.code).toMatch(/^[A-Z0-9]{16}$/);
+    expect(linkInfo.url).toContain(`/org-chart/view?public=${linkInfo.code}`);
+    expect(new Date(linkInfo.expiresAt).getTime()).toBeGreaterThan(Date.now());
+
+    const publicDataRes = await page.request.get(appPath(`/api/public-chart-data?code=${linkInfo.code}`));
+    expect(publicDataRes.ok()).toBeTruthy();
+    const publicData = await publicDataRes.json();
+    expect(publicData.tree.length).toBeGreaterThan(0);
+
+    const invalidRes = await page.request.get(appPath("/api/public-chart-data?code=BADCODE123"));
+    expect(invalidRes.status()).toBe(403);
+
+    const rotateRes = await page.request.post(appPath("/api/public-view-link/rotate"));
+    expect(rotateRes.ok()).toBeTruthy();
+    const rotated = await rotateRes.json();
+    expect(rotated.code).toMatch(/^[A-Z0-9]{16}$/);
+    expect(rotated.code).not.toBe(linkInfo.code);
+
+    const oldCodeRes = await page.request.get(appPath(`/api/public-chart-data?code=${linkInfo.code}`));
+    expect(oldCodeRes.status()).toBe(403);
+
+    const newCodeRes = await page.request.get(appPath(`/api/public-chart-data?code=${rotated.code}`));
+    expect(newCodeRes.ok()).toBeTruthy();
+
+    await page.goto(appPath("/admin/settings"));
+    await expect(page.getByText("Public View Link")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Rotate Link" })).toBeVisible();
+  });
+
+  test("public view link renders chart without login and offers login prompt", async ({ page }) => {
+    await login(page, "admin", "admin123");
+    const rotateRes = await page.request.post(appPath("/api/public-view-link/rotate"));
+    expect(rotateRes.ok()).toBeTruthy();
+    const { code } = await rotateRes.json();
+
+    await page.context().clearCookies();
+    await page.goto(appPath(`/view?public=${code}`));
+
+    await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page).toHaveURL(/\/org-chart\/login$/);
+  });
+
   test("people edit form saves through the configured app base path", async ({ page }) => {
     const qaName = `Edit Base Path QA ${Date.now()}`;
     const driveShareUrl = "https://drive.google.com/file/d/1d-ittEfrRJh_C4YQXpYL2xHVX6H5Cx_y/view?usp=sharing";

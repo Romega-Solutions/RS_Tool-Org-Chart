@@ -26,6 +26,7 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 - Export to styled Excel, PNG, print/PDF view, and CSV.
 - Audit log for create, update, delete, toggle, and password-change activity.
 - Editor/viewer role model with JWT session cookies.
+- Rotatable public read-only chart link for onboarding access without a login.
 - API-key support for external integrations such as n8n or automation scripts.
 - n8n MCP workflow JSON for org chart tools plus daily Google Sheets review.
 - Google Sheets sync preserves good local WebP photos, inactive status, secondary reporting, and technical department aliases predictably.
@@ -212,6 +213,9 @@ All endpoints require session auth unless noted. Write operations require editor
 | `POST` | `/api/auth/logout` | Public | Logout. |
 | `GET` | `/api/auth/me` | Public | Return current user or null. |
 | `POST` | `/api/auth/change-password` | Any user | Change current user's password. |
+| `GET` | `/api/public-chart-data?code=...` | Valid public code | Read-only org chart tree for public onboarding links. |
+| `GET` | `/api/public-view-link` | Editor | Return the current generated public view link and expiry. |
+| `POST` | `/api/public-view-link/rotate` | Editor | Generate a new alphanumeric public view code and expire the previous link. |
 
 ## Security Notes
 

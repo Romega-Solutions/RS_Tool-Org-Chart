@@ -3,7 +3,7 @@ import { apiPath } from "@/lib/paths";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ChartData } from "@/types";
 
-export function useChartData() {
+export function useChartData(endpoint = "/api/chart-data") {
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +13,7 @@ export function useChartData() {
     if (!initialLoadDone.current) setLoading(true);
     setError(null);
     try {
-      const res = await fetch(apiPath("/api/chart-data"), { signal });
+      const res = await fetch(apiPath(endpoint), { signal });
       if (!res.ok) {
         throw new Error(`Failed to fetch chart data (${res.status})`);
       }
@@ -33,7 +33,7 @@ export function useChartData() {
       if (signal?.aborted) return;
       setLoading(false);
     }
-  }, []);
+  }, [endpoint]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { settings } from "@/lib/db/schema";
 import { requireEditor, getUserFromRequest } from "@/lib/auth";
+import { settingsRowsToMap } from "@/lib/settings-map";
+import type { Setting } from "@/types";
 
 export async function GET(request: Request) {
-  const rows = db.select().from(settings).all();
-  const map: Record<string, string> = {};
-  for (const row of rows) map[row.key] = row.value;
+  const user = await getUserFromRequest(request);
+  const rows = db.select().from(settings).all() as Setting[];
+  const map = settingsRowsToMap(rows, user?.role === "editor");
 
   // Include API key info for authenticated editors only
-  const user = await getUserFromRequest(request);
   if (user?.role === "editor") {
     const apiKey = process.env.API_KEY || "";
     map.api_key = apiKey;
