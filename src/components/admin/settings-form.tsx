@@ -866,7 +866,7 @@ export function SettingsForm() {
                   ["Get settings", "GET", "/api/settings", "", "Public"],
                   ["Update settings", "PATCH", "/api/settings", '{"key":"value"}', "Editor"],
                   ["Import CSV", "POST", "/api/import", "multipart file", "Editor"],
-                  ["Sync Sheets", "POST", "/api/sync", "url?", "Editor"],
+                  ["Sync Sheets", "POST", "/api/sync", "url?, dryRun?", "Editor"],
                   ["Upload photo", "POST", "/api/upload", "multipart file", "Editor"],
                 ],
               },
@@ -917,6 +917,7 @@ export function SettingsForm() {
                 ["Create person", `curl -X POST ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3,"email":"jane.doe@example.com"}'`],
                 ["Update person", `curl -X PATCH ${getBaseUrl()}/api/people/1 \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"title":"Senior Engineer"}'`],
                 ["Reassign", `curl -X PATCH ${getBaseUrl()}/api/people/reassign \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"personId":10,"reportsTo":14}'`],
+                ["Sync sheet (preview)", `curl -X POST ${getBaseUrl()}/api/sync \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url":"https://docs.google.com/spreadsheets/d/<sheetId>/export?format=csv&gid=947755283","dryRun":true}'`],
                 ["Chart data", `curl ${getBaseUrl()}/api/chart-data`],
               ] as [string, string][]).map(([label, cmd]) => (
                 <div key={label} className="rounded-lg border border-border overflow-hidden">
@@ -954,24 +955,35 @@ export function SettingsForm() {
             <div>
               <CardTitle className="text-base">Google Sheets Sync</CardTitle>
               <CardDescription>
-                Automatically sync people from a published Google Sheet.
+                Keep people in sync from a Google Sheet by reading its CSV export.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sheets_url">Google Sheet CSV URL</Label>
+            <Label htmlFor="sheets_url">Google Sheet Source URL</Label>
             <Input
               id="sheets_url"
-              aria-label="Google Sheet CSV URL"
+              aria-label="Google Sheet Source URL"
               value={form.sheets_url || ""}
               onChange={(e) => setField("sheets_url", e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=0"
+              placeholder="https://docs.google.com/spreadsheets/d/<sheetId>/edit#gid=<tabId>"
             />
-            <p className="text-xs text-muted-foreground">
-              Paste a normal Google Sheet URL (edit link or CSV export URL). If protected, keep access open via link so this app can fetch it.
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                You can paste either a normal Google Sheet view/edit link or an export URL. This app normalizes both to a CSV export URL.
+              </p>
+              <p className="font-mono text-[11px]">
+                https://docs.google.com/spreadsheets/d/&lt;sheetId&gt;/export?format=csv&amp;gid=&lt;tabId&gt;
+              </p>
+              <p>
+                Ensure the sheet is set to Anyone with the link can view, or otherwise publicly accessible to this server.
+              </p>
+              <p>
+                Required columns: <span className="font-medium text-foreground">Name</span>, <span className="font-medium text-foreground">Title</span>, <span className="font-medium text-foreground">Org Chart Team</span>. Email is optional via <span className="font-medium text-foreground">Work Email</span>.
+              </p>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Auto-Sync Interval</Label>
