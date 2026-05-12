@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     id: people.id, name: people.name, title: people.title,
     departmentId: people.departmentId, departmentName: departments.name,
     departmentColor: departments.color, reportsTo: people.reportsTo,
-    photoUrl: people.photoUrl, displayOrder: people.displayOrder,
+    photoUrl: people.photoUrl, email: people.email, displayOrder: people.displayOrder,
     isActive: people.isActive, createdAt: people.createdAt,
     updatedAt: people.updatedAt, employmentType: people.employmentType,
     projectIds: people.projectIds,

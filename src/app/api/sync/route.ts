@@ -82,8 +82,26 @@ function mapRow(raw: Record<string, string>): {
     reportsTo: get("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
     secondaryReportsTo: get("secondary reports to", "Secondary Reports To", "dotted reports to", "Dotted Reports To", "secondary manager", "Secondary Manager", "also reports to", "Also Reports To"),
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
-    email: get("email", "work email", "Work Email", "work_email"),
-    hasEmailColumn: hasColumn("email", "work email", "Work Email", "work_email"),
+    email: get(
+      "email",
+      "work email",
+      "Work Email",
+      "work_email",
+      "email address",
+      "Email Address",
+      "work email address",
+      "Work Email Address"
+    ),
+    hasEmailColumn: hasColumn(
+      "email",
+      "work email",
+      "Work Email",
+      "work_email",
+      "email address",
+      "Email Address",
+      "work email address",
+      "Work Email Address"
+    ),
     isActive: parseStatus(get("status", "Status", "is_active", "Is Active", "active", "Active")),
     hasPhotoColumn: hasColumn("photo_filename", "photo", "photo_url"),
     hasReportsToColumn: hasColumn("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
@@ -134,6 +152,16 @@ function normalizePhotoUrl(raw: string): string {
   }
   // Filename only
   return `/uploads/photos/${trimmed}`;
+}
+
+function toCsvExportUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  const sheetIdMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!sheetIdMatch) return trimmed;
+  const sheetId = sheetIdMatch[1];
+  const gidMatch = trimmed.match(/(?:[?&#]|\b)gid=([0-9]+)/);
+  const gid = gidMatch ? gidMatch[1] : "0";
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
 }
 
 function splitManagerNames(raw: string): string[] {
@@ -198,16 +226,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Convert Google Sheets edit URL to CSV export URL
-  const sheetIdMatch = sheetsUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  let csvUrl = sheetsUrl;
-  if (sheetIdMatch) {
-    const sheetId = sheetIdMatch[1];
-    // Check for gid= param (specific sheet tab)
-    const gidMatch = sheetsUrl.match(/gid=(\d+)/);
-    const gid = gidMatch ? gidMatch[1] : "0";
-    csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-  }
+  const csvUrl = toCsvExportUrl(sheetsUrl);
 
   let text: string;
   try {

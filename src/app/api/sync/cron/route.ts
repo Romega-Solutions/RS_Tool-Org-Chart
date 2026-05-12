@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { appPath } from "@/lib/paths";
 
 /**
  * GET /api/sync/cron — External cron trigger for Google Sheets sync.
@@ -45,12 +46,23 @@ export async function GET(request: Request) {
   // Delegate to the existing POST /api/sync handler via internal fetch
   const origin = request.headers.get("host") ?? "localhost:3000";
   const protocol = request.headers.get("x-forwarded-proto") ?? "http";
-  const syncUrl = `${protocol}://${origin}/api/sync`;
+  const syncPath = appPath("/api/sync");
+  const syncUrl = `${protocol}://${origin}${syncPath}`;
+  const apiToken = process.env.API_KEY ?? process.env.ORGCHART_API_KEY;
+  if (!apiToken) {
+    return NextResponse.json(
+      { error: "CRON requires API_KEY or ORGCHART_API_KEY to authenticate internal sync calls." },
+      { status: 500 }
+    );
+  }
 
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    headers["x-api-key"] = apiToken;
+
     const res = await fetch(syncUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ url: sheetsUrlRow.value }),
     });
     const data = await res.json();

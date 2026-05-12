@@ -6,11 +6,21 @@ import { motion } from "framer-motion";
 import { LoginForm } from "@/components/auth/login-form";
 import { ChartBackgroundDecor } from "@/components/chart/chart-background-decor";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle, Shield } from "lucide-react";
+import { HelpCircle, LogOut, Shield } from "lucide-react";
 
-function VisitorAccessSnackbar({ onUseVisitor }: { onUseVisitor: () => void }) {
+function VisitorAccessSnackbar({
+  canLogout,
+  onUseVisitor,
+  onLogout,
+}: {
+  canLogout: boolean;
+  onUseVisitor: () => void;
+  onLogout: () => Promise<void>;
+}) {
   const [visible, setVisible] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setVisible(false), 7000);
@@ -60,9 +70,31 @@ function VisitorAccessSnackbar({ onUseVisitor }: { onUseVisitor: () => void }) {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <Button type="button" size="lg" className="h-10 w-full cursor-pointer" onClick={onUseVisitor}>
-              Use view-only access
-            </Button>
+            <div className="space-y-2">
+              <Button type="button" size="lg" className="h-10 w-full cursor-pointer" onClick={onUseVisitor}>
+                Use view-only access
+              </Button>
+              {canLogout ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-10 w-full cursor-pointer"
+                  onClick={async () => {
+                    setLoggingOut(true);
+                    try {
+                      await onLogout();
+                    } finally {
+                      setLoggingOut(false);
+                    }
+                  }}
+                  disabled={loggingOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {loggingOut ? "Signing out..." : "Log out"}
+                </Button>
+              ) : null}
+            </div>
           </div>
           <motion.div
             className="h-1 origin-left bg-rs-primary-500 dark:bg-rs-primary-300"
@@ -79,6 +111,7 @@ function VisitorAccessSnackbar({ onUseVisitor }: { onUseVisitor: () => void }) {
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const { user, loading: authLoading, logout } = useAuth();
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-background">
@@ -130,8 +163,14 @@ export default function LoginPage() {
         </motion.div>
       </motion.div>
       <VisitorAccessSnackbar
+        canLogout={!authLoading && user?.username === "visitor"}
         onUseVisitor={() => {
           setUsername("visitor");
+          setPassword("");
+        }}
+        onLogout={async () => {
+          await logout();
+          setUsername("");
           setPassword("");
         }}
       />

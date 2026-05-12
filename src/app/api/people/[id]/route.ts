@@ -25,6 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       departmentId: people.departmentId,
       reportsTo: people.reportsTo,
       photoUrl: people.photoUrl,
+      email: people.email,
       displayOrder: people.displayOrder,
       isActive: people.isActive,
       employmentType: people.employmentType,

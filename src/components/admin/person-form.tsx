@@ -26,8 +26,8 @@ import { getDeptIcon } from "@/lib/dept-icons";
 import type { Person, Department } from "@/types";
 
 interface PersonWithDept extends Person {
-  departmentName: string | null;
-  departmentColor: string | null;
+  departmentName?: string | null;
+  departmentColor?: string | null;
 }
 
 interface Props {

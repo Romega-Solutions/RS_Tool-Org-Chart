@@ -339,10 +339,19 @@ export function SettingsForm() {
   async function handleSync() {
     setSyncing(true);
     try {
-      const res = await fetch(apiPath("/api/sync"), { method: "POST" });
+      const nextUrl = form.sheets_url?.trim();
+      const init: RequestInit = {
+        method: "POST",
+      };
+      if (nextUrl) {
+        init.headers = { "Content-Type": "application/json" };
+        init.body = JSON.stringify({ url: nextUrl });
+      }
+      const res = await fetch(apiPath("/api/sync"), init);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync failed");
       const { summary } = data;
+      setSyncPreview(null);
       toast.success(`Sync complete: ${summary.created} created, ${summary.updated} updated, ${summary.errors} errors`);
       await refetch();
     } catch (err) {
@@ -355,10 +364,11 @@ export function SettingsForm() {
   async function handleSyncPreview() {
     setPreviewingSync(true);
     try {
+      const nextUrl = form.sheets_url?.trim();
       const res = await fetch(apiPath("/api/sync"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dryRun: true, url: form.sheets_url }),
+        ...(nextUrl ? { body: JSON.stringify({ dryRun: true, url: nextUrl }) } : {}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync preview failed");
@@ -951,15 +961,15 @@ export function SettingsForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sheets_url">Google Sheet CSV URL</Label>
+            <Label htmlFor="sheets_url">Google Sheet URL</Label>
             <Input
               id="sheets_url"
               value={form.sheets_url || ""}
               onChange={(e) => setField("sheets_url", e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv"
+              placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=0"
             />
             <p className="text-xs text-muted-foreground">
-              In Google Sheets: <strong>File → Share → Publish to web → CSV</strong>. Paste the link here.
+              Paste a normal Google Sheet URL (edit link or CSV export URL). If protected, keep access open via link so this app can fetch it.
             </p>
           </div>
           <div className="space-y-1.5">

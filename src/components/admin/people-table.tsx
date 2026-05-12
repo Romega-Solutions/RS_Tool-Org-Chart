@@ -13,7 +13,12 @@ import type { Person } from "@/types";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
-interface PersonRow extends Person {
+interface PersonForForm extends Person {
+  departmentName?: string | null;
+  departmentColor?: string | null;
+}
+
+interface PersonRow extends PersonForForm {
   departmentName: string | null;
   departmentColor: string | null;
 }
@@ -216,11 +221,25 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
   const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
   const [loading, setLoading] = useState(true);
 
+  async function getPeopleList() {
+    const endpoints = [
+      apiPath("/api/people/headless?includeInactive=true"),
+      apiPath("/api/people?includeInactive=true"),
+    ];
+
+    for (const endpoint of endpoints) {
+      const res = await fetch(endpoint);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+    return [];
+  }
+
   const fetchPeople = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(apiPath("/api/people?includeInactive=true"));
-      const data = await res.json();
+      const data = await getPeopleList();
       setPeople(data);
     } finally {
       setLoading(false);
@@ -295,7 +314,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const lastClickedIndexRef = useRef<number | null>(null);
-  const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
+  const [editingPerson, setEditingPerson] = useState<PersonForForm | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
   const [deleteIntent, setDeleteIntent] = useState<{
@@ -303,6 +322,23 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
     title: string;
     description: string;
   } | null>(null);
+
+  async function openPersonEditor(person: PersonRow) {
+    setEditingPerson(person);
+
+    try {
+      const res = await fetch(apiPath(`/api/people/${person.id}`));
+      if (!res.ok) return;
+      const personFromServer = await res.json();
+
+      setEditingPerson({
+        ...person,
+        ...personFromServer,
+      });
+    } catch {
+      toast.error("Could not refresh the latest person data. Using table values.");
+    }
+  }
 
   // Clear selection when search changes
   useEffect(() => { setSelected(new Set()); }, [search]);
@@ -971,6 +1007,9 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                         : null}
                   </button>
                 </th>
+                <th className="hidden md:table-cell px-3 py-2 text-left font-medium">
+                  Email
+                </th>
                 <th
                   className="hidden md:table-cell px-3 py-2 text-left font-medium"
                   aria-sort={sortColumn === "department" ? "ascending" : sortColumn === "department-desc" ? "descending" : "none"}
@@ -1027,7 +1066,7 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
                       return;
                     }
                     // Anywhere else → open edit
-                    setEditingPerson(person);
+                    void openPersonEditor(person);
                   }}
                   className={cn(
                     "border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-all duration-200",
@@ -1062,6 +1101,11 @@ export function PeopleTable({ initialFilter }: { initialFilter?: StatusFilter })
 
                   {/* Title */}
                   <td className="hidden sm:table-cell px-3 py-2 text-muted-foreground">{person.title}</td>
+
+                  {/* Email */}
+                  <td className="hidden md:table-cell px-3 py-2 text-muted-foreground text-xs">
+                    {person.email || "—"}
+                  </td>
 
                   {/* Department */}
                   <td className="hidden md:table-cell px-3 py-2">
