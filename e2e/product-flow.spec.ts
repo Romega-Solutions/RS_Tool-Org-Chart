@@ -987,7 +987,7 @@ test.describe.serial("Product QA flow", () => {
 
       await login(page, "admin", "admin123");
       await page.goto(appPath("/admin/settings"));
-      await page.getByLabel("Google Sheet CSV URL").fill(`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`);
+      await page.getByLabel(/Google Sheet (CSV URL|Source URL)/).fill(`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`);
       await page.getByRole("button", { name: "Preview Changes" }).click();
       await expect(page.getByText("Sync Preview")).toBeVisible();
       await expect(page.getByText("Preview only")).toBeVisible();
