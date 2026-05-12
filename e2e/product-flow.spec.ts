@@ -20,6 +20,19 @@ function integrationHeaders() {
   return { "X-API-Key": apiKey! };
 }
 
+function treeHasEmailField(nodes: unknown[]): boolean {
+  const queue = [...nodes];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object") continue;
+    const entry = current as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(entry, "email")) return true;
+    const children = entry.children;
+    if (Array.isArray(children)) queue.push(...children);
+  }
+  return false;
+}
+
 test.describe.serial("Product QA flow", () => {
   test("base path root redirects to chart without duplicating the app prefix", async ({ page }) => {
     await page.goto(appPath("/"));
@@ -150,6 +163,188 @@ test.describe.serial("Product QA flow", () => {
     await page.goto(appPath("/admin/settings"));
     await expect(page).toHaveURL(/\/org-chart\/chart$/);
     await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible();
+  });
+
+  test("headless people API exposes email while chart-data omits it", async ({ page }) => {
+    const headers = integrationHeaders();
+    const qaName = `Headless Email QA ${Date.now()}`;
+    const qaEmail = `headless-${Date.now()}@example.com`;
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"), { headers });
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        headers,
+        data: {
+          name: qaName,
+          title: "Headless Email QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          email: qaEmail,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const headlessRes = await page.request.get(appPath("/api/people/headless"), { headers });
+      expect(headlessRes.ok()).toBeTruthy();
+      const headlessPeople = await headlessRes.json();
+      const headlessPerson = headlessPeople.find((person: { name: string; email: string | null }) => person.name === qaName);
+      expect(headlessPerson?.email).toBe(qaEmail);
+
+      const chartRes = await page.request.get(appPath("/api/chart-data"), { headers });
+      expect(chartRes.ok()).toBeTruthy();
+      const chartData = await chartRes.json();
+      expect(treeHasEmailField(chartData.tree)).toBe(false);
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`), { headers }).catch(() => undefined);
+      }
+    }
+  });
+
+  test("sync validates Work Email and avoids applying invalid email values", async ({ page }) => {
+    await login(page, "admin", "admin123");
+    const qaName = `Sync Email QA ${Date.now()}`;
+    const qaEmail = `sync-${Date.now()}@example.com`;
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Sync Email QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          email: qaEmail,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const invalidCsv = [
+        "Name,Role/Position,Team,Work Email",
+        `${qaName},Sync Email QA Updated,${departments[0].name},not-an-email`,
+      ].join("\n");
+      const invalidSyncRes = await page.request.post(appPath("/api/sync"), {
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(invalidCsv)}` },
+      });
+      expect(invalidSyncRes.ok()).toBeTruthy();
+      const invalidSyncJson = await invalidSyncRes.json();
+      expect(invalidSyncJson.summary.updated).toBe(1);
+      expect(invalidSyncJson.changes.warnings.some(
+        (warning: { name: string; message: string }) => warning.name === qaName && warning.message.includes("Invalid email")
+      )).toBe(true);
+      expect(invalidSyncJson.changes.email.some((entry: { name: string }) => entry.name === qaName)).toBe(false);
+
+      const headlessRes = await page.request.get(appPath("/api/people/headless"));
+      expect(headlessRes.ok()).toBeTruthy();
+      const headlessPeople = await headlessRes.json();
+      const updatedPerson = headlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      expect(updatedPerson?.email).toBe(qaEmail);
+
+      const clearCsv = [
+        "Name,Role/Position,Team,Work Email",
+        `${qaName},Sync Email QA Cleared,${departments[0].name},`,
+      ].join("\n");
+      const clearSyncRes = await page.request.post(appPath("/api/sync"), {
+        data: { url: `data:text/csv;charset=utf-8,${encodeURIComponent(clearCsv)}` },
+      });
+      expect(clearSyncRes.ok()).toBeTruthy();
+
+      const clearedHeadlessRes = await page.request.get(appPath("/api/people/headless"));
+      expect(clearedHeadlessRes.ok()).toBeTruthy();
+      const clearedHeadlessPeople = await clearedHeadlessRes.json();
+      const clearedPerson = clearedHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      expect(clearedPerson?.email).toBeNull();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
+  });
+
+  test("import supports Work Email header and clears email on blank values", async ({ page }) => {
+    await login(page, "admin", "admin123");
+    const qaName = `Import Email QA ${Date.now()}`;
+    const qaEmail = `import-${Date.now()}@example.com`;
+    let personId: number | null = null;
+
+    try {
+      const departmentsRes = await page.request.get(appPath("/api/departments"));
+      expect(departmentsRes.ok()).toBeTruthy();
+      const departments = await departmentsRes.json();
+
+      const createRes = await page.request.post(appPath("/api/people"), {
+        data: {
+          name: qaName,
+          title: "Import Email QA",
+          departmentId: departments[0].id,
+          reportsTo: null,
+          email: qaEmail,
+          displayOrder: 9999,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      personId = (await createRes.json()).id;
+
+      const clearCsv = `name,title,department,reports_to_name,photo_filename,Work Email\n${qaName},Import Email QA,${departments[0].name},,,`;
+      const clearRes = await page.request.post(appPath("/api/import"), {
+        multipart: {
+          file: {
+            name: `import-clear-${Date.now()}.csv`,
+            mimeType: "text/csv",
+            buffer: Buffer.from(clearCsv),
+          },
+        },
+      });
+      expect(clearRes.ok()).toBeTruthy();
+      const clearJson = await clearRes.json();
+      expect(clearJson.results.some((entry: { name: string; status: string }) => (
+        entry.name === qaName && entry.status === "updated"
+      ))).toBe(true);
+
+      const clearedRes = await page.request.get(appPath("/api/people/headless"));
+      expect(clearedRes.ok()).toBeTruthy();
+      const clearedHeadlessPeople = await clearedRes.json();
+      const clearedPersonFromImport = clearedHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      expect(clearedPersonFromImport?.email).toBeNull();
+
+      const invalidCsv = `name,title,department,Work Email\n${qaName},Import Email QA,${departments[0].name},not-an-email`;
+      const invalidRes = await page.request.post(appPath("/api/import"), {
+        multipart: {
+          file: {
+            name: `import-invalid-${Date.now()}.csv`,
+            mimeType: "text/csv",
+            buffer: Buffer.from(invalidCsv),
+          },
+        },
+      });
+      expect(invalidRes.ok()).toBeTruthy();
+      const invalidJson = await invalidRes.json();
+      expect(invalidJson.results.some((entry: { name: string; status: string; message?: string }) => (
+        entry.name === qaName && entry.status === "error" && entry.message?.includes("Invalid email")
+      ))).toBe(true);
+
+      const invalidHeadlessRes = await page.request.get(appPath("/api/people/headless"));
+      expect(invalidHeadlessRes.ok()).toBeTruthy();
+      const invalidHeadlessPeople = await invalidHeadlessRes.json();
+      const stillNullAfterInvalid = invalidHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      expect(stillNullAfterInvalid?.email).toBeNull();
+    } finally {
+      if (personId) {
+        await page.request.delete(appPath(`/api/people/${personId}`)).catch(() => undefined);
+      }
+    }
   });
 
   test("admin can rotate a generated public view link for login-free chart access", async ({ page }) => {

@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { people, departments, settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
-import { requireEditor } from "@/lib/auth";
+import { requireEditor, parseOptionalEmail } from "@/lib/auth";
 import { normalizeDrivePhotoUrl } from "@/lib/photo-storage";
 import { getSheetPhotoSource, parseSecondaryReportsTo, setSecondaryReportsTo, setSheetPhotoSource } from "@/lib/secondary-reporting";
 
@@ -39,6 +39,7 @@ function mapRow(raw: Record<string, string>): {
   secondaryReportsTo: string;
   photo: string;
   email: string;
+  hasEmailColumn: boolean;
   isActive: boolean | null;
   hasPhotoColumn: boolean;
   hasReportsToColumn: boolean;
@@ -82,6 +83,7 @@ function mapRow(raw: Record<string, string>): {
     secondaryReportsTo: get("secondary reports to", "Secondary Reports To", "dotted reports to", "Dotted Reports To", "secondary manager", "Secondary Manager", "also reports to", "Also Reports To"),
     photo: get("photo_filename", "photo", "Photo", "photo_url"),
     email: get("email", "work email", "Work Email", "work_email"),
+    hasEmailColumn: hasColumn("email", "work email", "Work Email", "work_email"),
     isActive: parseStatus(get("status", "Status", "is_active", "Is Active", "active", "Active")),
     hasPhotoColumn: hasColumn("photo_filename", "photo", "photo_url"),
     hasReportsToColumn: hasColumn("reports_to_name", "reports_to", "Reports To", "manager", "Manager"),
@@ -233,6 +235,7 @@ export async function POST(request: Request) {
     title: Array<{ name: string; before: string; after: string }>;
     status: Array<{ name: string; before: string; after: string }>;
     department: Array<{ name: string; before: string; after: string }>;
+    email: Array<{ name: string; before: string | null; after: string | null }>;
     reporting: Array<{ name: string; before: string | null; after: string | null }>;
     secondaryReporting: Array<{ name: string; before: string[]; after: string[] }>;
     photo: Array<{ name: string; before: string | null; after: string | null }>;
@@ -243,6 +246,7 @@ export async function POST(request: Request) {
     title: [],
     status: [],
     department: [],
+    email: [],
     reporting: [],
     secondaryReporting: [],
     photo: [],
@@ -299,15 +303,24 @@ export async function POST(request: Request) {
 
     const existingId = nameToId.get(row.name.toLowerCase());
     const photoUrl = row.photo ? normalizePhotoUrl(row.photo) : null;
+    const parsedEmail = parseOptionalEmail(row.email);
+    const hasInvalidEmail = Boolean(row.email && parsedEmail.error);
+    if (hasInvalidEmail) {
+      changes.warnings.push({ name: row.name, message: `Invalid email in sheet: ${parsedEmail.error}` });
+    }
+    const nextEmail = parsedEmail.value;
 
     if (existingId) {
       const existingPerson = existing.find((p) => p.id === existingId);
       const previousSheetPhotoSource = getSheetPhotoSource(existingPerson?.projectIds ?? null);
       const shouldUpdatePhoto = shouldUpdatePhotoUrl(existingPerson?.photoUrl ?? null, photoUrl, previousSheetPhotoSource);
       const existingManagedPhoto = existingPerson?.photoUrl?.startsWith("/uploads/photos/") ? existingPerson.photoUrl : null;
-      if (existingPerson?.title !== row.title) {
-        changes.title.push({ name: row.name, before: existingPerson?.title ?? "", after: row.title });
-      }
+    if (existingPerson?.title !== row.title) {
+      changes.title.push({ name: row.name, before: existingPerson?.title ?? "", after: row.title });
+    }
+    if (row.hasEmailColumn && !hasInvalidEmail && existingPerson?.email !== nextEmail) {
+      changes.email.push({ name: row.name, before: existingPerson?.email ?? null, after: nextEmail ?? null });
+    }
       if (existingPerson?.departmentId !== deptId) {
         changes.department.push({
           name: row.name,
@@ -330,6 +343,7 @@ export async function POST(request: Request) {
         db.update(people).set({
           title: row.title,
           departmentId: deptId,
+          ...(row.hasEmailColumn && !hasInvalidEmail && { email: nextEmail }),
           ...(shouldUpdatePhoto && { photoUrl }),
           projectIds: updateProjectIds,
           ...(row.isActive !== null && { isActive: row.isActive }),
@@ -346,6 +360,7 @@ export async function POST(request: Request) {
           title: row.title,
           departmentId: deptId,
           photoUrl,
+          ...(row.hasEmailColumn && !hasInvalidEmail && { email: nextEmail }),
           projectIds: photoUrl ? setSheetPhotoSource(null, photoUrl) : null,
           isActive: row.isActive ?? true,
         }).returning().get();

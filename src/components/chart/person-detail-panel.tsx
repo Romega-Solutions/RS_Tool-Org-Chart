@@ -228,6 +228,7 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                       updatedAt: person.updatedAt ?? "",
                       employmentType: person.employmentType ?? null,
                       projectIds: person.projectIds ?? null,
+                      email: person.email ?? null,
                       departmentName: person.department?.name ?? null,
                       departmentColor: person.department?.color ?? null,
                     }}
@@ -300,6 +301,25 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                 </div>
 
                 <div className="border-t border-border" />
+
+                {isEditor && person.email && (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                        Email
+                      </p>
+                      <a
+                        href={`mailto:${person.email}`}
+                        className="inline-flex text-sm text-rs-primary-600 hover:text-rs-primary-700 underline decoration-rs-primary-500/40"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {person.email}
+                      </a>
+                    </div>
+                    <div className="border-t border-border" />
+                  </>
+                )}
 
                 {/* Department */}
                 {person.department && (() => {

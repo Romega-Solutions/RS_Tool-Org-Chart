@@ -28,6 +28,7 @@ export const people = sqliteTable("people", {
   departmentId: integer("department_id").notNull().references(() => departments.id),
   reportsTo: integer("reports_to"),
   photoUrl: text("photo_url"),
+  email: text("email"),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

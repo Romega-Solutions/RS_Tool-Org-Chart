@@ -5,6 +5,7 @@ export interface Person {
   departmentId: number;
   reportsTo: number | null;
   photoUrl: string | null;
+  email?: string | null;
   displayOrder: number;
   isActive: boolean;
   createdAt: string;

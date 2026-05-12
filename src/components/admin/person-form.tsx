@@ -59,6 +59,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
   const [departmentId, setDepartmentId] = useState<number | null>(null);
   const [reportsTo, setReportsTo] = useState<number | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -75,6 +76,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
       setTitle(person?.title || "");
       setDepartmentId(person?.departmentId ?? null);
       setReportsTo(person?.reportsTo ?? null);
+      setEmail(person?.email ?? "");
       setPhotoUrl(person?.photoUrl ?? null);
       setPhotoPreview(person?.photoUrl ?? null);
       setSaveError(null);
@@ -137,6 +139,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
           title: title.trim(),
           departmentId,
           reportsTo,
+          email: email.trim() || null,
           photoUrl,
         }),
       });
@@ -160,6 +163,7 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
       setTitle("");
       setDepartmentId(null);
       setReportsTo(null);
+      setEmail("");
       setPhotoUrl(null);
       setPhotoPreview(null);
     }
@@ -299,7 +303,18 @@ export function PersonForm({ person, onSave, trigger, open: controlledOpen, onOp
             />
           </div>
 
-          {/* Department */}
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="person-email">Email</Label>
+            <Input
+              id="person-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+            />
+          </div>
+
           {/* Department */}
           <div className="space-y-2">
             <Label>Department</Label>

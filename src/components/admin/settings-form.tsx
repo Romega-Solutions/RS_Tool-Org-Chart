@@ -74,6 +74,7 @@ const SYNC_CHANGE_LABELS: Record<string, string> = {
   title: "Title Changes",
   status: "Status Changes",
   department: "Department Changes",
+  email: "Email Changes",
   reporting: "Reports To Changes",
   secondaryReporting: "Secondary Reports To Changes",
   photo: "Photo Source Changes",
@@ -816,10 +817,11 @@ export function SettingsForm() {
                 group: "People",
                 color: "text-blue-500",
                 endpoints: [
-                  ["List", "GET", "/api/people", "?includeInactive=true", "Public"],
-                  ["Get", "GET", "/api/people/{id}", "", "Public"],
-                  ["Create", "POST", "/api/people", "name, title, departmentId, reportsTo?, photoUrl?", "Editor"],
-                  ["Update", "PATCH", "/api/people/{id}", "name?, title?, departmentId?, reportsTo?, isActive?", "Editor"],
+                  ["List", "GET", "/api/people", "?includeInactive=true", "Editor"],
+                  ["Get", "GET", "/api/people/{id}", "", "Editor"],
+                  ["Headless profile", "GET", "/api/people/headless", "?includeInactive=true", "Editor"],
+                  ["Create", "POST", "/api/people", "name, title, departmentId, reportsTo?, photoUrl?, email?", "Editor"],
+                  ["Update", "PATCH", "/api/people/{id}", "name?, title?, departmentId?, reportsTo?, isActive?, email?", "Editor"],
                   ["Delete", "DELETE", "/api/people/{id}", "", "Editor"],
                   ["Toggle active", "PATCH", "/api/people/{id}/toggle", "", "Editor"],
                   ["Reassign", "PATCH", "/api/people/reassign", "personId, reportsTo", "Editor"],
@@ -901,7 +903,8 @@ export function SettingsForm() {
             <div className="space-y-2">
               {([
                 ["List people", `curl ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY"`],
-                ["Create person", `curl -X POST ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3}'`],
+                ["Headless profile list", `curl ${getBaseUrl()}/api/people/headless \\\n  -H "X-API-Key: YOUR_KEY"`],
+                ["Create person", `curl -X POST ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3,"email":"jane.doe@example.com"}'`],
                 ["Update person", `curl -X PATCH ${getBaseUrl()}/api/people/1 \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"title":"Senior Engineer"}'`],
                 ["Reassign", `curl -X PATCH ${getBaseUrl()}/api/people/reassign \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"personId":10,"reportsTo":14}'`],
                 ["Chart data", `curl ${getBaseUrl()}/api/chart-data`],

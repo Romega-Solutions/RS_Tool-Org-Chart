@@ -3,11 +3,41 @@ import { db } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
-import { requireEditor } from "@/lib/auth";
+import { requireEditor, parseOptionalEmail } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const EMAIL_COLUMNS = ["email", "work email", "work_email"];
 
-interface CsvRow { name: string; title: string; department: string; reports_to_name: string; photo_filename: string; }
+interface CsvRow {
+  name: string;
+  title: string;
+  department: string;
+  reports_to_name: string;
+  photo_filename: string;
+  email?: string;
+  hasEmailColumn: boolean;
+}
+
+function normalizeHeader(value: string): string {
+  return value.toLowerCase().trim().replace(/_/g, " ").replace(/\s+/g, " ");
+}
+
+function parseEmailColumn(row: Record<string, string>): { email: string; hasEmailColumn: boolean } {
+  let email = "";
+  let hasEmailColumn = false;
+
+  for (const [key, rawValue] of Object.entries(row)) {
+    const normalizedKey = normalizeHeader(key);
+    if (EMAIL_COLUMNS.includes(normalizedKey)) {
+      hasEmailColumn = true;
+      if (email === "" && rawValue?.trim()) {
+        email = rawValue.trim();
+      }
+    }
+  }
+
+  return { email, hasEmailColumn };
+}
 
 export async function POST(request: Request) {
   const [, err] = await requireEditor(request);
@@ -18,7 +48,7 @@ export async function POST(request: Request) {
   if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 413 });
 
   const text = await file.text();
-  const { data, errors } = Papa.parse<CsvRow>(text, { header: true, skipEmptyLines: true });
+  const { data, errors } = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
   if (errors.length > 0) return NextResponse.json({ error: "CSV parse error", details: errors }, { status: 400 });
 
   const results: Array<{ row: number; name: string; status: "created" | "updated" | "error"; message?: string }> = [];
@@ -30,20 +60,43 @@ export async function POST(request: Request) {
   for (const d of deptRows) deptByName.set(d.name.toLowerCase(), d.id);
 
   for (let i = 0; i < data.length; i++) {
-    const row = data[i];
+    const rawRow = data[i];
+    const row = {
+      ...rawRow,
+      ...(parseEmailColumn(rawRow) as Pick<CsvRow, "email" | "hasEmailColumn">),
+    } as CsvRow;
+
     if (!row.name || !row.title || !row.department) {
       results.push({ row: i + 1, name: row.name || "(empty)", status: "error", message: "Missing required field" });
       continue;
     }
+    const emailValue = parseOptionalEmail(row.email);
+    if (row.hasEmailColumn && row.email && emailValue.error) {
+      results.push({ row: i + 1, name: row.name, status: "error", message: `Invalid email: ${emailValue.error}` });
+      continue;
+    }
+    const hasEmail = row.hasEmailColumn;
     const deptId = deptByName.get(row.department.toLowerCase());
     if (!deptId) { results.push({ row: i + 1, name: row.name, status: "error", message: `Department "${row.department}" not found` }); continue; }
 
     const existingId = nameToId.get(row.name.toLowerCase());
     if (existingId) {
-      db.update(people).set({ title: row.title, departmentId: deptId, ...(row.photo_filename && { photoUrl: `/uploads/photos/${row.photo_filename}` }), updatedAt: new Date().toISOString() }).where(eq(people.id, existingId)).run();
+      db.update(people).set({
+        title: row.title,
+        departmentId: deptId,
+        ...(hasEmail && { email: emailValue.value }),
+        ...(row.photo_filename && { photoUrl: `/uploads/photos/${row.photo_filename}` }),
+        updatedAt: new Date().toISOString(),
+      }).where(eq(people.id, existingId)).run();
       results.push({ row: i + 1, name: row.name, status: "updated" });
     } else {
-      const inserted = db.insert(people).values({ name: row.name, title: row.title, departmentId: deptId, photoUrl: row.photo_filename ? `/uploads/photos/${row.photo_filename}` : null }).returning().get();
+      const inserted = db.insert(people).values({
+        name: row.name,
+        title: row.title,
+        departmentId: deptId,
+        photoUrl: row.photo_filename ? `/uploads/photos/${row.photo_filename}` : null,
+        ...(hasEmail && { email: emailValue.value }),
+      }).returning().get();
       nameToId.set(row.name.toLowerCase(), inserted.id);
       results.push({ row: i + 1, name: row.name, status: "created" });
     }

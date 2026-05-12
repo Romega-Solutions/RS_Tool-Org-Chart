@@ -145,6 +145,7 @@ export function checkGlobalRateLimit(request: Request): NextResponse | null {
 
 // --- Input validators ---
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateColor(color: unknown): string | null {
   if (color === null || color === undefined || color === "") return null;
@@ -164,4 +165,33 @@ export function validateInt(value: unknown, field: string, min = 0, max = 10000)
   if (typeof value !== "number" || !Number.isInteger(value)) return `${field} must be an integer`;
   if (value < min || value > max) return `${field} must be between ${min} and ${max}`;
   return null;
+}
+
+export function parseOptionalEmail(value: unknown): { value: string | null; error?: string } {
+  if (value === undefined) {
+    return { value: null };
+  }
+
+  if (value === null) {
+    return { value: null };
+  }
+
+  if (typeof value !== "string") {
+    return { value: null, error: "Email must be a string" };
+  }
+
+  const nextValue = value.trim().toLowerCase();
+  if (!nextValue) {
+    return { value: null };
+  }
+
+  if (nextValue.length > 254) {
+    return { value: null, error: "Email must be shorter than 255 characters" };
+  }
+
+  if (!EMAIL_PATTERN.test(nextValue)) {
+    return { value: null, error: "Email is not valid" };
+  }
+
+  return { value: nextValue };
 }
