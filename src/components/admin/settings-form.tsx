@@ -961,9 +961,10 @@ export function SettingsForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sheets_url">Google Sheet URL</Label>
+            <Label htmlFor="sheets_url">Google Sheet CSV URL</Label>
             <Input
               id="sheets_url"
+              aria-label="Google Sheet CSV URL"
               value={form.sheets_url || ""}
               onChange={(e) => setField("sheets_url", e.target.value)}
               placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=0"
