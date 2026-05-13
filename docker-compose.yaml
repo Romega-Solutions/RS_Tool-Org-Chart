@@ -30,7 +30,7 @@ services:
       - orgchart_uploads:/app/public/uploads
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:3000/org-chart/api/auth/me"]
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/org-chart/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -46,6 +46,7 @@ services:
     environment:
       - CRON_SECRET=${CRON_SECRET:-}
       - SYNC_INTERVAL=${SYNC_INTERVAL:-off}
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-/org-chart}
     entrypoint: /bin/sh
     command:
       - -c
@@ -63,10 +64,13 @@ services:
           *)   echo "[sync-cron] SYNC_INTERVAL=$$SYNC_INTERVAL (off) — exiting."; exit 0 ;;
         esac
         echo "[sync-cron] Running every $$SYNC_INTERVAL ($$SLEEP seconds)"
+        BASE_PATH="$${NEXT_PUBLIC_BASE_PATH:-/org-chart}"
+        BASE_PATH="/$${BASE_PATH#/}"
+        BASE_PATH="$${BASE_PATH%/}"
         while true; do
           sleep $$SLEEP
           echo "[sync-cron] Triggering sync..."
-          curl -sf -H "Authorization: Bearer $$CRON_SECRET" http://orgchart:3000/api/sync/cron || echo "[sync-cron] Sync request failed"
+          curl -sf -H "Authorization: Bearer $$CRON_SECRET" "http://orgchart:3000$${BASE_PATH}/api/sync/cron" || echo "[sync-cron] Sync request failed"
         done
     restart: unless-stopped
 

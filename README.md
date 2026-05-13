@@ -206,6 +206,7 @@ All endpoints require session auth unless noted. Write operations require editor
 | `POST` | `/api/import` | Editor | CSV import. Max 10MB. Supports `Email` and `Work Email` columns, including blank value to clear email. |
 | `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state, `Org Chart Team` / `Primary Team` for multi-team department overrides, and `Secondary Reports To` for dashed secondary chart connectors. Reads optional `Email` / `Work Email` and requires valid email format. Send `dryRun: true` to preview without writing. Applied syncs store the latest sync review in settings. |
 | `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
+| `GET` | `/api/health` | Public | Lightweight production health check. |
 
 ### Authentication
 
