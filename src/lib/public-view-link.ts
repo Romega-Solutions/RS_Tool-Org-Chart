@@ -7,6 +7,7 @@ import { APP_BASE_PATH } from "@/lib/paths";
 const PUBLIC_CODE_LENGTH = 16;
 const PUBLIC_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const PUBLIC_LINK_TTL_DAYS = 90;
+const DEFAULT_PUBLIC_ORIGIN = "https://tools.romega-solutions.com";
 
 export type PublicViewLink = {
   code: string;
@@ -82,6 +83,47 @@ export function rotatePublicViewLink() {
 export function getPublicViewUrl(origin: string, code: string) {
   const basePath = APP_BASE_PATH && APP_BASE_PATH !== "/" ? APP_BASE_PATH : "";
   return `${origin}${basePath}/view?public=${encodeURIComponent(code)}`;
+}
+
+function parseOrigin(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function firstHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+function isInternalOrigin(origin: string) {
+  try {
+    const hostname = new URL(origin).hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return false;
+    if (hostname === "0.0.0.0") return false;
+    return !hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+export function getPublicRequestOrigin(request: Request) {
+  const configuredOrigin =
+    parseOrigin(process.env.PUBLIC_APP_ORIGIN) ??
+    parseOrigin(process.env.NEXT_PUBLIC_APP_ORIGIN) ??
+    parseOrigin(process.env.ORGCHART_BASE_URL);
+  if (configuredOrigin) return configuredOrigin;
+
+  const forwardedHost = firstHeaderValue(request.headers.get("x-forwarded-host"));
+  if (forwardedHost) {
+    const forwardedProto = firstHeaderValue(request.headers.get("x-forwarded-proto")) ?? "https";
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  const requestOrigin = new URL(request.url).origin;
+  return isInternalOrigin(requestOrigin) ? DEFAULT_PUBLIC_ORIGIN : requestOrigin;
 }
 
 export function isPublicViewCodeValid(code: string | null | undefined) {

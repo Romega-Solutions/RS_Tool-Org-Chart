@@ -26,7 +26,7 @@ ORGCHART_MCP_URL=https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
 ## What It Checks
 
 - Public login page returns the org chart app.
-- People API returns live people data.
+- People API returns live people data with `X-API-Key`.
 - Departments API works with `X-API-Key`.
 - Audit API works with `X-API-Key`.
 - Google Sheet CSV is reachable, populated, and has required columns.

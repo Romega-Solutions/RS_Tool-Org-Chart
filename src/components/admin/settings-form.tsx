@@ -294,12 +294,16 @@ export function SettingsForm() {
     }
   }
 
-  function getEmbedCode() {
+  function getAppUrl(path = "") {
     const origin =
       typeof window !== "undefined"
         ? window.location.origin
         : "https://your-domain.com";
-    return `<iframe\n  src="${origin}/view"\n  width="100%"\n  height="800"\n  style="border: none; border-radius: 8px;"\n  title="${form.chart_title || "Organization Chart"}"\n></iframe>`;
+    return `${origin}${apiPath(path)}`;
+  }
+
+  function getEmbedCode() {
+    return `<iframe\n  src="${getAppUrl("/view")}"\n  width="100%"\n  height="800"\n  style="border: none; border-radius: 8px;"\n  title="${form.chart_title || "Organization Chart"}"\n></iframe>`;
   }
 
   async function handleCopyEmbed() {
@@ -333,7 +337,7 @@ export function SettingsForm() {
   }
 
   function getBaseUrl() {
-    return typeof window !== "undefined" ? window.location.origin : "https://your-domain.com";
+    return getAppUrl();
   }
 
   async function handleSync() {
@@ -814,6 +818,7 @@ export function SettingsForm() {
               <Label>Endpoint Reference</Label>
               <div className="flex items-center gap-2 text-[10px]">
                 <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Public</span>
+                <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">Auth</span>
                 <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">Editor</span>
                 <span className="text-muted-foreground">
                   <code className="bg-muted px-1 py-0.5 rounded">?</code> = optional
@@ -841,7 +846,7 @@ export function SettingsForm() {
                 group: "Departments",
                 color: "text-violet-500",
                 endpoints: [
-                  ["List", "GET", "/api/departments", "", "Public"],
+                  ["List", "GET", "/api/departments", "", "Auth"],
                   ["Create", "POST", "/api/departments", "name, color?, displayOrder?", "Editor"],
                   ["Update", "PATCH", "/api/departments/{id}", "name?, color?, displayOrder?", "Editor"],
                   ["Delete", "DELETE", "/api/departments/{id}", "", "Editor"],
@@ -851,9 +856,9 @@ export function SettingsForm() {
                 group: "Chart & Data",
                 color: "text-emerald-500",
                 endpoints: [
-                  ["Org chart tree", "GET", "/api/chart-data", "", "Public"],
-                  ["Audit log", "GET", "/api/audit", "?page=1&limit=50", "Public"],
-                  ["Photos", "GET", "/api/photos", "", "Public"],
+                  ["Org chart tree", "GET", "/api/chart-data", "", "Auth"],
+                  ["Audit log", "GET", "/api/audit", "?page=1&limit=50", "Auth"],
+                  ["Photos", "GET", "/api/photos", "", "Auth"],
                   ["Delete photo", "DELETE", "/api/photos/{filename}", "", "Editor"],
                   ["Import external", "POST", "/api/photos/import-external", "", "Editor"],
                   ["Clean unused", "POST", "/api/photos/cleanup-unused", "", "Editor"],
@@ -870,7 +875,7 @@ export function SettingsForm() {
                   ["Upload photo", "POST", "/api/upload", "multipart file", "Editor"],
                 ],
               },
-            ] as { group: string; color: string; endpoints: [string, string, string, string, string][] }[]).map(({ group, color, endpoints }) => (
+            ] as { group: string; color: string; endpoints: [string, string, string, string, "Public" | "Auth" | "Editor"][] }[]).map(({ group, color, endpoints }) => (
               <div key={group} className="rounded-lg border border-border overflow-hidden">
                 <div className="bg-muted/40 px-3 py-1.5 border-b border-border">
                   <span className={`text-xs font-semibold ${color}`}>{group}</span>
@@ -892,10 +897,18 @@ export function SettingsForm() {
                             </td>
                             <td className="px-2 py-1.5 font-mono text-muted-foreground text-[11px]">{endpoint}</td>
                             <td className="px-2 py-1.5 font-mono text-muted-foreground/70 text-[10px] max-w-[180px] truncate" title={body}>{body || "—"}</td>
-                            <td className="px-2 py-1.5 w-[60px] text-right">
-                              {auth === "Editor" && (
-                                <span className="inline-block rounded-full w-1.5 h-1.5 bg-amber-500" title="Requires auth" />
-                              )}
+                            <td className="px-2 py-1.5 w-[72px] text-right">
+                              <span
+                                className={
+                                  auth === "Editor"
+                                    ? "inline-flex rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                                    : auth === "Auth"
+                                      ? "inline-flex rounded-full bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400"
+                                      : "inline-flex rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                                }
+                              >
+                                {auth}
+                              </span>
                             </td>
                           </tr>
                         );

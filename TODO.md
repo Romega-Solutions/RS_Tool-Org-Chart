@@ -189,4 +189,4 @@
 | **Deployment** | GitHub Actions → VPS/Easypanel live deploy |
 | **Production Domain** | tools.romega-solutions.com/org-chart |
 | **Security** | 3-layer DDoS, CSRF, rate limiting, HTTPS, Fail2ban |
-| **Tests** | Playwright e2e (58 tests, no skips) |
+| **Tests** | Playwright e2e (70 tests, no skips) |

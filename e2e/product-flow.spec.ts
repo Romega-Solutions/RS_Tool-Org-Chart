@@ -382,6 +382,28 @@ test.describe.serial("Product QA flow", () => {
     await expect(page.getByRole("button", { name: "Rotate Link" })).toBeVisible();
   });
 
+  test("public view link APIs use the forwarded public origin instead of the internal service host", async ({ page }) => {
+    await login(page, "admin", "admin123");
+
+    const forwardedHeaders = {
+      Host: "6682740c7a55:80",
+      "X-Forwarded-Host": "tools.romega-solutions.com",
+      "X-Forwarded-Proto": "https",
+    };
+
+    const linkRes = await page.request.get(appPath("/api/public-view-link"), { headers: forwardedHeaders });
+    expect(linkRes.ok()).toBeTruthy();
+    const linkInfo = await linkRes.json();
+    expect(linkInfo.url).toMatch(/^https:\/\/tools\.romega-solutions\.com\/org-chart\/view\?public=/);
+    expect(linkInfo.url).not.toContain("6682740c7a55");
+
+    const rotateRes = await page.request.post(appPath("/api/public-view-link/rotate"), { headers: forwardedHeaders });
+    expect(rotateRes.ok()).toBeTruthy();
+    const rotated = await rotateRes.json();
+    expect(rotated.url).toMatch(/^https:\/\/tools\.romega-solutions\.com\/org-chart\/view\?public=/);
+    expect(rotated.url).not.toContain("6682740c7a55");
+  });
+
   test("public view link renders chart without login and offers login prompt", async ({ page }) => {
     await login(page, "admin", "admin123");
     const rotateRes = await page.request.post(appPath("/api/public-view-link/rotate"));
@@ -394,6 +416,20 @@ test.describe.serial("Product QA flow", () => {
     await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/org-chart\/login$/);
+  });
+
+  test("settings generated snippets and endpoint labels honor the app base path", async ({ page }) => {
+    await login(page, "admin", "admin123");
+    await page.goto(appPath("/admin/settings"));
+
+    const origin = await page.evaluate(() => window.location.origin);
+    await expect(page.getByText(`src="${origin}${appPath("/view")}"`)).toBeVisible();
+    await expect(page.getByText(`curl ${origin}${appPath("/api/people")} -H "X-API-Key: YOUR_KEY"`)).toBeVisible();
+    await expect(page.getByText(`curl ${origin}${appPath("/api/chart-data")}`)).toBeVisible();
+
+    for (const endpoint of ["/api/departments", "/api/chart-data", "/api/audit", "/api/photos"]) {
+      await expect(page.locator("tr").filter({ hasText: endpoint }).filter({ hasText: "Auth" })).toBeVisible();
+    }
   });
 
   test("people edit form saves through the configured app base path", async ({ page }) => {

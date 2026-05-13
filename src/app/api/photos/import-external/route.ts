@@ -18,8 +18,45 @@ type ImportResult = {
   message?: string;
 };
 
+const IMPORT_CONCURRENCY = 8;
+
 function isLocalManagedPhoto(photoUrl: string) {
   return photoUrl.startsWith("/uploads/photos/");
+}
+
+async function importCandidate(
+  person: { id: number; name: string; photoUrl: string | null; projectIds: string | null },
+  actorUsername: string,
+): Promise<ImportResult | null> {
+  const source = person.photoUrl;
+  if (!source) return null;
+
+  if (isLocalManagedPhoto(source)) {
+    return { personId: person.id, name: person.name, status: "skipped", source, message: "Already imported." };
+  }
+
+  try {
+    const buffer = await fetchExternalPhoto(source);
+    const photoUrl = await saveProfilePhoto(buffer, person.name);
+    db.update(people)
+      .set({
+        photoUrl,
+        projectIds: setSheetPhotoSource(person.projectIds, source),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(people.id, person.id))
+      .run();
+    logChange("updated", "person", person.id, person.name, actorUsername, { photoUrl, importedPhotoFrom: source });
+    return { personId: person.id, name: person.name, status: "imported", source, photoUrl };
+  } catch (error) {
+    return {
+      personId: person.id,
+      name: person.name,
+      status: "error",
+      source,
+      message: error instanceof Error ? error.message : "Could not import photo.",
+    };
+  }
 }
 
 export async function POST(request: Request) {
@@ -42,38 +79,10 @@ export async function POST(request: Request) {
     });
 
   const results: ImportResult[] = [];
-
-  for (const person of candidates) {
-    const source = person.photoUrl;
-    if (!source) continue;
-
-    if (isLocalManagedPhoto(source)) {
-      results.push({ personId: person.id, name: person.name, status: "skipped", source, message: "Already imported." });
-      continue;
-    }
-
-    try {
-      const buffer = await fetchExternalPhoto(source);
-      const photoUrl = await saveProfilePhoto(buffer, person.name);
-      db.update(people)
-        .set({
-          photoUrl,
-          projectIds: setSheetPhotoSource(person.projectIds, source),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(people.id, person.id))
-        .run();
-      logChange("updated", "person", person.id, person.name, actor.username, { photoUrl, importedPhotoFrom: source });
-      results.push({ personId: person.id, name: person.name, status: "imported", source, photoUrl });
-    } catch (error) {
-      results.push({
-        personId: person.id,
-        name: person.name,
-        status: "error",
-        source,
-        message: error instanceof Error ? error.message : "Could not import photo.",
-      });
-    }
+  for (let index = 0; index < candidates.length; index += IMPORT_CONCURRENCY) {
+    const batch = candidates.slice(index, index + IMPORT_CONCURRENCY);
+    const batchResults = await Promise.all(batch.map((person) => importCandidate(person, actor.username)));
+    results.push(...batchResults.filter((result): result is ImportResult => Boolean(result)));
   }
 
   return NextResponse.json({

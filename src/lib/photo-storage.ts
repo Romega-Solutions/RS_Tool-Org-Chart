@@ -6,6 +6,7 @@ export const MAX_PHOTO_FILE_SIZE = 5 * 1024 * 1024;
 export const MAX_UPLOAD_DIR_SIZE = 500 * 1024 * 1024;
 export const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 export const ALLOWED_PHOTO_EXT = /\.(jpg|jpeg|png|gif|webp)$/i;
+export const EXTERNAL_PHOTO_FETCH_TIMEOUT_MS = 4_000;
 
 export function getPhotoUploadDir() {
   return path.join(process.cwd(), "public", "uploads", "photos");
@@ -69,7 +70,7 @@ export function normalizeDrivePhotoUrl(raw: string) {
   return trimmed;
 }
 
-export async function fetchExternalPhoto(rawUrl: string) {
+export async function fetchExternalPhoto(rawUrl: string, timeoutMs = EXTERNAL_PHOTO_FETCH_TIMEOUT_MS) {
   const url = normalizeDrivePhotoUrl(rawUrl);
 
   if (url.startsWith("data:")) {
@@ -86,7 +87,19 @@ export async function fetchExternalPhoto(rawUrl: string) {
     throw new Error("Photo URL must be an HTTP, HTTPS, Google Drive, or data URL.");
   }
 
-  const response = await fetch(url, { redirect: "follow" });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(url, { redirect: "follow", signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Photo fetch timed out.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     throw new Error(`Photo fetch failed with HTTP ${response.status}.`);
   }

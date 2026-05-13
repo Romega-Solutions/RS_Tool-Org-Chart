@@ -18,9 +18,9 @@ const checks = [];
 
 try {
   await checkPublicRoute("/login", "Org Chart");
-  await checkJson("/api/people?includeInactive=true", "people", { minItems: 1 });
 
   if (apiKey) {
+    await checkJson("/api/people?includeInactive=true", "people", { minItems: 1, apiKey });
     await checkJson("/api/departments", "departments", { minItems: 1, apiKey });
     await checkJson("/api/audit?limit=5&page=1", "audit", { apiKey, validator: validateAudit });
   } else {
