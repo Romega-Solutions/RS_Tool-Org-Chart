@@ -1,7 +1,7 @@
 # RS Auto Org Chart Generator — TODO
 
-> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, n8n/MCP workflow assets, sheet sync, managed photos, and live product QA. Latest checkpoint `d682c49` is pushed and live.
-> Last updated: 2026-05-07
+> Status: Deployed with CI/CD, custom domain, rotated live passwords, headless API key, n8n/MCP workflow assets, sheet sync, managed photos, and live product QA. Local full scan on 2026-05-16 passed lint, build, Playwright Chromium, dependency audit, and weekly live QA.
+> Last updated: 2026-05-16
 
 ---
 
@@ -15,12 +15,14 @@
 - [x] Product QA pass completed against disposable local data
 - [x] Permanent product-flow Playwright spec added for CRUD, photos, chart views/search, export, print, audit, permissions, and mobile smoke
 - [x] Photo-gallery assignment tests made deterministic with disposable fixtures
-- [x] Full Playwright suite is now deterministic: 60 passing tests, no skips
+- [x] Full Playwright suite is now deterministic: 70 passing tests, no skips
 - [x] Live production smoke passed for chart, search, grid view, photos empty state, Excel/PNG export, print view, and mobile chart
 - [x] Production readiness snapshot documented in `docs/production-readiness-2026-05-05.md`
 - [x] May 7 live product QA passed for login, chart render, Duane secondary connector, hidden placeholder records, disposable people CRUD, photo upload/display, crop/zoom, Excel export, print view, mobile layout, Sync Now, and cleanup unused photos
 - [x] Weekly live QA script added for public route, protected API, Google Sheet CSV, and n8n MCP endpoint checks
 - [x] Weekly live QA MCP check now verifies production MCP initialize plus `tools/list`
+- [x] May 16 local scan passed: `pnpm lint`, `pnpm build`, `pnpm exec playwright test` (70 passed), `pnpm audit --audit-level moderate` (no known vulnerabilities), and `pnpm qa:weekly-live`
+- [x] Security dependency refresh: Next.js 16.2.6, Tailwind CSS 4.3.0, shadcn CLI 4.7.0, with pnpm overrides for patched `postcss` and `esbuild`
 
 ### Core Features
 - [x] 3 chart views (top-down, horizontal, department grid)

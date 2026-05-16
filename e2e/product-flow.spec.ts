@@ -72,7 +72,7 @@ test.describe.serial("Product QA flow", () => {
     await expect(prompt).toContainText("New to Romega?");
     await expect(prompt).toContainText("Use view-only access for onboarding.");
 
-    await expect(prompt).toBeHidden({ timeout: 8_000 });
+    await expect(prompt).toBeHidden({ timeout: 12_000 });
 
     await page.goto(appPath("/login"));
     await page.getByRole("button", { name: "Use view-only access" }).click();

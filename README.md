@@ -11,8 +11,8 @@ The app manages people, departments, photos, audit history, chart views, exports
 | Production URL | `https://tools.romega-solutions.com/org-chart` |
 | Easypanel fallback URL | `https://romega-projects-rs-tool-org-chart.ikuuwb.easypanel.host/org-chart` |
 | Deployment | GitHub Actions -> VPS/Easypanel |
-| Latest verification | `d682c49` deployed through GitHub Actions; live product QA and production n8n MCP read-only tools passed on 2026-05-07 |
-| Test suite | GitHub Actions lint, build, and Playwright Chromium suite passing |
+| Latest verification | Local full scan on 2026-05-16: lint, build, Playwright Chromium, audit, and weekly live QA passed |
+| Test suite | 70 Playwright Chromium tests passing locally; GitHub Actions gates lint, build, Playwright, deploy, and live verification |
 | Production notes | Live passwords have been rotated. n8n/MCP setup is documented. API-key protected endpoints are live. |
 
 Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs/production-readiness-2026-05-05.md).
@@ -246,6 +246,13 @@ All endpoints require session auth unless noted. Write operations require editor
 - bcryptjs
 - jose JWT sessions
 - Playwright E2E
+
+Current dependency baseline:
+
+- Next.js `16.2.6`
+- Tailwind CSS `4.3.0`
+- shadcn CLI `4.7.0`
+- `pnpm audit --audit-level moderate` reports no known vulnerabilities as of 2026-05-16 local verification.
 
 ## Data and Storage
 
