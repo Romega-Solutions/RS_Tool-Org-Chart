@@ -169,6 +169,25 @@ jobs:
             sudo git -C /tmp/org-chart-master rev-parse --short HEAD 2>/dev/null || true
             echo "=== Docker containers matching org chart ==="
             sudo docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | grep -Ei 'org|chart|romega|easy|nginx' || true
+            echo "=== Docker services matching org chart ==="
+            sudo docker service ls --format 'table {{.Name}}\t{{.Image}}\t{{.Replicas}}\t{{.Ports}}' | grep -Ei 'org|chart|romega|easy|nginx' || true
+            echo "=== Docker service tasks matching org chart ==="
+            for service in $(sudo docker service ls --format '{{.Name}}' | grep -Ei 'org|chart|rs_tool' || true); do
+              echo "--- service: $service ---"
+              sudo docker service ps --no-trunc "$service" || true
+              sudo docker service logs --tail=160 "$service" || true
+            done
+            echo "=== Running org chart container logs and probes ==="
+            for container in $(sudo docker ps --format '{{.Names}}' | grep -Ei 'org|chart|rs_tool' || true); do
+              echo "--- container: $container ---"
+              sudo docker inspect \
+                --format='status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} image={{.Config.Image}} started={{.State.StartedAt}}' \
+                "$container" || true
+              sudo docker logs --tail=200 "$container" || true
+              sudo docker exec "$container" sh -lc 'echo "--- env names ---"; env | cut -d= -f1 | sort | grep -E "^(NODE_ENV|PORT|HOSTNAME|NEXT_PUBLIC_BASE_PATH|PUBLIC_APP_ORIGIN|SESSION_SECRET|API_KEY|ORGCHART_API_KEY|CRON_SECRET|SYNC_INTERVAL)$" || true' || true
+              sudo docker exec "$container" sh -lc 'echo "--- local health ---"; wget -S -O - http://127.0.0.1:3000/org-chart/api/health 2>&1 | head -80' || true
+              sudo docker exec "$container" sh -lc 'echo "--- local login ---"; wget -S -O - http://127.0.0.1:3000/org-chart/login 2>&1 | head -80' || true
+            done
             echo "=== Docker compose ps ==="
             sudo docker compose ps || true
             echo "=== Recent orgchart logs ==="
