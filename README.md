@@ -269,6 +269,8 @@ The current app is deployed through GitHub Actions to the VPS/Easypanel app.
 
 The Easypanel domain route for `tools.romega-solutions.com` should point to the app service over HTTP port `80`; Easypanel maps the running Next.js service to that port in production.
 
+The Docker runtime command forces `HOSTNAME=0.0.0.0` so the standalone Next.js server binds to the container network interface. Keep Easypanel's runtime `PORT` value intact; local compose still defaults to `3000`.
+
 Older Docker Compose and hardening scripts remain in the repo for fresh-server setup or recovery, but the active production path is the GitHub Actions deploy workflow.
 
 For a fresh self-hosted VPS:

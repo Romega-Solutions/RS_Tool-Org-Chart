@@ -27,4 +27,5 @@ RUN mkdir -p data public/uploads/photos && chown -R nextjs:nodejs data public/up
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
-CMD ["node", "server.js"]
+ENV HOSTNAME=0.0.0.0
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 node server.js"]
