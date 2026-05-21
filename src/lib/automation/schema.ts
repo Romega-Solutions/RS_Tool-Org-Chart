@@ -1,15 +1,16 @@
-export type AutomationActorType = "tool" | "agent" | "system";
+export type AutomationActorType = "user" | "api" | "n8n";
 
 export type AutomationEnvelope<TData> = {
-  id: string;
-  version: "1.0";
   event: string;
-  source: string;
+  sourceTool: string;
+  version: "1.0";
+  requestId: string;
+  occurredAt: string;
   actor: {
     type: AutomationActorType;
-    id: string;
+    id?: string;
+    name?: string;
   };
-  occurredAt: string;
   data: TData;
 };
 
@@ -49,33 +50,19 @@ export const orgChartAutomationSchema = {
     endpoint: "/api/people/headless?includeInactive=false",
     profileFields: staffProfileFields,
   },
-  inboundEvents: [
-    {
-      event: "org_chart.people.snapshot_requested",
-      description: "Request a staff directory snapshot from the Org Chart tool.",
-    },
-  ],
-  outboundEvents: [
-    {
-      event: "org_chart.people.snapshot_ready",
-      description: "Staff directory snapshot is ready for downstream automation.",
-    },
-    {
-      event: "org_chart.person.updated",
-      description: "A staff profile was created, updated, moved, or deactivated.",
-    },
-  ],
+  inboundEvents: ["org_chart.people.snapshot_requested"],
+  outboundEvents: ["org_chart.people.snapshot_ready", "org_chart.person.updated"],
   webhookReady: true,
   exampleEnvelope: {
-    id: "evt_org_chart_example",
-    version: "1.0",
     event: "org_chart.people.snapshot_ready",
-    source: sourceTool,
+    sourceTool,
+    version: "1.0",
+    requestId: "org_20260521_example",
+    occurredAt: "2026-05-21T00:00:00.000Z",
     actor: {
-      type: "tool",
-      id: sourceTool,
+      type: "api",
+      name: "API Integration",
     },
-    occurredAt: "2026-01-01T00:00:00.000Z",
     data: {
       people: [
         {

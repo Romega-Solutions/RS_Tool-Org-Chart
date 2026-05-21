@@ -24,17 +24,22 @@ test.describe("automation contract", () => {
     expect(schema.sourceTool).toBe("RS_Tool-Auto-Org_Chart-Generator");
     expect(schema.auth.header).toBe("X-API-Key");
     expect(schema.staffDirectory.endpoint).toBe("/api/people/headless?includeInactive=false");
-    expect(schema.inboundEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ event: "org_chart.people.snapshot_requested" }),
-      ]),
+    expect(schema.inboundEvents).toContain("org_chart.people.snapshot_requested");
+    expect(schema.outboundEvents).toContain("org_chart.people.snapshot_ready");
+    expect(schema.outboundEvents).toContain("org_chart.person.updated");
+    expect(schema.exampleEnvelope).toEqual(
+      expect.objectContaining({
+        event: "org_chart.people.snapshot_ready",
+        sourceTool: "RS_Tool-Auto-Org_Chart-Generator",
+        version: "1.0",
+        requestId: "org_20260521_example",
+        occurredAt: "2026-05-21T00:00:00.000Z",
+        actor: { type: "api", name: "API Integration" },
+        data: { people: expect.any(Array) },
+      }),
     );
-    expect(schema.outboundEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ event: "org_chart.people.snapshot_ready" }),
-        expect.objectContaining({ event: "org_chart.person.updated" }),
-      ]),
-    );
+    expect(schema.exampleEnvelope).not.toHaveProperty("id");
+    expect(schema.exampleEnvelope).not.toHaveProperty("source");
   });
 
   test("GET /api/people/headless returns staff profiles with contract metadata", async ({ request }) => {
