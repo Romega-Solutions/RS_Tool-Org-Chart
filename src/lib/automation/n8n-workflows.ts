@@ -1,4 +1,5 @@
 export type N8nWorkflowStatus = "active" | "config_required";
+export type N8nWorkflowConfigMode = "stable" | "temporary_tunnel" | "placeholder" | "unknown";
 
 export type N8nWorkflowReadiness = {
   id: string;
@@ -12,6 +13,8 @@ export type N8nWorkflowReadiness = {
   lastVerifiedAt: string | null;
   latestExecutionStatus?: string | null;
   liveError?: string | null;
+  configUrlMode?: N8nWorkflowConfigMode;
+  configUrlHost?: string | null;
 };
 
 export const n8nWorkflowReadiness: N8nWorkflowReadiness[] = [
@@ -54,5 +57,17 @@ export const n8nWorkflowReadiness: N8nWorkflowReadiness[] = [
     requiredConfig: [],
     lastEvidence: "Execution 120",
     lastVerifiedAt: "2026-05-22T00:00:00.000Z",
+  },
+  {
+    id: "internal-tools-failure-alert",
+    name: "Romega - Internal Tools Failure Alert",
+    workflowId: "e4JWNpiO87BM1rL2",
+    webhookPath: "Error Trigger",
+    status: "config_required",
+    requiredConfig: ["alertWebhookUrl"],
+    lastEvidence: "Imported inactive",
+    lastVerifiedAt: "2026-05-22T23:28:28.463Z",
+    configUrlMode: "placeholder",
+    configUrlHost: null,
   },
 ];

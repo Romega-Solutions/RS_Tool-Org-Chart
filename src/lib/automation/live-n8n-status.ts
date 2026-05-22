@@ -1,7 +1,22 @@
-import { n8nWorkflowReadiness, type N8nWorkflowReadiness } from "./n8n-workflows";
+import {
+  n8nWorkflowReadiness,
+  type N8nWorkflowConfigMode,
+  type N8nWorkflowReadiness,
+} from "./n8n-workflows";
 
 type N8nWorkflowResponse = {
   active?: boolean;
+  nodes?: Array<{
+    name?: string;
+    parameters?: {
+      assignments?: {
+        assignments?: Array<{
+          name?: string;
+          value?: string;
+        }>;
+      };
+    };
+  }>;
 };
 
 type N8nExecutionResponse = {
@@ -17,6 +32,13 @@ type N8nExecution = {
 };
 
 const N8N_TIMEOUT_MS = 8_000;
+const CONFIG_URL_ASSIGNMENTS = new Set([
+  "orgChartBaseUrl",
+  "certificateBaseUrl",
+  "emailSignatureBaseUrl",
+  "jobScraperBaseUrl",
+  "alertWebhookUrl",
+]);
 
 function staticWorkflows(liveError?: string): N8nWorkflowReadiness[] {
   return n8nWorkflowReadiness.map((workflow) => ({
@@ -79,6 +101,33 @@ function executionEvidence(workflow: N8nWorkflowReadiness, execution?: N8nExecut
   };
 }
 
+function classifyConfigUrl(value?: string): { configUrlMode: N8nWorkflowConfigMode; configUrlHost: string | null } {
+  if (!value || value.includes("REPLACE_WITH_")) {
+    return { configUrlMode: "placeholder", configUrlHost: null };
+  }
+
+  try {
+    const url = new URL(value);
+    const temporaryHosts = ["lhr.life", "loca.lt", "ngrok-free.app", "localhost", "127.0.0.1"];
+    const isTemporary = temporaryHosts.some((host) => url.hostname === host || url.hostname.endsWith(`.${host}`));
+
+    return {
+      configUrlMode: isTemporary ? "temporary_tunnel" : "stable",
+      configUrlHost: url.hostname,
+    };
+  } catch {
+    return { configUrlMode: "unknown", configUrlHost: null };
+  }
+}
+
+function workflowConfigUrl(workflow: N8nWorkflowResponse) {
+  const assignments = workflow.nodes
+    ?.flatMap((node) => node.parameters?.assignments?.assignments ?? [])
+    .filter((assignment) => assignment.name && CONFIG_URL_ASSIGNMENTS.has(assignment.name));
+
+  return assignments?.[0]?.value;
+}
+
 export async function getN8nWorkflowReadiness(): Promise<N8nWorkflowReadiness[]> {
   const config = getN8nConfig();
 
@@ -98,15 +147,25 @@ export async function getN8nWorkflowReadiness(): Promise<N8nWorkflowReadiness[]>
         ]);
         const execution = executionsResponse.data?.[0];
         const evidence = executionEvidence(workflow, execution);
+        const configUrl = workflowConfigUrl(workflowResponse);
+        const configUrlState = classifyConfigUrl(configUrl);
+        const requiredConfig = new Set(workflow.requiredConfig);
+
+        if (configUrlState.configUrlMode === "placeholder") {
+          requiredConfig.add(workflow.id === "internal-tools-failure-alert" ? "alertWebhookUrl" : "stableToolUrl");
+        }
 
         return {
           ...workflow,
           status: workflowResponse.active ? "active" : "config_required",
           statusSource: "live",
+          requiredConfig: Array.from(requiredConfig),
           lastEvidence: evidence.lastEvidence,
           lastVerifiedAt: evidence.lastVerifiedAt,
           latestExecutionStatus: evidence.latestExecutionStatus,
           liveError: null,
+          configUrlMode: configUrlState.configUrlMode,
+          configUrlHost: configUrlState.configUrlHost,
         };
       }),
     );

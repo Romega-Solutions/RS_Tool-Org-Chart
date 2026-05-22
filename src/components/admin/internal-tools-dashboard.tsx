@@ -16,7 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { N8nWorkflowReadiness, N8nWorkflowStatus } from "@/lib/automation/n8n-workflows";
+import type {
+  N8nWorkflowConfigMode,
+  N8nWorkflowReadiness,
+  N8nWorkflowStatus,
+} from "@/lib/automation/n8n-workflows";
 import type { InternalToolStatus, InternalToolStatusValue, InternalToolsStatusResponse } from "@/lib/automation/tool-status";
 
 const statusLabels: Record<InternalToolStatusValue, string> = {
@@ -47,6 +51,20 @@ const workflowStatusLabels: Record<N8nWorkflowStatus, string> = {
 const workflowStatusStyles: Record<N8nWorkflowStatus, string> = {
   active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   config_required: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+};
+
+const configModeLabels: Record<N8nWorkflowConfigMode, string> = {
+  stable: "Stable URL",
+  temporary_tunnel: "Temporary tunnel",
+  placeholder: "Placeholder",
+  unknown: "Unknown URL",
+};
+
+const configModeStyles: Record<N8nWorkflowConfigMode, string> = {
+  stable: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  temporary_tunnel: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  placeholder: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  unknown: "border-muted-foreground/30 bg-muted text-muted-foreground",
 };
 
 function StatusIcon({ status }: { status: InternalToolStatusValue }) {
@@ -171,6 +189,18 @@ function WorkflowStatusBadge({ status }: { status: N8nWorkflowStatus }) {
   );
 }
 
+function ConfigModeBadge({ mode }: { mode?: N8nWorkflowConfigMode }) {
+  if (!mode) {
+    return null;
+  }
+
+  return (
+    <Badge variant="outline" className={`w-fit ${configModeStyles[mode]}`}>
+      {configModeLabels[mode]}
+    </Badge>
+  );
+}
+
 function WorkflowRow({ workflow }: { workflow: N8nWorkflowReadiness }) {
   return (
     <TableRow>
@@ -191,6 +221,10 @@ function WorkflowRow({ workflow }: { workflow: N8nWorkflowReadiness }) {
         <div className="space-y-1">
           <p>{workflow.lastEvidence}</p>
           {workflow.lastVerifiedAt && <p>{formatTime(workflow.lastVerifiedAt)}</p>}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ConfigModeBadge mode={workflow.configUrlMode} />
+            {workflow.configUrlHost && <span className="font-mono text-[11px]">{workflow.configUrlHost}</span>}
+          </div>
           <p>
             Source: {workflow.statusSource ?? "static"}
             {workflow.liveError ? ` (${workflow.liveError})` : ""}
@@ -272,7 +306,7 @@ export function InternalToolsDashboard({
               <TableHead>Status</TableHead>
               <TableHead>Webhook</TableHead>
               <TableHead>Required config</TableHead>
-              <TableHead>Last evidence</TableHead>
+              <TableHead>Evidence and URL mode</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

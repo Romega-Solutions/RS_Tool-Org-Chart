@@ -132,6 +132,9 @@ test.describe("automation contract", () => {
     await expect(page.getByRole("heading", { name: "n8n Workflows" })).toBeVisible();
     await expect(page.getByText("Romega - Job Scrape Report", { exact: true })).toBeVisible();
     await expect(page.getByText("Romega - Certificate Delivery", { exact: true })).toBeVisible();
+    await expect(page.getByText("Romega - Internal Tools Failure Alert", { exact: true })).toBeVisible();
+    await expect(page.getByText("Error Trigger", { exact: true })).toBeVisible();
+    await expect(page.getByText("Placeholder", { exact: true })).toBeVisible();
     await expect(page.getByText("Execution 130", { exact: true })).toBeVisible();
     await expect(page.getByText("Execution 120", { exact: true })).toBeVisible();
     await expect(page.getByText("Active").first()).toBeVisible();
