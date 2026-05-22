@@ -23,6 +23,7 @@ import {
   ClipboardList,
   Image,
   KeyRound,
+  Workflow,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
@@ -62,6 +63,7 @@ const navItems = [
   { href: "/chart", label: "Chart", icon: Network },
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/photos", label: "Photos", icon: Image },
+  { href: "/admin/tools", label: "Tools", icon: Workflow },
   { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/accessibility", label: "Accessibility & Support", icon: LifeBuoy },

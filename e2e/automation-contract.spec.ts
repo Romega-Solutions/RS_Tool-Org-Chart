@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { SignJWT } from "jose";
 import { appPath } from "./helpers/paths";
 
 const apiHeaders = { "X-API-Key": "playwright-orgchart-api-key" };
+const sessionSecret = process.env.SESSION_SECRET ?? "playwright-session-secret-for-local-e2e-only";
 const profileFields = [
   "id",
   "name",
@@ -12,6 +14,14 @@ const profileFields = [
   "managerId",
   "isActive",
 ];
+
+async function editorSessionCookie() {
+  return new SignJWT({ username: "admin", name: "Admin", role: "editor" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(new TextEncoder().encode(sessionSecret));
+}
 
 test.describe("automation contract", () => {
   test("GET /api/automation/schema exposes the org chart automation schema", async ({ request }) => {
@@ -100,5 +110,24 @@ test.describe("automation contract", () => {
     const body = await response.json();
 
     expect(body.tools.some((tool: { status: string }) => tool.status === "not_configured")).toBe(true);
+  });
+
+  test("admin tools dashboard renders tool readiness", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "orgchart_token",
+        value: await editorSessionCookie(),
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    await page.goto(appPath("/admin/tools"));
+
+    await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
+    await expect(page.getByText("Org Chart", { exact: true })).toBeVisible();
+    await expect(page.getByText("Certificate Creator", { exact: true })).toBeVisible();
+    await expect(page.getByText("Email Signature", { exact: true })).toBeVisible();
+    await expect(page.getByText("Job Scraper", { exact: true })).toBeVisible();
   });
 });
