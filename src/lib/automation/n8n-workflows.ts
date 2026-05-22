@@ -6,9 +6,12 @@ export type N8nWorkflowReadiness = {
   workflowId: string;
   webhookPath: string;
   status: N8nWorkflowStatus;
+  statusSource?: "static" | "live";
   requiredConfig: string[];
   lastEvidence: string;
   lastVerifiedAt: string | null;
+  latestExecutionStatus?: string | null;
+  liveError?: string | null;
 };
 
 export const n8nWorkflowReadiness: N8nWorkflowReadiness[] = [

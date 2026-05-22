@@ -191,6 +191,10 @@ function WorkflowRow({ workflow }: { workflow: N8nWorkflowReadiness }) {
         <div className="space-y-1">
           <p>{workflow.lastEvidence}</p>
           {workflow.lastVerifiedAt && <p>{formatTime(workflow.lastVerifiedAt)}</p>}
+          <p>
+            Source: {workflow.statusSource ?? "static"}
+            {workflow.liveError ? ` (${workflow.liveError})` : ""}
+          </p>
         </div>
       </TableCell>
     </TableRow>
@@ -258,7 +262,7 @@ export function InternalToolsDashboard({
         <div className="border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">n8n Workflows</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Live workflow ids, activation state, and required config for the imported Romega n8n workflows.
+            Server-side n8n status when configured, with static readiness fallback for the imported Romega workflows.
           </p>
         </div>
         <Table>
