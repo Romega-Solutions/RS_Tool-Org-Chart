@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { InternalToolsDashboard } from "@/components/admin/internal-tools-dashboard";
+import { n8nWorkflowReadiness } from "@/lib/automation/n8n-workflows";
 import { getInternalToolsStatus } from "@/lib/automation/tool-status";
 
 export const dynamic = "force-dynamic";
@@ -10,5 +11,5 @@ export default async function InternalToolsPage() {
   const protocol = headerList.get("x-forwarded-proto") ?? "http";
   const status = await getInternalToolsStatus(`${protocol}://${host}/api/tools/status`);
 
-  return <InternalToolsDashboard status={status} />;
+  return <InternalToolsDashboard status={status} workflows={n8nWorkflowReadiness} />;
 }

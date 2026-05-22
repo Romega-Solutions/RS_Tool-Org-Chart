@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { N8nWorkflowReadiness, N8nWorkflowStatus } from "@/lib/automation/n8n-workflows";
 import type { InternalToolStatus, InternalToolStatusValue, InternalToolsStatusResponse } from "@/lib/automation/tool-status";
 
 const statusLabels: Record<InternalToolStatusValue, string> = {
@@ -36,6 +37,16 @@ const statusStyles: Record<InternalToolStatusValue, string> = {
   auth_failed: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
   schema_missing: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   invalid_response: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+};
+
+const workflowStatusLabels: Record<N8nWorkflowStatus, string> = {
+  active: "Active",
+  config_required: "Config required",
+};
+
+const workflowStatusStyles: Record<N8nWorkflowStatus, string> = {
+  active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  config_required: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
 };
 
 function StatusIcon({ status }: { status: InternalToolStatusValue }) {
@@ -91,6 +102,22 @@ function EventList({ events }: { events: string[] }) {
   );
 }
 
+function ConfigList({ values }: { values: string[] }) {
+  if (values.length === 0) {
+    return <span className="text-xs text-muted-foreground">Configured</span>;
+  }
+
+  return (
+    <div className="flex max-w-[24rem] flex-wrap gap-1.5">
+      {values.map((value) => (
+        <Badge key={value} variant="outline" className="font-mono text-[11px]">
+          {value}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -135,7 +162,48 @@ function ToolRow({ tool }: { tool: InternalToolStatus }) {
   );
 }
 
-export function InternalToolsDashboard({ status }: { status: InternalToolsStatusResponse }) {
+function WorkflowStatusBadge({ status }: { status: N8nWorkflowStatus }) {
+  return (
+    <Badge variant="outline" className={`gap-1.5 ${workflowStatusStyles[status]}`}>
+      {status === "active" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+      {workflowStatusLabels[status]}
+    </Badge>
+  );
+}
+
+function WorkflowRow({ workflow }: { workflow: N8nWorkflowReadiness }) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">{workflow.name}</p>
+          <p className="font-mono text-[11px] text-muted-foreground">{workflow.workflowId}</p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <WorkflowStatusBadge status={workflow.status} />
+      </TableCell>
+      <TableCell className="font-mono text-[11px] text-muted-foreground">{workflow.webhookPath}</TableCell>
+      <TableCell>
+        <ConfigList values={workflow.requiredConfig} />
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">
+        <div className="space-y-1">
+          <p>{workflow.lastEvidence}</p>
+          {workflow.lastVerifiedAt && <p>{formatTime(workflow.lastVerifiedAt)}</p>}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+export function InternalToolsDashboard({
+  status,
+  workflows = [],
+}: {
+  status: InternalToolsStatusResponse;
+  workflows?: N8nWorkflowReadiness[];
+}) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -181,6 +249,31 @@ export function InternalToolsDashboard({ status }: { status: InternalToolsStatus
           <TableBody>
             {status.tools.map((tool) => (
               <ToolRow key={tool.id} tool={tool} />
+            ))}
+          </TableBody>
+        </Table>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card">
+        <div className="border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold text-foreground">n8n Workflows</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Live workflow ids, activation state, and required config for the imported Romega n8n workflows.
+          </p>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Workflow</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Webhook</TableHead>
+              <TableHead>Required config</TableHead>
+              <TableHead>Last evidence</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workflows.map((workflow) => (
+              <WorkflowRow key={workflow.id} workflow={workflow} />
             ))}
           </TableBody>
         </Table>
