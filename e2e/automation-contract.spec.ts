@@ -102,6 +102,10 @@ test.describe("automation contract", () => {
         service: "org-chart",
         event: "internal_tool.alert.received",
         requestId,
+        audit: expect.objectContaining({
+          durable: expect.any(Boolean),
+          storage: expect.any(String),
+        }),
       }),
     );
 

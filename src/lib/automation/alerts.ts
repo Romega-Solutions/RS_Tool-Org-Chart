@@ -36,9 +36,20 @@ export type AutomationAlertRecord = {
 };
 
 const MAX_ALERTS = 100;
+const N8N_TIMEOUT_MS = 8_000;
 
 function alertsFilePath() {
   return path.join(os.tmpdir(), "romega-orgchart-automation-alerts.json");
+}
+
+function n8nAuditConfig() {
+  const url = process.env.N8N_URL?.trim().replace(/\/+$/, "");
+  const apiKey = process.env.N8N_API_KEY?.trim();
+  const tableId = process.env.N8N_AUDIT_TABLE_ID?.trim();
+
+  if (!url || !apiKey || !tableId) return null;
+
+  return { url, apiKey, tableId };
 }
 
 function stringOrNull(value: unknown): string | null {
@@ -98,6 +109,9 @@ export function normalizeAutomationAlert(input: AutomationAlertInput): Automatio
 }
 
 export async function readAutomationAlerts(limit = 20): Promise<AutomationAlertRecord[]> {
+  const n8nAlerts = await readN8nAutomationAlerts(limit);
+  if (n8nAlerts) return n8nAlerts;
+
   try {
     const raw = await readFile(alertsFilePath(), "utf8");
     const parsed = JSON.parse(raw);
@@ -111,7 +125,9 @@ export async function readAutomationAlerts(limit = 20): Promise<AutomationAlertR
   }
 }
 
-export async function appendAutomationAlert(alert: AutomationAlertRecord): Promise<AutomationAlertRecord[]> {
+export async function appendAutomationAlert(
+  alert: AutomationAlertRecord,
+): Promise<{ alerts: AutomationAlertRecord[]; durable: boolean; storage: "n8n_data_table" | "local_json_file" }> {
   const existing = await readAutomationAlerts(MAX_ALERTS);
   const nextAlerts = [alert, ...existing].slice(0, MAX_ALERTS);
   const filePath = alertsFilePath();
@@ -119,5 +135,96 @@ export async function appendAutomationAlert(alert: AutomationAlertRecord): Promi
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(nextAlerts, null, 2), "utf8");
 
-  return nextAlerts;
+  const durable = await appendN8nAutomationAlert(alert);
+
+  return {
+    alerts: nextAlerts,
+    durable,
+    storage: durable ? "n8n_data_table" : "local_json_file",
+  };
+}
+
+function toN8nAuditRow(alert: AutomationAlertRecord) {
+  return {
+    eventId: alert.id,
+    tool: "org-chart",
+    event: alert.event,
+    requestId: alert.requestId,
+    status: "failed",
+    receivedAt: alert.receivedAt,
+    summary: alert.workflowName || alert.errorMessage,
+    payload: JSON.stringify(alert),
+  };
+}
+
+async function appendN8nAutomationAlert(alert: AutomationAlertRecord): Promise<boolean> {
+  const config = n8nAuditConfig();
+  if (!config) return false;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.url}/api/v1/data-tables/${config.tableId}/rows`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-N8N-API-KEY": config.apiKey,
+      },
+      body: JSON.stringify({ data: [toN8nAuditRow(alert)], returnType: "all" }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function readN8nAutomationAlerts(limit: number): Promise<AutomationAlertRecord[] | null> {
+  const config = n8nAuditConfig();
+  if (!config) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+
+  try {
+    const url = new URL(`${config.url}/api/v1/data-tables/${config.tableId}/rows`);
+    url.searchParams.set("limit", String(Math.min(Math.max(limit, 1), MAX_ALERTS)));
+    url.searchParams.set("search", "org-chart");
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "X-N8N-API-KEY": config.apiKey,
+      },
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as { data?: Array<{ payload?: unknown; tool?: unknown }> };
+    const rows = Array.isArray(body.data) ? body.data : [];
+
+    return rows
+      .filter((row) => row.tool === "org-chart" && typeof row.payload === "string")
+      .map((row) => {
+        try {
+          return JSON.parse(row.payload as string) as AutomationAlertRecord;
+        } catch {
+          return null;
+        }
+      })
+      .filter((alert): alert is AutomationAlertRecord => Boolean(alert))
+      .slice(0, Math.min(Math.max(limit, 1), MAX_ALERTS));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }

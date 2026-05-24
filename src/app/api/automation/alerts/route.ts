@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   const alert = normalizeAutomationAlert(payload);
-  await appendAutomationAlert(alert);
+  const persistence = await appendAutomationAlert(alert);
 
   return NextResponse.json(
     {
@@ -59,6 +59,10 @@ export async function POST(request: Request) {
       event: "internal_tool.alert.received",
       requestId: alert.requestId,
       receivedAt: alert.receivedAt,
+      audit: {
+        durable: persistence.durable,
+        storage: persistence.storage,
+      },
     },
     { status: 202, headers: { "Cache-Control": "no-store, no-cache, max-age=0" } },
   );
