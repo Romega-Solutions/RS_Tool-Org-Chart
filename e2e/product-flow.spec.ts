@@ -33,6 +33,14 @@ function treeHasEmailField(nodes: unknown[]): boolean {
   return false;
 }
 
+type HeadlessPerson = { id: number; name: string; email: string | null };
+
+async function headlessPeople(response: { json(): Promise<unknown> }): Promise<HeadlessPerson[]> {
+  const body = await response.json();
+  expect(body).toEqual(expect.objectContaining({ people: expect.any(Array) }));
+  return (body as { people: HeadlessPerson[] }).people;
+}
+
 test.describe.serial("Product QA flow", () => {
   test("base path root redirects to chart without duplicating the app prefix", async ({ page }) => {
     await page.goto(appPath("/"));
@@ -192,8 +200,8 @@ test.describe.serial("Product QA flow", () => {
 
       const headlessRes = await page.request.get(appPath("/api/people/headless"), { headers });
       expect(headlessRes.ok()).toBeTruthy();
-      const headlessPeople = await headlessRes.json();
-      const headlessPerson = headlessPeople.find((person: { name: string; email: string | null }) => person.name === qaName);
+      const people = await headlessPeople(headlessRes);
+      const headlessPerson = people.find((person) => person.name === qaName);
       expect(headlessPerson?.email).toBe(qaEmail);
 
       const chartRes = await page.request.get(appPath("/api/chart-data"), { headers });
@@ -248,8 +256,8 @@ test.describe.serial("Product QA flow", () => {
 
       const headlessRes = await page.request.get(appPath("/api/people/headless"));
       expect(headlessRes.ok()).toBeTruthy();
-      const headlessPeople = await headlessRes.json();
-      const updatedPerson = headlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      const people = await headlessPeople(headlessRes);
+      const updatedPerson = people.find((person) => person.id === personId);
       expect(updatedPerson?.email).toBe(qaEmail);
 
       const clearCsv = [
@@ -263,8 +271,8 @@ test.describe.serial("Product QA flow", () => {
 
       const clearedHeadlessRes = await page.request.get(appPath("/api/people/headless"));
       expect(clearedHeadlessRes.ok()).toBeTruthy();
-      const clearedHeadlessPeople = await clearedHeadlessRes.json();
-      const clearedPerson = clearedHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      const clearedPeople = await headlessPeople(clearedHeadlessRes);
+      const clearedPerson = clearedPeople.find((person) => person.id === personId);
       expect(clearedPerson?.email).toBeNull();
     } finally {
       if (personId) {
@@ -315,8 +323,8 @@ test.describe.serial("Product QA flow", () => {
 
       const clearedRes = await page.request.get(appPath("/api/people/headless"));
       expect(clearedRes.ok()).toBeTruthy();
-      const clearedHeadlessPeople = await clearedRes.json();
-      const clearedPersonFromImport = clearedHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      const clearedPeople = await headlessPeople(clearedRes);
+      const clearedPersonFromImport = clearedPeople.find((person) => person.id === personId);
       expect(clearedPersonFromImport?.email).toBeNull();
 
       const invalidCsv = `name,title,department,Work Email\n${qaName},Import Email QA,${departments[0].name},not-an-email`;
@@ -337,8 +345,8 @@ test.describe.serial("Product QA flow", () => {
 
       const invalidHeadlessRes = await page.request.get(appPath("/api/people/headless"));
       expect(invalidHeadlessRes.ok()).toBeTruthy();
-      const invalidHeadlessPeople = await invalidHeadlessRes.json();
-      const stillNullAfterInvalid = invalidHeadlessPeople.find((person: { id: number; email: string | null }) => person.id === personId);
+      const invalidPeople = await headlessPeople(invalidHeadlessRes);
+      const stillNullAfterInvalid = invalidPeople.find((person) => person.id === personId);
       expect(stillNullAfterInvalid?.email).toBeNull();
     } finally {
       if (personId) {
