@@ -35,8 +35,11 @@ test.describe("automation contract", () => {
     expect(schema.auth.header).toBe("X-API-Key");
     expect(schema.staffDirectory.endpoint).toBe("/api/people/headless?includeInactive=false");
     expect(schema.inboundEvents).toContain("org_chart.people.snapshot_requested");
+    expect(schema.inboundEvents).toContain("internal_tools.workflow_failed");
     expect(schema.outboundEvents).toContain("org_chart.people.snapshot_ready");
     expect(schema.outboundEvents).toContain("org_chart.person.updated");
+    expect(schema.alerts.endpoint).toBe("/api/automation/alerts");
+    expect(schema.alerts.events).toContain("internal_tools.workflow_failed");
     expect(schema.exampleEnvelope).toEqual(
       expect.objectContaining({
         event: "org_chart.people.snapshot_ready",
@@ -50,6 +53,70 @@ test.describe("automation contract", () => {
     );
     expect(schema.exampleEnvelope).not.toHaveProperty("id");
     expect(schema.exampleEnvelope).not.toHaveProperty("source");
+  });
+
+  test("POST /api/automation/alerts requires API authentication", async ({ request }) => {
+    const response = await request.post(appPath("/api/automation/alerts"), {
+      data: {
+        event: "internal_tools.workflow_failed",
+        sourceTool: "n8n",
+        version: "1.0",
+        requestId: "n8n_error_unauthorized",
+        occurredAt: "2026-05-24T00:00:00.000Z",
+        actor: { type: "n8n", name: "Romega Internal Tools n8n" },
+        data: { workflowName: "Unauthorized Probe", errorMessage: "Missing API key" },
+      },
+    });
+
+    expect(response.status()).toBe(401);
+  });
+
+  test("POST and GET /api/automation/alerts records n8n failure alerts", async ({ request }) => {
+    const requestId = `n8n_error_${Date.now()}`;
+    const response = await request.post(appPath("/api/automation/alerts"), {
+      headers: apiHeaders,
+      data: {
+        event: "internal_tools.workflow_failed",
+        sourceTool: "n8n",
+        version: "1.0",
+        requestId,
+        occurredAt: "2026-05-24T00:00:00.000Z",
+        actor: { type: "n8n", name: "Romega Internal Tools n8n" },
+        data: {
+          workflowId: "workflow-123",
+          workflowName: "Certificate Delivery",
+          executionId: "execution-456",
+          executionUrl: "https://n8n.example/execution/456",
+          errorMessage: "Callback failed",
+          lastNodeExecuted: "POST Tool Callback",
+          mode: "webhook",
+        },
+      },
+    });
+
+    expect(response.status()).toBe(202);
+    const body = await response.json();
+    expect(body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        service: "org-chart",
+        event: "internal_tool.alert.received",
+        requestId,
+      }),
+    );
+
+    const listResponse = await request.get(appPath("/api/automation/alerts?limit=5"), { headers: apiHeaders });
+    expect(listResponse.status()).toBe(200);
+    const listBody = await listResponse.json();
+    expect(listBody.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          requestId,
+          workflowName: "Certificate Delivery",
+          errorMessage: "Callback failed",
+        }),
+      ]),
+    );
   });
 
   test("GET /api/people/headless returns staff profiles with contract metadata", async ({ request }) => {

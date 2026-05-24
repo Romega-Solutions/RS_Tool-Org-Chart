@@ -50,7 +50,13 @@ export const orgChartAutomationSchema = {
     endpoint: "/api/people/headless?includeInactive=false",
     profileFields: staffProfileFields,
   },
-  inboundEvents: ["org_chart.people.snapshot_requested"],
+  alerts: {
+    endpoint: "/api/automation/alerts",
+    historyEndpoint: "/api/automation/alerts?limit=20",
+    events: ["internal_tools.workflow_failed"],
+    storage: process.env.VERCEL === "1" ? "ephemeral_serverless_file" : "local_json_file",
+  },
+  inboundEvents: ["org_chart.people.snapshot_requested", "internal_tools.workflow_failed"],
   outboundEvents: ["org_chart.people.snapshot_ready", "org_chart.person.updated"],
   webhookReady: true,
   exampleEnvelope: {

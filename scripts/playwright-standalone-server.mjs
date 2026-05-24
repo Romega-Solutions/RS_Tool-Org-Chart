@@ -13,6 +13,7 @@ if (!existsSync(serverPath)) {
 
 for (const [source, destination] of [
   [path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static")],
+  [path.join(root, ".next", "server"), path.join(standaloneDir, ".next", "server")],
   [path.join(root, "public"), path.join(standaloneDir, "public")],
 ]) {
   if (existsSync(source)) {
