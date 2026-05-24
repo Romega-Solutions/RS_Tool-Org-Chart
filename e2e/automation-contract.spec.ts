@@ -201,7 +201,7 @@ test.describe("automation contract", () => {
     await expect(page.getByText("Romega - Certificate Delivery", { exact: true })).toBeVisible();
     await expect(page.getByText("Romega - Internal Tools Failure Alert", { exact: true })).toBeVisible();
     await expect(page.getByText("Error Trigger", { exact: true })).toBeVisible();
-    await expect(page.getByText("Placeholder", { exact: true })).toBeVisible();
+    await expect(page.getByText("Stable URL", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Execution 130", { exact: true })).toBeVisible();
     await expect(page.getByText("Execution 120", { exact: true })).toBeVisible();
     await expect(page.getByText("Active").first()).toBeVisible();
