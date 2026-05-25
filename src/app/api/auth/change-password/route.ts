@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { compare, hashSync } from "bcryptjs";
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     .run();
 
   logChange("updated", "person", user.id, user.name, actor.username, { passwordChanged: true });
+  await persistOrgChartDbSnapshot("auth:change-password");
 
   return NextResponse.json({ success: true });
 }

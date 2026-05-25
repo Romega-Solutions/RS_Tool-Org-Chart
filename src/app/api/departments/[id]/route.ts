@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { departments, people } from "@/lib/db/schema";
 import { eq, count } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
@@ -32,6 +32,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }).where(eq(departments.id, deptId)).returning().get();
   if (!result) return NextResponse.json({ error: "Department not found" }, { status: 404 });
   logChange("updated", "department", result.id, result.name, actor.username, { name, color, displayOrder });
+  await persistOrgChartDbSnapshot("departments:update");
   return NextResponse.json(result);
 }
 
@@ -49,5 +50,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const deptName = dept?.name ?? `ID ${deptId}`;
   db.delete(departments).where(eq(departments.id, deptId)).run();
   logChange("deleted", "department", deptId, deptName, actor.username);
+  await persistOrgChartDbSnapshot("departments:delete");
   return NextResponse.json({ success: true });
 }

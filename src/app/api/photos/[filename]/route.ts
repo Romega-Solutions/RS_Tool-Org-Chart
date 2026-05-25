@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
@@ -37,6 +37,10 @@ export async function DELETE(
   const deleted = await deleteProfilePhoto(filename);
   if (!deleted) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+
+  if (affectedPeople.length > 0) {
+    await persistOrgChartDbSnapshot("photos:delete-linked");
   }
 
   return NextResponse.json({ success: true, cleared: affectedPeople.length });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
@@ -118,6 +118,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const result = db.select().from(people).where(eq(people.id, personId)).get();
   if (!result) return NextResponse.json({ error: "Person not found" }, { status: 404 });
   logChange("updated", "person", personId, result.name, actor.username, updateValues);
+  await persistOrgChartDbSnapshot("people:update");
   return NextResponse.json(result);
 }
 
@@ -134,5 +135,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const personName = person?.name ?? `ID ${personId}`;
   db.delete(people).where(eq(people.id, personId)).run();
   logChange("deleted", "person", personId, personName, actor.username);
+  await persistOrgChartDbSnapshot("people:delete");
   return NextResponse.json({ success: true });
 }

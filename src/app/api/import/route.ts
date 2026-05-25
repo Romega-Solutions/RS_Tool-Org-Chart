@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
@@ -109,6 +109,9 @@ export async function POST(request: Request) {
       const managerId = nameToId.get(row.reports_to_name.toLowerCase());
       if (personId && managerId) db.update(people).set({ reportsTo: managerId }).where(eq(people.id, personId)).run();
     }
+  }
+  if (results.some((result) => result.status === "created" || result.status === "updated")) {
+    await persistOrgChartDbSnapshot("import:csv");
   }
   return NextResponse.json({ results });
 }

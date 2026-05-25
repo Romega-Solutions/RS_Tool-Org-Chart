@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
 import { requireEditor } from "@/lib/auth";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { fetchExternalPhoto, saveProfilePhoto } from "@/lib/photo-storage";
 import { setSheetPhotoSource } from "@/lib/secondary-reporting";
@@ -84,11 +84,15 @@ export async function POST(request: Request) {
     const batchResults = await Promise.all(batch.map((person) => importCandidate(person, actor.username)));
     results.push(...batchResults.filter((result): result is ImportResult => Boolean(result)));
   }
+  const imported = results.filter((result) => result.status === "imported").length;
+  if (imported > 0) {
+    await persistOrgChartDbSnapshot("photos:import-external");
+  }
 
   return NextResponse.json({
     results,
     summary: {
-      imported: results.filter((result) => result.status === "imported").length,
+      imported,
       skipped: results.filter((result) => result.status === "skipped").length,
       errors: results.filter((result) => result.status === "error").length,
       total: results.length,

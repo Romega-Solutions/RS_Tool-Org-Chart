@@ -20,7 +20,7 @@ type PhotoRow = {
 };
 
 function cleanEnvValue(value?: string) {
-  return (value ?? "").replace(/\\r|\\n/g, "").trim();
+  return (value ?? "").replace(/\r|\n|\\r|\\n/g, "").trim();
 }
 
 function n8nPhotoConfig() {

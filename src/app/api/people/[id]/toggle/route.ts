@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
@@ -35,5 +35,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     actor.username
   );
   const updated = db.select().from(people).where(eq(people.id, personId)).get();
+  await persistOrgChartDbSnapshot("people:toggle");
   return NextResponse.json(updated);
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people, departments } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
@@ -77,5 +77,6 @@ export async function POST(request: Request) {
     displayOrder: nextDisplayOrder,
   }).returning().get();
   logChange("created", "person", result.id, result.name, actor.username);
+  await persistOrgChartDbSnapshot("people:create");
   return NextResponse.json(result, { status: 201 });
 }

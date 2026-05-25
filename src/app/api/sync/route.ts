@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { people, departments, settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Papa from "papaparse";
@@ -469,6 +469,8 @@ export async function POST(request: Request) {
       .values({ key: "last_sync_summary", value: JSON.stringify(syncSummary) })
       .onConflictDoUpdate({ target: settings.key, set: { value: JSON.stringify(syncSummary) } })
       .run();
+
+    await persistOrgChartDbSnapshot("sync:sheet");
   }
 
   return NextResponse.json({

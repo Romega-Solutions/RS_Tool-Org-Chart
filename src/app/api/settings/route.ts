@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
+import { db, persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { settings } from "@/lib/db/schema";
 import { requireEditor, getUserFromRequest } from "@/lib/auth";
 import { settingsRowsToMap } from "@/lib/settings-map";
@@ -26,5 +26,6 @@ export async function PATCH(request: Request) {
   for (const [key, value] of Object.entries(body)) {
     db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
   }
+  await persistOrgChartDbSnapshot("settings:patch");
   return NextResponse.json({ success: true });
 }

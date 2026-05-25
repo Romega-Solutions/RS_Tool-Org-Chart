@@ -137,6 +137,7 @@ The deploy job only runs after CI passes.
 | `N8N_URL` | Optional | n8n instance URL for durable Data Table-backed storage features. |
 | `N8N_API_KEY` | Optional | n8n API key for durable Data Table-backed storage features. |
 | `N8N_ORG_CHART_PHOTO_TABLE_ID` | Optional | n8n Data Table id for durable uploaded/cropped/imported photo storage. Falls back to local filesystem when unset. |
+| `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` | Optional | n8n Data Table id for a single-row SQLite DB snapshot used as a serverless durability bridge. Falls back to local SQLite only when unset. |
 
 For n8n, set these on the n8n app, not the org chart app:
 
@@ -261,8 +262,9 @@ Current dependency baseline:
 
 Runtime data is intentionally ignored by git:
 
-- SQLite DB: `data/orgchart.db`
+- SQLite DB: `data/orgchart.db` locally and in standalone Docker. On serverless deployments, set `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to restore the DB into `/tmp` on cold start and persist snapshots after admin mutations.
 - Uploaded photos: `public/uploads/photos/` by default, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments. On serverless deployments, set `N8N_ORG_CHART_PHOTO_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to persist managed photos in n8n Data Table storage instead. Use Photos -> Clean Unused to remove duplicate files or rows that are no longer assigned.
+- The n8n SQLite snapshot path is a pragmatic durability bridge for Vercel/serverless. It is not a full managed SQL replacement for high-concurrency editing because multiple warm instances can each hold a local SQLite copy.
 
 For QA, back up and restore those folders before running mutating product-flow tests against local data.
 
