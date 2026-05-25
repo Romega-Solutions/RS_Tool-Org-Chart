@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { requireAuth } from "@/lib/auth";
+import { listProfilePhotos } from "@/lib/photo-storage";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const [, err] = await requireAuth(request);
   if (err) return err;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
 
-  let filenames: string[] = [];
+  let managedPhotos: Array<{ filename: string; url: string }> = [];
   try {
-    filenames = await fs.readdir(uploadDir);
+    managedPhotos = await listProfilePhotos();
   } catch {
     return NextResponse.json([]);
   }
@@ -33,12 +31,11 @@ export async function GET(request: Request) {
   }
 
   const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp)$/i;
-  const photos = filenames
-    .filter((f) => IMAGE_EXT.test(f))
-    .map((filename) => ({
-      filename,
-      url: `/uploads/photos/${filename}`,
-      usedBy: usageMap.get(filename) ?? null,
+  const photos = managedPhotos
+    .filter((photo) => IMAGE_EXT.test(photo.filename))
+    .map((photo) => ({
+      ...photo,
+      usedBy: usageMap.get(photo.filename) ?? null,
     }))
     .sort((a, b) => b.filename.localeCompare(a.filename));
 

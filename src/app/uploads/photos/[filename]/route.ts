@@ -1,17 +1,10 @@
-import fs from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { getPhotoUploadDir } from "@/lib/photo-storage";
+import { contentTypeForPhoto, readProfilePhoto } from "@/lib/photo-storage";
 
 export const dynamic = "force-dynamic";
 
-const CONTENT_TYPES: Record<string, string> = {
-  ".gif": "image/gif",
-  ".jpeg": "image/jpeg",
-  ".jpg": "image/jpeg",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
+const ALLOWED_PHOTO_EXTENSIONS = new Set([".gif", ".jpeg", ".jpg", ".png", ".webp"]);
 
 function isSafePhotoFilename(filename: string) {
   return !filename.includes("/") && !filename.includes("\\") && !filename.includes("..");
@@ -24,18 +17,19 @@ export async function GET(
   const { filename } = await params;
   const ext = path.extname(filename).toLowerCase();
 
-  if (!isSafePhotoFilename(filename) || !CONTENT_TYPES[ext]) {
+  if (!isSafePhotoFilename(filename) || !ALLOWED_PHOTO_EXTENSIONS.has(ext)) {
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
   }
 
-  const filePath = path.join(getPhotoUploadDir(), filename);
-
   try {
-    const file = await fs.readFile(filePath);
-    return new NextResponse(file, {
+    const photo = await readProfilePhoto(filename);
+    if (!photo) {
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+    return new NextResponse(new Uint8Array(photo.bytes), {
       headers: {
         "Cache-Control": "public, max-age=31536000, immutable",
-        "Content-Type": CONTENT_TYPES[ext],
+        "Content-Type": photo.contentType || contentTypeForPhoto(filename),
       },
     });
   } catch {

@@ -1,10 +1,8 @@
-import fs from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
-import { getPhotoUploadDir } from "@/lib/photo-storage";
+import { deleteProfilePhoto, listProfilePhotos } from "@/lib/photo-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +12,9 @@ export async function POST(request: Request) {
   const [, authErr] = await requireEditor(request);
   if (authErr) return authErr;
 
-  const uploadDir = getPhotoUploadDir();
-
-  let filenames: string[] = [];
+  let managedPhotos: Array<{ filename: string }> = [];
   try {
-    filenames = await fs.readdir(uploadDir);
+    managedPhotos = await listProfilePhotos();
   } catch {
     return NextResponse.json({ deleted: 0, failed: [], totalUnused: 0 });
   }
@@ -31,14 +27,17 @@ export async function POST(request: Request) {
     if (filename) usedFilenames.add(filename);
   }
 
-  const unused = filenames.filter((filename) => IMAGE_EXT.test(filename) && !usedFilenames.has(filename));
+  const unused = managedPhotos
+    .map((photo) => photo.filename)
+    .filter((filename) => IMAGE_EXT.test(filename) && !usedFilenames.has(filename));
   const failed: string[] = [];
   let deleted = 0;
 
   for (const filename of unused) {
     try {
-      await fs.unlink(path.join(uploadDir, filename));
-      deleted++;
+      const didDelete = await deleteProfilePhoto(filename);
+      if (didDelete) deleted++;
+      else failed.push(filename);
     } catch {
       failed.push(filename);
     }

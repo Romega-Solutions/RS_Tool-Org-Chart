@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
 import { db } from "@/lib/db/client";
 import { people } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
 import { requireEditor } from "@/lib/auth";
+import { deleteProfilePhoto } from "@/lib/photo-storage";
 
 export async function DELETE(
   request: Request,
@@ -20,7 +19,6 @@ export async function DELETE(
   const [actor, authErr] = await requireEditor(request);
   if (authErr) return authErr;
   const photoUrl = `/uploads/photos/${filename}`;
-  const filePath = path.join(process.cwd(), "public", "uploads", "photos", filename);
 
   const affectedPeople = db
     .select({ id: people.id, name: people.name })
@@ -36,9 +34,8 @@ export async function DELETE(
     logChange("updated", "person", person.id, person.name, actor.username, { photoUrl: null });
   }
 
-  try {
-    await fs.unlink(filePath);
-  } catch {
+  const deleted = await deleteProfilePhoto(filename);
+  if (!deleted) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
