@@ -28,7 +28,7 @@ export async function GET(
     }
     return new NextResponse(new Uint8Array(photo.bytes), {
       headers: {
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "no-store",
         "Content-Type": photo.contentType || contentTypeForPhoto(filename),
       },
     });
