@@ -134,6 +134,9 @@ The deploy job only runs after CI passes.
 | `CRON_SECRET` | Optional | Bearer token for `/api/sync/cron`. |
 | `SYNC_INTERVAL` | Optional | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off`. |
 | `API_KEY` | Optional | External integration key. Grants editor access through `X-API-Key`. |
+| `N8N_URL` | Optional | n8n instance URL for durable Data Table-backed storage features. |
+| `N8N_API_KEY` | Optional | n8n API key for durable Data Table-backed storage features. |
+| `N8N_ORG_CHART_PHOTO_TABLE_ID` | Optional | n8n Data Table id for durable uploaded/cropped/imported photo storage. Falls back to local filesystem when unset. |
 
 For n8n, set these on the n8n app, not the org chart app:
 
@@ -259,7 +262,7 @@ Current dependency baseline:
 Runtime data is intentionally ignored by git:
 
 - SQLite DB: `data/orgchart.db`
-- Uploaded photos: `public/uploads/photos/`, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments. Use Photos -> Clean Unused to remove duplicate files that are no longer assigned.
+- Uploaded photos: `public/uploads/photos/` by default, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments. On serverless deployments, set `N8N_ORG_CHART_PHOTO_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to persist managed photos in n8n Data Table storage instead. Use Photos -> Clean Unused to remove duplicate files or rows that are no longer assigned.
 
 For QA, back up and restore those folders before running mutating product-flow tests against local data.
 
