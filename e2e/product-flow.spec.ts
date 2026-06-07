@@ -50,18 +50,20 @@ test.describe.serial("Product QA flow", () => {
   });
 
   test("email signature custom route hands off to the Email Signature app", async ({ page }) => {
-    const response = await page.request.get("/email-signature/api/health");
+    for (const path of ["/email-signature/api/health", appPath("/email-signature/api/health")]) {
+      const response = await page.request.get(path);
 
-    expect(response.status()).toBe(200);
-    await expect(response).toBeOK();
+      expect(response.status()).toBe(200);
+      await expect(response).toBeOK();
 
-    const body = await response.json();
-    expect(body).toEqual(
-      expect.objectContaining({
-        ok: true,
-        service: "email-signature",
-      })
-    );
+      const body = await response.json();
+      expect(body).toEqual(
+        expect.objectContaining({
+          ok: true,
+          service: "email-signature",
+        })
+      );
+    }
   });
 
   test("login form redirects without duplicating the app prefix", async ({ page }) => {
