@@ -7,11 +7,21 @@ const SECRET_KEY = new TextEncoder().encode(
 );
 const SESSION_COOKIE = "orgchart_token";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
+const EMAIL_SIGNATURE_PUBLIC_URL =
+  process.env.EMAIL_SIGNATURE_PUBLIC_URL ?? "https://rs-tool-email-signature.vercel.app";
 
 function appPath(path: string) {
   if (!BASE_PATH || BASE_PATH === "/") return path;
   if (path === BASE_PATH || path.startsWith(`${BASE_PATH}/`)) return path;
   return `${BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function emailSignatureUrl(path: string, search: string) {
+  const target = new URL(EMAIL_SIGNATURE_PUBLIC_URL);
+  const suffix = path === "/email-signature" ? "/" : path.slice("/email-signature".length);
+  target.pathname = `${target.pathname.replace(/\/$/, "")}${suffix}`;
+  target.search = search;
+  return target;
 }
 
 // Global rate limiter: 200 req/min per IP (DDoS mitigation at edge)
@@ -54,6 +64,10 @@ setInterval(() => {
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  if (path === "/email-signature" || path.startsWith("/email-signature/")) {
+    return NextResponse.redirect(emailSignatureUrl(path, request.nextUrl.search), 307);
+  }
+
   // Skip rate limiting for auth endpoints (they have their own brute-force protection)
   // and for Next.js internals / static assets
   if (!path.startsWith("/api/auth/") && !path.startsWith("/_next/")) {
@@ -86,5 +100,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/chart/:path*", "/admin/:path*", "/account/:path*", "/api/:path*"],
+  matcher: [
+    "/chart/:path*",
+    "/admin/:path*",
+    "/account/:path*",
+    "/api/:path*",
+    "/email-signature",
+    "/email-signature/:path*",
+  ],
 };

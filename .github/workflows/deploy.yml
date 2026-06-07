@@ -149,6 +149,23 @@ jobs:
             exit 1
           fi
 
+          email_signature_body="$(mktemp)"
+          email_signature_status="$(
+            curl --silent --show-error --location --output "$email_signature_body" --write-out "%{http_code}" --max-time 30 \
+              "$LIVE_URL/email-signature/api/health"
+          )"
+          if [ "$email_signature_status" != "200" ]; then
+            echo "::error::Expected /email-signature/api/health to resolve through the tools-domain handoff, got HTTP $email_signature_status"
+            cat "$email_signature_body"
+            exit 1
+          fi
+
+          if ! grep -q '"service":"email-signature"' "$email_signature_body"; then
+            echo "::error::Expected Email Signature health payload from /email-signature/api/health."
+            cat "$email_signature_body"
+            exit 1
+          fi
+
           echo "Live deep-route verification passed."
 
       - name: Collect VPS diagnostics on deploy failure
