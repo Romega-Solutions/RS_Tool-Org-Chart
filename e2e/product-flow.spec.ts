@@ -49,6 +49,21 @@ test.describe.serial("Product QA flow", () => {
     expect(page.url()).not.toContain("/org-chart/org-chart/");
   });
 
+  test("email signature custom route hands off to the Email Signature app", async ({ page }) => {
+    const response = await page.request.get("/email-signature/api/health");
+
+    expect(response.status()).toBe(200);
+    await expect(response).toBeOK();
+
+    const body = await response.json();
+    expect(body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        service: "email-signature",
+      })
+    );
+  });
+
   test("login form redirects without duplicating the app prefix", async ({ page }) => {
     const user = { username: "admin", name: "Admin", role: "editor" };
 

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
+const emailSignatureUrl = process.env.EMAIL_SIGNATURE_PUBLIC_URL ?? "https://rs-tool-email-signature.vercel.app";
 
 const nextConfig: NextConfig = {
   basePath,
@@ -15,7 +16,19 @@ const nextConfig: NextConfig = {
         basePath: false,
       },
       {
-        source: "/:path((?!org-chart|_next|api|uploads|assets|favicon.ico).*)",
+        source: "/email-signature",
+        destination: emailSignatureUrl,
+        permanent: false,
+        basePath: false,
+      },
+      {
+        source: "/email-signature/:path*",
+        destination: `${emailSignatureUrl}/:path*`,
+        permanent: false,
+        basePath: false,
+      },
+      {
+        source: "/:path((?!org-chart|email-signature|_next|api|uploads|assets|favicon.ico).*)",
         destination: `${basePath}/:path`,
         permanent: false,
         basePath: false,

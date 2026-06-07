@@ -131,6 +131,7 @@ The deploy job only runs after CI passes.
 | `SESSION_SECRET` | Production required | JWT signing key. Production startup fails without it. Use at least 32 random characters. |
 | `NEXT_PUBLIC_BASE_PATH` | Production required | App base path. Production uses `/org-chart`. |
 | `PUBLIC_APP_ORIGIN` | Recommended behind proxy | Browser-facing origin for generated public links. Production uses `https://tools.romega-solutions.com`. |
+| `EMAIL_SIGNATURE_PUBLIC_URL` | Optional | External Email Signature app URL used by the `tools.romega-solutions.com/email-signature` handoff. Defaults to `https://rs-tool-email-signature.vercel.app`. |
 | `CRON_SECRET` | Optional | Bearer token for `/api/sync/cron`. |
 | `SYNC_INTERVAL` | Optional | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off`. |
 | `API_KEY` | Optional | External integration key. Grants editor access through `X-API-Key`. |
@@ -273,6 +274,8 @@ For QA, back up and restore those folders before running mutating product-flow t
 The current app is deployed through GitHub Actions to the VPS/Easypanel app.
 
 The Easypanel domain route for `tools.romega-solutions.com` should point to the app service over HTTP port `80`; Easypanel maps the running Next.js service to that port in production.
+
+The Org Chart app also owns the tools-domain root routing. Requests under `/email-signature` are redirected to `EMAIL_SIGNATURE_PUBLIC_URL` so the shared tools domain can hand users to the standalone Email Signature deployment without routing them into `/org-chart`.
 
 The Docker runtime command forces `HOSTNAME=0.0.0.0` so the standalone Next.js server binds to the container network interface. Keep Easypanel's runtime `PORT` value intact; local compose still defaults to `3000`.
 
