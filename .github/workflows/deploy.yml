@@ -104,6 +104,60 @@ jobs:
           echo "Easypanel deployment webhook triggered."
           sleep 90
 
+      - name: Force active Swarm service refresh
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+
+            PROJECT_DIR="/etc/easypanel/projects/romega-projects/rs_tool-org-chart/code"
+            SERVICE_NAME="romega-projects_rs_tool-org-chart"
+            IMAGE_TAG="easypanel/romega-projects/rs_tool-org-chart:latest"
+
+            echo "=== Verifying active service ==="
+            if ! sudo docker service inspect "$SERVICE_NAME" >/dev/null 2>&1; then
+              echo "Service $SERVICE_NAME was not found; leaving Easypanel webhook deployment as the only deployment path."
+              exit 0
+            fi
+
+            echo "=== Building refreshed image from synced source ==="
+            cd "$PROJECT_DIR"
+            sudo docker build --pull -t "$IMAGE_TAG" .
+
+            echo "=== Forcing Swarm service to refreshed image ==="
+            sudo docker service update --force --image "$IMAGE_TAG" "$SERVICE_NAME"
+
+            echo "=== Waiting for service convergence ==="
+            for attempt in $(seq 1 40); do
+              replicas="$(sudo docker service ls --filter "name=$SERVICE_NAME" --format '{{.Replicas}}' | head -1)"
+              echo "Attempt $attempt/40 replicas=$replicas"
+              if [ "$replicas" = "1/1" ]; then
+                break
+              fi
+              if [ "$attempt" = "40" ]; then
+                echo "Service did not converge to 1/1."
+                sudo docker service ps --no-trunc "$SERVICE_NAME" || true
+                exit 1
+              fi
+              sleep 10
+            done
+
+            echo "=== Probing service task locally ==="
+            task_container="$(sudo docker ps --filter "name=$SERVICE_NAME" --format '{{.Names}}' | head -1)"
+            if [ -z "$task_container" ]; then
+              echo "No running task container found for $SERVICE_NAME."
+              sudo docker service ps --no-trunc "$SERVICE_NAME" || true
+              exit 1
+            fi
+
+            sudo docker exec "$task_container" sh -lc 'wget -S -O - http://127.0.0.1:${PORT:-80}/org-chart/api/health 2>&1 | head -80'
+            sudo docker exec "$task_container" sh -lc 'wget -S -O - http://127.0.0.1:${PORT:-80}/org-chart/email-signature/api/health 2>&1 | head -80'
+
       - name: Verify live site
         env:
           LIVE_URL: https://tools.romega-solutions.com
