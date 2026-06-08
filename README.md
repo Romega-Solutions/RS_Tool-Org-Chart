@@ -277,6 +277,8 @@ The Easypanel domain route for `tools.romega-solutions.com` should point to the 
 
 The Org Chart app also owns the tools-domain root routing. Requests under `/email-signature` are redirected to `EMAIL_SIGNATURE_PUBLIC_URL` so the shared tools domain can hand users to the standalone Email Signature deployment without routing them into `/org-chart`.
 
+The deploy workflow first triggers the Easypanel webhook, then builds the refreshed image on the VPS and forces the active Docker Swarm service `romega-projects_rs_tool-org-chart` to the rebuilt image. Keep that fallback in place unless Easypanel webhook-only deploys are proven to replace the running service image reliably.
+
 The Docker runtime command forces `HOSTNAME=0.0.0.0` so the standalone Next.js server binds to the container network interface. Keep Easypanel's runtime `PORT` value intact; local compose still defaults to `3000`.
 
 Older Docker Compose and hardening scripts remain in the repo for fresh-server setup or recovery, but the active production path is the GitHub Actions deploy workflow.
