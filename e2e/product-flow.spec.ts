@@ -59,11 +59,19 @@ test.describe.serial("Product QA flow", () => {
     await expect(page.getByRole("link", { name: /Email Signature/ })).toHaveAttribute("href", "/email-signature");
   });
 
-  test("unconfigured reserved tool slugs return to the tools directory", async ({ page }) => {
-    await page.goto("/ats");
+  test("reserved tool slugs route to configured production tools", async ({ page }) => {
+    const expectedRoutes = [
+      ["/ats", "https://rs-tool-ats.vercel.app/"],
+      ["/certificate-creator", "https://rs-tool-romega-certificate-creator.vercel.app/"],
+      ["/job-scraper", "https://rs-tool-job-scraper.vercel.app/"],
+      ["/ticketing", "/org-chart/tools"],
+    ] as const;
 
-    await expect(page).toHaveURL(/\/org-chart\/tools$/);
-    await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
+    for (const [path, location] of expectedRoutes) {
+      const response = await page.request.get(path, { maxRedirects: 0 });
+      expect(response.status(), path).toBe(307);
+      expect(response.headers().location, path).toBe(location);
+    }
   });
 
   test("email signature custom route proxies the Email Signature app without leaving tools domain", async ({ page }) => {

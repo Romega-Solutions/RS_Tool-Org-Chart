@@ -7,9 +7,9 @@ export type ToolEntry = {
 };
 
 const optionalToolUrls = {
-  ats: process.env.TOOLS_ATS_URL,
-  "certificate-creator": process.env.TOOLS_CERTIFICATE_CREATOR_URL,
-  "job-scraper": process.env.TOOLS_JOB_SCRAPER_URL,
+  ats: process.env.TOOLS_ATS_URL ?? "https://rs-tool-ats.vercel.app",
+  "certificate-creator": process.env.TOOLS_CERTIFICATE_CREATOR_URL ?? "https://rs-tool-romega-certificate-creator.vercel.app",
+  "job-scraper": process.env.TOOLS_JOB_SCRAPER_URL ?? "https://rs-tool-job-scraper.vercel.app",
   ticketing: process.env.TOOLS_TICKETING_URL,
 };
 

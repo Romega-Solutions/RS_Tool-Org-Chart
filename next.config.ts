@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";
 const emailSignatureUrl = process.env.EMAIL_SIGNATURE_PUBLIC_URL ?? "https://rs-tool-email-signature.vercel.app";
+const defaultToolUrls = {
+  ats: process.env.TOOLS_ATS_URL ?? "https://rs-tool-ats.vercel.app",
+  certificateCreator: process.env.TOOLS_CERTIFICATE_CREATOR_URL ?? "https://rs-tool-romega-certificate-creator.vercel.app",
+  jobScraper: process.env.TOOLS_JOB_SCRAPER_URL ?? "https://rs-tool-job-scraper.vercel.app",
+  ticketing: process.env.TOOLS_TICKETING_URL,
+};
 const reservedRootSegments = [
   "org-chart",
   "email-signature",
@@ -109,10 +115,10 @@ const nextConfig: NextConfig = {
         permanent: false,
         basePath: false,
       },
-      ...toolRedirects("/ats", process.env.TOOLS_ATS_URL),
-      ...toolRedirects("/certificate-creator", process.env.TOOLS_CERTIFICATE_CREATOR_URL),
-      ...toolRedirects("/job-scraper", process.env.TOOLS_JOB_SCRAPER_URL),
-      ...toolRedirects("/ticketing", process.env.TOOLS_TICKETING_URL),
+      ...toolRedirects("/ats", defaultToolUrls.ats),
+      ...toolRedirects("/certificate-creator", defaultToolUrls.certificateCreator),
+      ...toolRedirects("/job-scraper", defaultToolUrls.jobScraper),
+      ...toolRedirects("/ticketing", defaultToolUrls.ticketing),
       {
         source: `/:path((?!${reservedRootSegments}).*)`,
         destination: `${basePath}/:path`,
