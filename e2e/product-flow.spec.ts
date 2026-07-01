@@ -49,8 +49,23 @@ test.describe.serial("Product QA flow", () => {
     expect(page.url()).not.toContain("/org-chart/org-chart/");
   });
 
-  test("email signature custom route hands off to the Email Signature app", async ({ page }) => {
-    for (const path of ["/email-signature/api/health", appPath("/email-signature/api/health")]) {
+  test("tools domain root renders the shared tools directory", async ({ page }) => {
+    const response = await page.goto("/");
+
+    expect(response?.status()).toBe(200);
+    await expect(page).toHaveURL(/\/org-chart\/tools$/);
+    await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Org Chart/ })).toHaveAttribute("href", "/org-chart");
+    await expect(page.getByRole("link", { name: /Email Signature/ })).toHaveAttribute("href", "/email-signature");
+  });
+
+  test("email signature custom route proxies the Email Signature app without leaving tools domain", async ({ page }) => {
+    const pageResponse = await page.goto("/email-signature");
+    expect(pageResponse?.status()).toBe(200);
+    await expect(page).toHaveURL(/\/email-signature$/);
+    expect(new URL(page.url()).pathname).toBe("/email-signature");
+
+    for (const path of ["/email-signature/api/health", "/api/signature/schema"]) {
       const response = await page.request.get(path);
 
       expect(response.status()).toBe(200);

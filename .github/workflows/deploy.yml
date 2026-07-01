@@ -156,7 +156,7 @@ jobs:
             fi
 
             sudo docker exec "$task_container" sh -lc 'wget -S -O - http://127.0.0.1:${PORT:-80}/org-chart/api/health 2>&1 | head -80'
-            sudo docker exec "$task_container" sh -lc 'wget -S -O - http://127.0.0.1:${PORT:-80}/org-chart/email-signature/api/health 2>&1 | head -80'
+            sudo docker exec "$task_container" sh -lc 'wget -S -O - http://127.0.0.1:${PORT:-80}/email-signature/api/health 2>&1 | head -80'
 
       - name: Verify live site
         env:
@@ -188,6 +188,12 @@ jobs:
           account_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/org-chart/account")"
           if [ "$account_status" != "200" ] && [ "$account_status" != "307" ] && [ "$account_status" != "308" ]; then
             echo "::error::Expected /org-chart/account to be available or redirect to login, got HTTP $account_status"
+            exit 1
+          fi
+
+          tools_home_status="$(curl --silent --show-error --location --output /dev/null --write-out "%{http_code}" --max-time 30 "$LIVE_URL/")"
+          if [ "$tools_home_status" != "200" ]; then
+            echo "::error::Expected tools-domain root to resolve to the tools directory, got HTTP $tools_home_status"
             exit 1
           fi
 
