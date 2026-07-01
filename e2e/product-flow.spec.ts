@@ -60,6 +60,7 @@ test.describe.serial("Product QA flow", () => {
     expect(response?.status()).toBe(200);
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Configured Next" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Org Chart/ })).toHaveAttribute("href", "/org-chart/chart");
     await expect(page.getByRole("link", { name: /Email Signature/ })).toHaveAttribute("href", "/email-signature");
 

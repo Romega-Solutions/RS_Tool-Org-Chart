@@ -1,4 +1,4 @@
-import { ArrowUpRight, ExternalLink, Wrench } from "lucide-react";
+import { ArrowUpRight, Wrench } from "lucide-react";
 import { RootUrlNormalizer } from "@/components/tools/root-url-normalizer";
 import { toolEntries } from "@/lib/tools-registry";
 
@@ -31,10 +31,10 @@ export default function ToolsHomePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[1fr_280px] lg:px-10">
+      <section className={`mx-auto grid max-w-6xl gap-8 px-5 py-8 sm:px-8 lg:px-10 ${plannedTools.length > 0 ? "lg:grid-cols-[1fr_280px]" : ""}`}>
         <div>
           <h2 className="mb-4 text-sm font-bold uppercase tracking-normal text-muted-foreground">Available Tools</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {liveTools.map((tool) => (
               <a
                 key={tool.slug}
@@ -53,20 +53,19 @@ export default function ToolsHomePage() {
           </div>
         </div>
 
-        <aside className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-sm font-bold uppercase tracking-normal text-muted-foreground">Configured Next</h2>
-          <div className="mt-4 space-y-4">
-            {plannedTools.map((tool) => (
-              <div key={tool.slug} className="border-b border-border pb-4 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between gap-3">
+        {plannedTools.length > 0 && (
+          <aside className="rounded-lg border border-border bg-card p-5">
+            <h2 className="text-sm font-bold uppercase tracking-normal text-muted-foreground">Configured Next</h2>
+            <div className="mt-4 space-y-4">
+              {plannedTools.map((tool) => (
+                <div key={tool.slug} className="border-b border-border pb-4 last:border-0 last:pb-0">
                   <h3 className="font-semibold">{tool.name}</h3>
-                  <ExternalLink className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
-              </div>
-            ))}
-          </div>
-        </aside>
+              ))}
+            </div>
+          </aside>
+        )}
       </section>
     </main>
   );
