@@ -73,11 +73,10 @@ jobs:
             echo "=== Deployment Start ==="
             cd "$PROJECT_DIR"
             
-            # Use GITHUB_TOKEN passed as an environment variable to authenticate the clone
-            # This is the most standard way for GitHub Actions to talk to GitHub
+            # Use the built-in GitHub Actions token to authenticate the clone.
             echo "=== Re-cloning master with AUTH ==="
             sudo rm -rf /tmp/org-chart-master
-            sudo git clone --depth=1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Romega-Solutions/RS_Tool-Org-Chart.git /tmp/org-chart-master
+            sudo git clone --depth=1 https://x-access-token:${{ github.token }}@github.com/Romega-Solutions/RS_Tool-Org-Chart.git /tmp/org-chart-master
             
             echo "=== Copying files ==="
             sudo cp -rf /tmp/org-chart-master/* .
@@ -100,8 +99,11 @@ jobs:
             exit 1
           fi
 
-          curl --fail --silent --show-error --location --max-time 60 "$EASYPANEL_DEPLOY_WEBHOOK" >/dev/null
-          echo "Easypanel deployment webhook triggered."
+          if curl --fail --silent --show-error --location --max-time 60 "$EASYPANEL_DEPLOY_WEBHOOK" >/dev/null; then
+            echo "Easypanel deployment webhook triggered."
+          else
+            echo "::warning::Easypanel webhook failed. Continuing because the next step builds the synced source and forces the active Swarm service refresh."
+          fi
           sleep 90
 
       - name: Force active Swarm service refresh
