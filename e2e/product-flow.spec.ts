@@ -65,6 +65,17 @@ test.describe.serial("Product QA flow", () => {
     await expect(page).toHaveURL(/\/email-signature$/);
     expect(new URL(page.url()).pathname).toBe("/email-signature");
 
+    const html = await page.content();
+    const assetPaths = Array.from(html.matchAll(/(?:src|href)="([^"]+)"/g))
+      .map((match) => match[1])
+      .filter((path) => path.startsWith("/_astro/") || ["/romega-logo.svg", "/address.svg", "/fav-icon.ico"].includes(path));
+    expect(assetPaths.length).toBeGreaterThan(0);
+
+    for (const assetPath of assetPaths.slice(0, 4)) {
+      const assetResponse = await page.request.get(assetPath);
+      expect(assetResponse.status(), assetPath).toBe(200);
+    }
+
     for (const path of ["/email-signature/api/health", "/api/signature/schema"]) {
       const response = await page.request.get(path);
 

@@ -10,11 +10,18 @@ const reservedRootSegments = [
   "job-scraper",
   "ticketing",
   "tools",
+  "_astro",
   "_next",
   "api",
   "uploads",
   "assets",
+  "address.svg",
+  "at.svg",
+  "call.svg",
+  "fav-icon.ico",
   "favicon.ico",
+  "globe.svg",
+  "romega-logo.svg",
 ].join("|");
 
 function toolRedirects(source: string, destination?: string) {
@@ -61,6 +68,36 @@ const nextConfig: NextConfig = {
       {
         source: "/api/signature/:path*",
         destination: `${emailSignatureUrl}/api/signature/:path*`,
+        basePath: false,
+      },
+      {
+        source: "/address.svg",
+        destination: `${emailSignatureUrl}/address.svg`,
+        basePath: false,
+      },
+      {
+        source: "/at.svg",
+        destination: `${emailSignatureUrl}/at.svg`,
+        basePath: false,
+      },
+      {
+        source: "/call.svg",
+        destination: `${emailSignatureUrl}/call.svg`,
+        basePath: false,
+      },
+      {
+        source: "/fav-icon.ico",
+        destination: `${emailSignatureUrl}/fav-icon.ico`,
+        basePath: false,
+      },
+      {
+        source: "/globe.svg",
+        destination: `${emailSignatureUrl}/globe.svg`,
+        basePath: false,
+      },
+      {
+        source: "/romega-logo.svg",
+        destination: `${emailSignatureUrl}/romega-logo.svg`,
         basePath: false,
       },
     ];
