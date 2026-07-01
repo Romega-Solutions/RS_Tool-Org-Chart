@@ -51,6 +51,10 @@ test.describe.serial("Product QA flow", () => {
   });
 
   test("tools domain root renders the shared tools directory", async ({ page }) => {
+    const headResponse = await page.request.get(`${origin}/`, { maxRedirects: 0 });
+    expect(headResponse.status()).toBe(200);
+    expect(headResponse.headers().location).toBeUndefined();
+
     const response = await page.goto(`${origin}/`);
 
     expect(response?.status()).toBe(200);

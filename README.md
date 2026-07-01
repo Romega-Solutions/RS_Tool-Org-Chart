@@ -275,11 +275,11 @@ The current app is deployed through GitHub Actions to the VPS/Easypanel app.
 
 The Easypanel domain route for `tools.romega-solutions.com` should point to the app service over HTTP port `80`; Easypanel maps the running Next.js service to that port in production.
 
-The Org Chart app also owns the tools-domain root routing. Requests under `/email-signature` are redirected to `EMAIL_SIGNATURE_PUBLIC_URL` so the shared tools domain can hand users to the standalone Email Signature deployment without routing them into `/org-chart`.
+The Org Chart app also owns the tools-domain root routing. See `docs/tools-domain-route-map.md` for the public route contract, including `/portal` and the temporary `/ticketing` legacy alias. Requests under `/email-signature` are proxied to `EMAIL_SIGNATURE_PUBLIC_URL` so the shared tools domain can hand users to the standalone Email Signature deployment without routing them into `/org-chart`.
 
 The deploy workflow first triggers the Easypanel webhook, then builds the refreshed image on the VPS and forces the active Docker Swarm service `romega-projects_rs_tool-org-chart` to the rebuilt image. Keep that fallback in place unless Easypanel webhook-only deploys are proven to replace the running service image reliably.
 
-The Docker runtime command forces `HOSTNAME=0.0.0.0` so the standalone Next.js server binds to the container network interface. Keep Easypanel's runtime `PORT` value intact; local compose still defaults to `3000`.
+The Docker runtime starts `scripts/tools-domain-standalone-server.mjs` as a small wrapper in front of the generated Next.js standalone server. Keep Easypanel's runtime `PORT` value intact; the wrapper binds that public port and runs the internal Next.js server on `NEXT_INTERNAL_PORT` or `PORT + 1`. Local compose still defaults to `3000`.
 
 Older Docker Compose and hardening scripts remain in the repo for fresh-server setup or recovery, but the active production path is the GitHub Actions deploy workflow.
 
