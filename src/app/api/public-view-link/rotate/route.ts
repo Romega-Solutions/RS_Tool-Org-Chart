@@ -3,6 +3,8 @@ import { requireEditor } from "@/lib/auth";
 import { persistOrgChartDbSnapshot } from "@/lib/db/client";
 import { getPublicRequestOrigin, getPublicViewUrl, rotatePublicViewLink } from "@/lib/public-view-link";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const [, err] = await requireEditor(request);
   if (err) return err;

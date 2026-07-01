@@ -5,6 +5,8 @@ import { asc } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
 import { requireAuth, requireEditor, validateString, validateColor, validateInt } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const [, err] = await requireAuth(request);
   if (err) return err;

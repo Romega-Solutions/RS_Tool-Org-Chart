@@ -5,6 +5,8 @@ import { eq, asc } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
 import { requireEditor, validateString, validateInt, parseOptionalEmail } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const [, err] = await requireEditor(request);
   if (err) return err;

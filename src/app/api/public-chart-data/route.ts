@@ -7,6 +7,8 @@ import { isPublicViewCodeValid } from "@/lib/public-view-link";
 import { settingsRowsToMap } from "@/lib/settings-map";
 import type { Department, Person, Setting } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const code = new URL(request.url).searchParams.get("code");
   if (!isPublicViewCodeValid(code)) {

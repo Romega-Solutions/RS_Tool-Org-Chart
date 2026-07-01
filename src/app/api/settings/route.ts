@@ -5,6 +5,8 @@ import { requireEditor, getUserFromRequest } from "@/lib/auth";
 import { settingsRowsToMap } from "@/lib/settings-map";
 import type { Setting } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const user = await getUserFromRequest(request);
   const rows = db.select().from(settings).all() as Setting[];

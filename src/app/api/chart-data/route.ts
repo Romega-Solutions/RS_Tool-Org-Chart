@@ -7,6 +7,8 @@ import { requireAuth } from "@/lib/auth";
 import { settingsRowsToMap } from "@/lib/settings-map";
 import type { Department, Person, Setting } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const [, err] = await requireAuth(request);
   if (err) return err;

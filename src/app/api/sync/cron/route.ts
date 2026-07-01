@@ -4,6 +4,8 @@ import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { appPath } from "@/lib/paths";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/sync/cron — External cron trigger for Google Sheets sync.
  *

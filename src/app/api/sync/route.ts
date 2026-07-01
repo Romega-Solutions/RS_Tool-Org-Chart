@@ -7,6 +7,8 @@ import { requireEditor, parseOptionalEmail } from "@/lib/auth";
 import { normalizeDrivePhotoUrl } from "@/lib/photo-storage";
 import { getSheetPhotoSource, parseSecondaryReportsTo, setSecondaryReportsTo, setSheetPhotoSource } from "@/lib/secondary-reporting";
 
+export const dynamic = "force-dynamic";
+
 // Default department colors for auto-creation
 const DEPT_COLORS: Record<string, string> = {
   "executive": "#6366f1",

@@ -6,6 +6,8 @@ import { compare, hashSync } from "bcryptjs";
 import { requireAuth, checkCsrf } from "@/lib/auth";
 import { logChange } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const csrfErr = checkCsrf(request);
   if (csrfErr) return csrfErr;

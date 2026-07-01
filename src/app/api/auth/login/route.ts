@@ -7,6 +7,8 @@ import { signToken, SESSION_COOKIE } from "@/lib/session";
 import { checkLoginRateLimit, recordLoginFailure, clearLoginFailures, checkCsrf } from "@/lib/auth";
 import type { UserRole } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const csrfErr = checkCsrf(request);
   if (csrfErr) return csrfErr;

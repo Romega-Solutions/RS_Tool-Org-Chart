@@ -8,6 +8,8 @@ import { requireEditor, parseOptionalEmail } from "@/lib/auth";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const EMAIL_COLUMNS = ["email", "work email", "work_email"];
 
+export const dynamic = "force-dynamic";
+
 interface CsvRow {
   name: string;
   title: string;

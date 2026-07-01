@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { logChange } from "@/lib/audit";
 import { requireEditor } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(request: Request) {
   const body = await request.json();
   const personId = Number(body.personId);

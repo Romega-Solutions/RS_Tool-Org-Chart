@@ -7,6 +7,8 @@ import {
   saveProfilePhoto,
 } from "@/lib/photo-storage";
 
+export const dynamic = "force-dynamic";
+
 // Simple in-memory rate limiter: max 30 uploads per minute per user
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW = 60_000; // 1 minute

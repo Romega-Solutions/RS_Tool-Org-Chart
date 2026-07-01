@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireEditor } from "@/lib/auth";
 import { ensurePublicViewLink, getPublicRequestOrigin, getPublicViewUrl } from "@/lib/public-view-link";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const [, err] = await requireEditor(request);
   if (err) return err;
