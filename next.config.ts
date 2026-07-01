@@ -6,7 +6,7 @@ const defaultToolUrls = {
   ats: process.env.TOOLS_ATS_URL ?? "https://rs-tool-ats.vercel.app",
   certificateCreator: process.env.TOOLS_CERTIFICATE_CREATOR_URL ?? "https://rs-tool-romega-certificate-creator.vercel.app",
   jobScraper: process.env.TOOLS_JOB_SCRAPER_URL ?? "https://rs-tool-job-scraper.vercel.app",
-  ticketing: process.env.TOOLS_TICKETING_URL,
+  ticketing: process.env.TOOLS_TICKETING_URL ?? "https://portal.romega-solutions.com",
 };
 const reservedRootSegments = [
   "org-chart",
@@ -14,6 +14,7 @@ const reservedRootSegments = [
   "ats",
   "certificate-creator",
   "job-scraper",
+  "portal",
   "ticketing",
   "tools",
   "_astro",
@@ -119,6 +120,7 @@ const nextConfig: NextConfig = {
       ...toolRedirects("/ats", defaultToolUrls.ats),
       ...toolRedirects("/certificate-creator", defaultToolUrls.certificateCreator),
       ...toolRedirects("/job-scraper", defaultToolUrls.jobScraper),
+      ...toolRedirects("/portal", defaultToolUrls.ticketing),
       ...toolRedirects("/ticketing", defaultToolUrls.ticketing),
       {
         source: `/:path((?!${reservedRootSegments}).*)`,

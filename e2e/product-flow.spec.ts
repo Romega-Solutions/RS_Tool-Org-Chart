@@ -69,7 +69,8 @@ test.describe.serial("Product QA flow", () => {
       ["/ats", "https://rs-tool-ats.vercel.app/"],
       ["/certificate-creator", "https://rs-tool-romega-certificate-creator.vercel.app/"],
       ["/job-scraper", "https://rs-tool-job-scraper.vercel.app/"],
-      ["/ticketing", "/"],
+      ["/portal", "https://portal.romega-solutions.com/"],
+      ["/ticketing", "https://portal.romega-solutions.com/"],
     ] as const;
 
     for (const [path, location] of expectedRoutes) {

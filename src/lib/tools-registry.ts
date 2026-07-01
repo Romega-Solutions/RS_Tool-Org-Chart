@@ -10,7 +10,7 @@ const optionalToolUrls = {
   ats: process.env.TOOLS_ATS_URL ?? "https://rs-tool-ats.vercel.app",
   "certificate-creator": process.env.TOOLS_CERTIFICATE_CREATOR_URL ?? "https://rs-tool-romega-certificate-creator.vercel.app",
   "job-scraper": process.env.TOOLS_JOB_SCRAPER_URL ?? "https://rs-tool-job-scraper.vercel.app",
-  ticketing: process.env.TOOLS_TICKETING_URL,
+  portal: process.env.TOOLS_PORTAL_URL ?? process.env.TOOLS_TICKETING_URL ?? "https://portal.romega-solutions.com",
 };
 
 export const toolEntries: ToolEntry[] = [
@@ -50,10 +50,10 @@ export const toolEntries: ToolEntry[] = [
     status: optionalToolUrls["job-scraper"] ? "live" : "planned",
   },
   {
-    slug: "ticketing",
-    name: "Ticketing",
-    description: "Shared support ticket workflow for internal requests.",
-    href: optionalToolUrls.ticketing ?? "#",
-    status: optionalToolUrls.ticketing ? "live" : "planned",
+    slug: "portal",
+    name: "Employee Portal",
+    description: "Central portal for tasks, requests, and internal employee workflows.",
+    href: optionalToolUrls.portal ?? "#",
+    status: optionalToolUrls.portal ? "live" : "planned",
   },
 ];
