@@ -59,6 +59,13 @@ test.describe.serial("Product QA flow", () => {
     await expect(page.getByRole("link", { name: /Email Signature/ })).toHaveAttribute("href", "/email-signature");
   });
 
+  test("unconfigured reserved tool slugs return to the tools directory", async ({ page }) => {
+    await page.goto("/ats");
+
+    await expect(page).toHaveURL(/\/org-chart\/tools$/);
+    await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
+  });
+
   test("email signature custom route proxies the Email Signature app without leaving tools domain", async ({ page }) => {
     const pageResponse = await page.goto("/email-signature");
     expect(pageResponse?.status()).toBe(200);

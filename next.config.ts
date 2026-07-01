@@ -25,8 +25,7 @@ const reservedRootSegments = [
 ].join("|");
 
 function toolRedirects(source: string, destination?: string) {
-  if (!destination) return [];
-  const target = destination.replace(/\/$/, "");
+  const target = destination ? destination.replace(/\/$/, "") : `${basePath}/tools`;
 
   return [
     {
