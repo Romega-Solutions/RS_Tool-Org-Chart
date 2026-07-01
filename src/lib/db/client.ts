@@ -6,8 +6,12 @@ import fs from "fs";
 import os from "os";
 import { persistN8nSqliteSnapshot, restoreN8nSqliteSnapshot } from "@/lib/n8n-sqlite-snapshot";
 
+const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+
 const dataDir = process.env.ORGCHART_DB_DIR
   ? path.resolve(process.env.ORGCHART_DB_DIR)
+  : isProductionBuild
+    ? path.join(os.tmpdir(), `romega-orgchart-build-${process.pid}`)
   : process.env.VERCEL
     ? path.join(os.tmpdir(), "romega-orgchart")
     : path.join(process.cwd(), "data");
@@ -18,7 +22,7 @@ if (!fs.existsSync(dataDir)) {
 
 const dbPath = path.join(dataDir, "orgchart.db");
 
-if (!fs.existsSync(dbPath)) {
+if (!fs.existsSync(dbPath) && !isProductionBuild) {
   try {
     await restoreN8nSqliteSnapshot(dbPath);
   } catch (error) {
