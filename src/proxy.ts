@@ -54,6 +54,10 @@ setInterval(() => {
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  if (path === "/") {
+    return NextResponse.rewrite(new URL(appPath("/tools"), request.url));
+  }
+
   // Skip rate limiting for auth endpoints (they have their own brute-force protection)
   // and for Next.js internals / static assets
   if (!path.startsWith("/api/auth/") && !path.startsWith("/_next/")) {
@@ -87,6 +91,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    { source: "/" },
     "/chart/:path*",
     "/admin/:path*",
     "/account/:path*",

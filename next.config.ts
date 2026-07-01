@@ -31,7 +31,8 @@ const reservedRootSegments = [
 ].join("|");
 
 function toolRedirects(source: string, destination?: string) {
-  const target = destination ? destination.replace(/\/$/, "") : `${basePath}/tools`;
+  const target = destination ? destination.replace(/\/$/, "") : "/";
+  const pathTarget = target === "/" ? "/" : `${target}/:path*`;
 
   return [
     {
@@ -42,7 +43,7 @@ function toolRedirects(source: string, destination?: string) {
     },
     {
       source: `${source}/:path*`,
-      destination: `${target}/:path*`,
+      destination: pathTarget,
       permanent: false,
       basePath: false as const,
     },
@@ -110,8 +111,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/",
-        destination: `${basePath}/tools`,
+        source: `${basePath}/tools`,
+        destination: "/",
         permanent: false,
         basePath: false,
       },

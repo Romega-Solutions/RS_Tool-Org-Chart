@@ -1,4 +1,5 @@
 import { ArrowUpRight, ExternalLink, Wrench } from "lucide-react";
+import { RootUrlNormalizer } from "@/components/tools/root-url-normalizer";
 import { toolEntries } from "@/lib/tools-registry";
 
 export const metadata = {
@@ -12,6 +13,7 @@ export default function ToolsHomePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <RootUrlNormalizer />
       <section className="border-b border-border bg-card">
         <div className="mx-auto flex min-h-[34vh] max-w-6xl flex-col justify-end gap-5 px-5 py-10 sm:px-8 lg:px-10">
           <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-normal text-rs-primary-500">

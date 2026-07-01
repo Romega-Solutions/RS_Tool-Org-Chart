@@ -34,6 +34,7 @@ function treeHasEmailField(nodes: unknown[]): boolean {
 }
 
 type HeadlessPerson = { id: number; name: string; email: string | null };
+const origin = `http://localhost:${process.env.PORT ?? 3000}`;
 
 async function headlessPeople(response: { json(): Promise<unknown> }): Promise<HeadlessPerson[]> {
   const body = await response.json();
@@ -42,21 +43,25 @@ async function headlessPeople(response: { json(): Promise<unknown> }): Promise<H
 }
 
 test.describe.serial("Product QA flow", () => {
-  test("base path root redirects to chart without duplicating the app prefix", async ({ page }) => {
-    await page.goto(appPath("/"));
+  test("base path chart route redirects to login without duplicating the app prefix", async ({ page }) => {
+    await page.goto(appPath("/chart"));
 
     await expect(page).toHaveURL(/\/org-chart\/login\?next=%2Fchart$/);
     expect(page.url()).not.toContain("/org-chart/org-chart/");
   });
 
   test("tools domain root renders the shared tools directory", async ({ page }) => {
-    const response = await page.goto("/");
+    const response = await page.goto(`${origin}/`);
 
     expect(response?.status()).toBe(200);
-    await expect(page).toHaveURL(/\/org-chart\/tools$/);
+    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { name: "Internal Tools" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Org Chart/ })).toHaveAttribute("href", "/org-chart");
+    await expect(page.getByRole("link", { name: /Org Chart/ })).toHaveAttribute("href", "/org-chart/chart");
     await expect(page.getByRole("link", { name: /Email Signature/ })).toHaveAttribute("href", "/email-signature");
+
+    const oldToolsPath = await page.request.get(`${origin}/org-chart/tools`, { maxRedirects: 0 });
+    expect(oldToolsPath.status()).toBe(307);
+    expect(oldToolsPath.headers().location).toBe("/");
   });
 
   test("reserved tool slugs route to configured production tools", async ({ page }) => {
@@ -64,11 +69,11 @@ test.describe.serial("Product QA flow", () => {
       ["/ats", "https://rs-tool-ats.vercel.app/"],
       ["/certificate-creator", "https://rs-tool-romega-certificate-creator.vercel.app/"],
       ["/job-scraper", "https://rs-tool-job-scraper.vercel.app/"],
-      ["/ticketing", "/org-chart/tools"],
+      ["/ticketing", "/"],
     ] as const;
 
     for (const [path, location] of expectedRoutes) {
-      const response = await page.request.get(path, { maxRedirects: 0 });
+      const response = await page.request.get(`${origin}${path}`, { maxRedirects: 0 });
       expect(response.status(), path).toBe(307);
       expect(response.headers().location, path).toBe(location);
     }

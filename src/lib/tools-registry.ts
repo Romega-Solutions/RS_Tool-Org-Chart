@@ -18,7 +18,7 @@ export const toolEntries: ToolEntry[] = [
     slug: "org-chart",
     name: "Org Chart",
     description: "Manage team structure, departments, sync reviews, and public chart links.",
-    href: "/org-chart",
+    href: "/org-chart/chart",
     status: "live",
   },
   {
