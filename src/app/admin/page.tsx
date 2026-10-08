@@ -1,5 +1,5 @@
-import { DashboardStats } from "@/components/admin/dashboard-stats";
+import { redirect } from "next/navigation";
 
 export default function AdminDashboard() {
-  return <DashboardStats />;
+  redirect("/admin/settings");
 }

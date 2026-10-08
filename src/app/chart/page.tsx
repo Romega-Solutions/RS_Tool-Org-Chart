@@ -12,7 +12,7 @@ export default function ChartPage() {
       <div className="flex h-screen">
         {isEditor && <AdminSidebar />}
         <div className="flex-1">
-          <ChartCanvas isEditor={isEditor ?? false} />
+          <ChartCanvas />
         </div>
       </div>
     </ProtectedRoute>

@@ -5,13 +5,8 @@ export interface Person {
   departmentId: number;
   reportsTo: number | null;
   photoUrl: string | null;
-  email?: string | null;
   displayOrder: number;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  employmentType: string | null;
-  projectIds: string | null;
 }
 
 export interface Department {
@@ -19,8 +14,6 @@ export interface Department {
   name: string;
   color: string | null;
   displayOrder: number;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Setting {

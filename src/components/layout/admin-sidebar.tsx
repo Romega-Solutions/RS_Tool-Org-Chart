@@ -3,10 +3,8 @@ import { assetPath } from "@/lib/paths";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
   Settings,
   Network,
   LifeBuoy,
@@ -15,28 +13,12 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  UserPlus,
-  FolderPlus,
-  Upload,
-  ChevronDown,
-  ChevronRight,
-  ClipboardList,
-  Image,
   KeyRound,
   Workflow,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
-import { PersonForm } from "@/components/admin/person-form";
-import { DepartmentForm } from "@/components/admin/department-form";
-import { CsvImport } from "@/components/admin/csv-import";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ExportQuickAction } from "@/components/export/export-quick-action";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -59,19 +41,14 @@ function SidebarTooltip({
 }
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chart", label: "Chart", icon: Network },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/photos", label: "Photos", icon: Image },
   { href: "/admin/tools", label: "Tools", icon: Workflow },
-  { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/accessibility", label: "Accessibility & Support", icon: LifeBuoy },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout, isEditor } = useAuth();
   const { theme, toggle } = useTheme();
   const [collapsed, setCollapsed] = useState(() => {
@@ -80,17 +57,6 @@ export function AdminSidebar() {
     }
     return false;
   });
-  const [importOpen, setImportOpen] = useState(false);
-  const [quickActionsOpen, setQuickActionsOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("orgchart_quick_actions") !== "closed";
-    }
-    return true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("orgchart_quick_actions", quickActionsOpen ? "open" : "closed");
-  }, [quickActionsOpen]);
 
   useEffect(() => {
     localStorage.setItem("orgchart_sidebar", collapsed ? "collapsed" : "expanded");
@@ -161,102 +127,10 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* Quick Actions */}
+      {/* Export */}
       {isEditor && (
         <div className="p-2 border-t border-border space-y-1">
-          {!collapsed ? (
-            <button
-              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-              aria-expanded={quickActionsOpen}
-              aria-controls="sidebar-quick-actions"
-              className="flex items-center justify-between w-full text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1 hover:text-foreground cursor-pointer transition-colors duration-200"
-            >
-              <span>Quick Actions</span>
-              <span className="flex items-center gap-1">
-                <span className="text-[9px] normal-case tracking-normal opacity-70">
-                  {quickActionsOpen ? "Hide" : "Show"}
-                </span>
-                {quickActionsOpen ? (
-                  <ChevronDown className="w-3 h-3" />
-                ) : (
-                  <ChevronRight className="w-3 h-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <SidebarTooltip label={quickActionsOpen ? "Hide Quick Actions" : "Show Quick Actions"} show={true}>
-              <button
-                onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-                aria-label={quickActionsOpen ? "Hide quick actions" : "Show quick actions"}
-                aria-expanded={quickActionsOpen}
-                aria-controls="sidebar-quick-actions"
-                className="w-full flex justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 py-1"
-              >
-                {quickActionsOpen ? (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </SidebarTooltip>
-          )}
-          {quickActionsOpen && <div id="sidebar-quick-actions" className="space-y-1"><PersonForm
-            onSave={() => router.refresh()}
-            trigger={
-              <SidebarTooltip label="Add Person" show={collapsed}>
-                <Button
-                  variant="ghost"
-                  size={collapsed ? "icon" : "sm"}
-                  className={`${
-                    collapsed ? "w-full justify-center" : "w-full justify-start"
-                  } text-muted-foreground hover:text-rs-primary-400 hover:bg-rs-primary-500/10 cursor-pointer transition-all duration-200`}
-                >
-                  <UserPlus className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span className="ml-2">Add Person</span>}
-                </Button>
-              </SidebarTooltip>
-            }
-          />
-          <DepartmentForm
-            onSave={() => router.refresh()}
-            trigger={
-              <SidebarTooltip label="Add Department" show={collapsed}>
-                <Button
-                  variant="ghost"
-                  size={collapsed ? "icon" : "sm"}
-                  className={`${
-                    collapsed ? "w-full justify-center" : "w-full justify-start"
-                  } text-muted-foreground hover:text-rs-accent-400 hover:bg-rs-accent-500/10 cursor-pointer transition-all duration-200`}
-                >
-                  <FolderPlus className="w-4 h-4 shrink-0" />
-                  {!collapsed && <span className="ml-2">Add Department</span>}
-                </Button>
-              </SidebarTooltip>
-            }
-          />
-          <SidebarTooltip label="Import CSV" show={collapsed}>
-            <Button
-              variant="ghost"
-              size={collapsed ? "icon" : "sm"}
-              className={`${
-                collapsed ? "w-full justify-center" : "w-full justify-start"
-              } text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all duration-200`}
-              onClick={() => setImportOpen(true)}
-            >
-              <Upload className="w-4 h-4 shrink-0" />
-              {!collapsed && <span className="ml-2">Import CSV</span>}
-            </Button>
-          </SidebarTooltip>
           <ExportQuickAction collapsed={collapsed} />
-          </div>}
-          <Dialog open={importOpen} onOpenChange={setImportOpen}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Import People from CSV</DialogTitle>
-              </DialogHeader>
-              <CsvImport compact onComplete={() => { router.refresh(); }} />
-            </DialogContent>
-          </Dialog>
         </div>
       )}
 
