@@ -20,6 +20,8 @@ jobs:
     env:
       NODE_OPTIONS: --disable-warning=DEP0040
       SESSION_SECRET: ci-only-session-secret-for-build-and-e2e-checks
+      # Read-only Employee Portal directory (staging) for the chart e2e tests.
+      DIRECTORY_DATABASE_URL: ${{ secrets.DIRECTORY_DATABASE_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
