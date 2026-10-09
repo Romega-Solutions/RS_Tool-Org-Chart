@@ -2,14 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const DEFAULT_BASE_URL = "https://tools.romega-solutions.com/org-chart";
-const DEFAULT_SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283";
 const DEFAULT_MCP_URL = "https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart";
 
 loadEnvFile(".env.local");
 
 const baseUrl = stripTrailingSlash(process.env.ORGCHART_BASE_URL || DEFAULT_BASE_URL);
-const sheetCsvUrl = process.env.ORGCHART_SHEET_CSV_URL || DEFAULT_SHEET_CSV_URL;
 const mcpUrl = process.env.ORGCHART_MCP_URL || DEFAULT_MCP_URL;
 const apiKey = process.env.ORGCHART_API_KEY || process.env.API_KEY || "";
 const shouldProbeMcp = !process.argv.includes("--skip-mcp");
@@ -20,14 +17,11 @@ try {
   await checkPublicRoute("/login", "Org Chart");
 
   if (apiKey) {
-    await checkJson("/api/people?includeInactive=true", "people", { minItems: 1, apiKey });
-    await checkJson("/api/departments", "departments", { minItems: 1, apiKey });
-    await checkJson("/api/audit?limit=5&page=1", "audit", { apiKey, validator: validateAudit });
+    await checkJson("/api/chart-data", "chart-data", { apiKey, validator: validateChartData });
+    await checkJson("/api/people/headless", "staff", { apiKey, validator: validateStaff });
   } else {
     record("api-key", "warn", "API_KEY/ORGCHART_API_KEY is not set; skipped protected API checks.");
   }
-
-  await checkSheetCsv();
 
   if (shouldProbeMcp) {
     await checkMcpEndpoint();
@@ -110,38 +104,19 @@ async function checkJson(route, label, options = {}) {
     }
   }
 
-  const count = Array.isArray(data) ? data.length : data?.entries?.length ?? "ok";
+  const count = Array.isArray(data) ? data.length : data?.people?.length ?? data?.tree?.length ?? "ok";
   record(label, "pass", `HTTP ${response.status}; count=${count}`, ms);
   return data;
 }
 
-function validateAudit(data) {
-  if (!data || !Array.isArray(data.entries)) return "Expected audit response with entries array.";
+function validateChartData(data) {
+  if (!data || !Array.isArray(data.tree) || data.tree.length === 0) return "Expected chart data with a non-empty tree (is DIRECTORY_DATABASE_URL set?).";
   return true;
 }
 
-async function checkSheetCsv() {
-  const started = Date.now();
-  const response = await fetch(sheetCsvUrl, { redirect: "follow" });
-  const body = await response.text();
-  const ms = Date.now() - started;
-
-  if (!response.ok) {
-    record("sheet-csv", "fail", `HTTP ${response.status}`, ms);
-    return;
-  }
-
-  const lines = body.trim().split(/\r?\n/).filter(Boolean);
-  const header = lines[0] || "";
-  const required = ["Name", "Role/Position", "Team"];
-  const missing = required.filter((column) => !header.toLowerCase().includes(column.toLowerCase()));
-
-  if (missing.length > 0 || lines.length <= 1) {
-    record("sheet-csv", "fail", `Missing columns: ${missing.join(", ") || "none"}; rows=${Math.max(0, lines.length - 1)}`, ms);
-    return;
-  }
-
-  record("sheet-csv", "pass", `rows=${lines.length - 1}`, ms);
+function validateStaff(data) {
+  if (!data || !Array.isArray(data.people) || data.people.length === 0) return "Expected a non-empty people array.";
+  return true;
 }
 
 async function checkMcpEndpoint() {

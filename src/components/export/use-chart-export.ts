@@ -2,7 +2,7 @@
 import { apiPath, appPath, assetPath } from "@/lib/paths";
 
 import { useCallback, useState } from "react";
-import type { Department, Person } from "@/types";
+import type { ChartData, TreeNode } from "@/types";
 import { useSettings } from "@/hooks/use-settings";
 
 async function fetchJson<T>(input: RequestInfo | URL): Promise<T> {
@@ -41,10 +41,15 @@ export function useChartExport() {
     setExporting(true);
 
     try {
-      const [people, departments] = await Promise.all([
-        fetchJson<Person[]>(apiPath("/api/people?includeInactive=true")),
-        fetchJson<Department[]>(apiPath("/api/departments")),
-      ]);
+      const { tree, departments } = await fetchJson<ChartData>(apiPath("/api/chart-data"));
+      const people: TreeNode[] = [];
+      const collect = (nodes: TreeNode[]) => {
+        for (const node of nodes) {
+          people.push(node);
+          collect(node.children);
+        }
+      };
+      collect(tree);
 
       const deptMap = new Map<number, string>();
       const deptColorMap = new Map<number, string>();
@@ -96,8 +101,6 @@ export function useChartExport() {
         { header: "Title", key: "title", width: 28 },
         { header: "Department", key: "department", width: 22 },
         { header: "Reports To", key: "reportsTo", width: 22 },
-        { header: "Status", key: "status", width: 12 },
-        { header: "Employment Type", key: "employmentType", width: 18 },
       ];
       peopleSheet.columns = peopleCols;
 
@@ -119,8 +122,6 @@ export function useChartExport() {
           title: person.title,
           department: deptMap.get(person.departmentId) || "",
           reportsTo: person.reportsTo ? nameMap.get(person.reportsTo) || "" : "",
-          status: person.isActive ? "Active" : "Inactive",
-          employmentType: person.employmentType || "",
         });
 
         row.eachCell((cell) => {
@@ -135,13 +136,6 @@ export function useChartExport() {
           });
         }
 
-        // Status cell coloring
-        const statusCell = row.getCell("status");
-        if (person.isActive) {
-          statusCell.font = { color: { argb: "FF16A34A" } }; // green
-        } else {
-          statusCell.font = { color: { argb: "FFDC2626" } }; // red
-        }
       }
 
       // Auto-filter
@@ -176,7 +170,7 @@ export function useChartExport() {
       for (let i = 0; i < departments.length; i++) {
         const dept = departments[i];
         const headcount = people.filter(
-          (p) => p.departmentId === dept.id && p.isActive
+          (p) => p.departmentId === dept.id
         ).length;
 
         const row = deptSheet.addRow({

@@ -20,6 +20,8 @@ jobs:
     env:
       NODE_OPTIONS: --disable-warning=DEP0040
       SESSION_SECRET: ci-only-session-secret-for-build-and-e2e-checks
+      # Read-only Employee Portal directory (staging) for the chart e2e tests.
+      DIRECTORY_DATABASE_URL: ${{ secrets.DIRECTORY_DATABASE_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -263,7 +265,7 @@ jobs:
                 --format='status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} image={{.Config.Image}} started={{.State.StartedAt}}' \
                 "$container" || true
               sudo docker logs --tail=200 "$container" || true
-              sudo docker exec "$container" sh -lc 'echo "--- env names ---"; env | cut -d= -f1 | sort | grep -E "^(NODE_ENV|PORT|HOSTNAME|NEXT_PUBLIC_BASE_PATH|PUBLIC_APP_ORIGIN|SESSION_SECRET|API_KEY|ORGCHART_API_KEY|CRON_SECRET|SYNC_INTERVAL)$" || true' || true
+              sudo docker exec "$container" sh -lc 'echo "--- env names ---"; env | cut -d= -f1 | sort | grep -E "^(NODE_ENV|PORT|HOSTNAME|NEXT_PUBLIC_BASE_PATH|PUBLIC_APP_ORIGIN|SESSION_SECRET|API_KEY|ORGCHART_API_KEY|DIRECTORY_DATABASE_URL|DIRECTORY_SUPABASE_URL)$" || true' || true
               sudo docker exec "$container" sh -lc 'app_port="${PORT:-3000}"; echo "--- local health on port ${app_port} ---"; wget -S -O - "http://127.0.0.1:${app_port}/org-chart/api/health" 2>&1 | head -80' || true
               sudo docker exec "$container" sh -lc 'app_port="${PORT:-3000}"; echo "--- local login on port ${app_port} ---"; wget -S -O - "http://127.0.0.1:${app_port}/org-chart/login" 2>&1 | head -80' || true
               sudo docker exec "$container" sh -lc 'echo "--- fallback health on port 3000 ---"; wget -S -O - http://127.0.0.1:3000/org-chart/api/health 2>&1 | head -40' || true

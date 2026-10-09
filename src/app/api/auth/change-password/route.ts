@@ -4,7 +4,6 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { compare, hashSync } from "bcryptjs";
 import { requireAuth, checkCsrf } from "@/lib/auth";
-import { logChange } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +45,6 @@ export async function POST(request: Request) {
     .where(eq(users.id, user.id))
     .run();
 
-  logChange("updated", "person", user.id, user.name, actor.username, { passwordChanged: true });
   await persistOrgChartDbSnapshot("auth:change-password");
 
   return NextResponse.json({ success: true });

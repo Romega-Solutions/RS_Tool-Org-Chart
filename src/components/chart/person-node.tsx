@@ -15,14 +15,8 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
   const highlighted = data.highlighted as boolean | undefined;
   const pathHighlighted = data.pathHighlighted as boolean | undefined;
   const dimmed = data.dimmed as boolean | undefined;
-  const dropTarget = data.dropTarget as boolean | string | undefined;
   const placeholder = isOrgPlaceholder(name, title);
   const placeholderLabel = getOrgPlaceholderLabel(name, title);
-
-  const isReassign = dropTarget === true;
-  const isReorder =
-    dropTarget === "reorder-before" || dropTarget === "reorder-after";
-  const isDropActive = isReassign || isReorder;
 
   const initials = name
     .split(" ")
@@ -35,8 +29,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
     <div
       className={cn(
         "group relative flex w-[160px] justify-center transition-all duration-200",
-        dimmed && "opacity-30 scale-[0.97]",
-        isDropActive && "scale-[1.06] z-50"
+        dimmed && "opacity-30 scale-[0.97]"
       )}
     >
       <div
@@ -64,11 +57,7 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
           highlighted &&
             "ring-2 ring-rs-primary-500 shadow-[0_26px_60px_rgba(0,112,224,0.18),0_2px_0_rgba(255,255,255,0.8)_inset] border-rs-primary-300 -translate-y-0.5 dark:shadow-[0_28px_60px_rgba(14,165,233,0.18)]",
           pathHighlighted &&
-            "border-rs-primary-400 shadow-[0_24px_55px_rgba(0,112,224,0.12),0_2px_0_rgba(255,255,255,0.75)_inset] -translate-y-0.5 dark:border-rs-primary-500 dark:shadow-[0_24px_55px_rgba(14,165,233,0.14)]",
-          isReassign &&
-            "ring-[3px] ring-rs-accent-500 border-rs-accent-400 shadow-[0_0_24px_rgba(200,133,10,0.35),0_0_48px_rgba(200,133,10,0.15)] animate-pulse",
-          isReorder &&
-            "ring-[3px] ring-teal-500 border-teal-400 shadow-[0_0_24px_rgba(20,184,166,0.35),0_0_48px_rgba(20,184,166,0.15)] animate-pulse"
+            "border-rs-primary-400 shadow-[0_24px_55px_rgba(0,112,224,0.12),0_2px_0_rgba(255,255,255,0.75)_inset] -translate-y-0.5 dark:border-rs-primary-500 dark:shadow-[0_24px_55px_rgba(14,165,233,0.14)]"
         )}
         style={{
           borderLeftColor: departmentColor || undefined,
@@ -108,16 +97,6 @@ function PersonNodeComponent({ data }: { data: Record<string, unknown> }) {
           position={Position.Bottom}
           className="!bg-rs-primary-500 !w-2 !h-2"
         />
-        {isReassign && (
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-rs-accent-500 px-2 py-0.5 text-[0.6rem] font-semibold text-white shadow-lg">
-            Drop to reassign
-          </div>
-        )}
-        {isReorder && (
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-teal-500 px-2 py-0.5 text-[0.6rem] font-semibold text-white shadow-lg">
-            {dropTarget === "reorder-before" ? "Move before" : "Move after"}
-          </div>
-        )}
       </div>
     </div>
   );

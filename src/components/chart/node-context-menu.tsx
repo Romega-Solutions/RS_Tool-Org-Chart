@@ -8,14 +8,11 @@ interface Props {
   person: TreeNode;
   onClose: () => void;
   onEdit: () => void;
-  onToggle?: () => void;
-  onDelete?: () => void;
 }
 
-export function NodeContextMenu({ x, y, person, onClose, onEdit, onToggle, onDelete }: Props) {
+export function NodeContextMenu({ x, y, person, onClose, onEdit }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const hasEditorActions = Boolean(onToggle || onDelete);
 
   useEffect(() => {
     itemRefs.current[0]?.focus();
@@ -90,35 +87,8 @@ export function NodeContextMenu({ x, y, person, onClose, onEdit, onToggle, onDel
         role="menuitem"
         className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
       >
-        {hasEditorActions ? "Open Details" : "View Details"}
+        View Details
       </button>
-      {onToggle && (
-        <button
-          ref={(node) => {
-            itemRefs.current[1] = node;
-          }}
-          onClick={onToggle}
-          role="menuitem"
-          className="w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
-        >
-          {person.isActive ? "Deactivate" : "Activate"}
-        </button>
-      )}
-      {onDelete && (
-        <>
-          <div className="border-t border-border my-0.5" />
-          <button
-            ref={(node) => {
-              itemRefs.current[2] = node;
-            }}
-            onClick={onDelete}
-            role="menuitem"
-            className="w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            Delete
-          </button>
-        </>
-      )}
     </div>
   );
 }

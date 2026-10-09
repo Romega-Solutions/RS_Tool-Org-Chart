@@ -3,7 +3,6 @@ import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
-  SelectionMode,
   useNodesState,
   useEdgesState,
   type Node,
@@ -24,14 +23,7 @@ const Y_GAP = 160;
 const GRID_X_GAP = 200;
 const GRID_ROW_GAP = Y_GAP;
 const NODE_GAP = 50;
-const DROP_RADIUS = 130;
 const NODE_WIDTH = 160;
-const NODE_HEIGHT = 90;
-
-type DropResult = {
-  id: string;
-  intent: "reassign" | "reorder-before" | "reorder-after";
-} | null;
 
 const EDGE_STYLE = {
   stroke: "var(--chart-edge-stroke)",
@@ -57,19 +49,11 @@ interface ContextMenuState {
 
 interface Props {
   tree: TreeNode[];
-  isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
   onBackgroundContextMenu?: (x: number, y: number) => void;
-  onDragMiss?: () => void;
-  onDrop?: (personId: number, targetId: number) => void;
-  onToggle?: (personId: number) => void;
-  onDelete?: (personId: number, personName: string) => void;
-  onSelectionChange?: (nodeIds: number[]) => void;
   selectedNodeIds?: number[];
   highlightedNodeId?: number | null;
-  onCanvasDoubleClick?: () => void;
-  onReorder?: (personId: number, siblingId: number, position: "before" | "after") => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -340,19 +324,11 @@ function layoutTree(roots: TreeNode[]) {
 
 export function TopDownTree({
   tree,
-  isEditor,
   onNodeClick,
   onInit,
   onBackgroundContextMenu,
-  onDrop,
-  onDragMiss,
-  onToggle,
-  onDelete,
-  onSelectionChange,
   selectedNodeIds,
   highlightedNodeId,
-  onCanvasDoubleClick,
-  onReorder,
 }: Props) {
   const { nodes: initialNodes, edges: initialEdges, personMap } = useMemo(
     () => layoutTree(tree),
@@ -366,24 +342,6 @@ export function TopDownTree({
   const [animating, setAnimating] = useState(false);
   const mountedRef = useRef(false);
   const { handleNodeMouseEnter, handleNodeMouseLeave, applyToNodes, applyToEdges } = usePathHighlight(tree, selectedNodeIds);
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const lastDeltaRef = useRef({ x: 0, y: 0 });
-
-  // Build a map of each node's descendant IDs for group dragging
-  const descendantsMap = useMemo(() => {
-    const map = new Map<string, string[]>();
-    function collect(node: TreeNode): string[] {
-      const ids: string[] = [];
-      for (const child of node.children) {
-        ids.push(String(child.id));
-        ids.push(...collect(child));
-      }
-      map.set(String(node.id), ids);
-      return ids;
-    }
-    for (const root of tree) collect(root);
-    return map;
-  }, [tree]);
 
   // Sync nodes/edges when tree data changes — animate positions after initial mount
   useEffect(() => {
@@ -422,13 +380,6 @@ export function TopDownTree({
     setEdges((prev) => applyToEdges(prev));
   }, [applyToNodes, applyToEdges, setNodes, setEdges]);
 
-  const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
-      onSelectionChange?.(selectedNodes.map((n) => Number(n.id)));
-    },
-    [onSelectionChange]
-  );
-
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       setContextMenu(null);
@@ -436,169 +387,6 @@ export function TopDownTree({
       if (person) onNodeClick(person);
     },
     [personMap, onNodeClick]
-  );
-
-  // Save start position for group drag
-  const handleNodeDragStart = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      dragStartRef.current = { ...node.position };
-      lastDeltaRef.current = { x: 0, y: 0 };
-    },
-    []
-  );
-
-  // Find the closest drop target for a dragged node
-  const findDropTarget = useCallback(
-    (draggedNode: Node): DropResult => {
-      if (!isEditor) return null;
-      const draggedId = draggedNode.id;
-      const descendants = descendantsMap.get(draggedId) || [];
-      const excludeSet = new Set([draggedId, ...descendants]);
-
-      const cx = draggedNode.position.x + NODE_WIDTH / 2;
-      const cy = draggedNode.position.y + NODE_HEIGHT / 2;
-
-      let closestNode: Node | null = null;
-      let closestDist = Infinity;
-
-      for (const node of nodes) {
-        if (excludeSet.has(node.id)) continue;
-        const dx = cx - (node.position.x + NODE_WIDTH / 2);
-        const dy = cy - (node.position.y + NODE_HEIGHT / 2);
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestNode = node;
-        }
-      }
-
-      if (!closestNode || closestDist > DROP_RADIUS) return null;
-
-      // Check sibling relationship (same reportsTo = same parent)
-      const draggedPerson = personMap.get(draggedId);
-      const targetPerson = personMap.get(closestNode.id);
-
-      // null === null: root-level nodes are intentionally treated as siblings
-      if (
-        draggedPerson &&
-        targetPerson &&
-        draggedPerson.reportsTo === targetPerson.reportsTo
-      ) {
-        const draggedCX = draggedNode.position.x + NODE_WIDTH / 2;
-        const targetCX = closestNode.position.x + NODE_WIDTH / 2;
-        const intent =
-          draggedCX < targetCX ? "reorder-before" : "reorder-after";
-        return { id: closestNode.id, intent };
-      }
-
-      return { id: closestNode.id, intent: "reassign" };
-    },
-    [isEditor, descendantsMap, nodes, personMap]
-  );
-
-  // Move all descendants along with the dragged node + show drop target preview
-  const handleNodeDrag = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
-      const startPos = dragStartRef.current;
-      if (!startPos) return;
-
-      const descendants = descendantsMap.get(draggedNode.id);
-
-      const dx = draggedNode.position.x - startPos.x;
-      const dy = draggedNode.position.y - startPos.y;
-      const ddx = dx - lastDeltaRef.current.x;
-      const ddy = dy - lastDeltaRef.current.y;
-      lastDeltaRef.current = { x: dx, y: dy };
-
-      const result = findDropTarget(draggedNode);
-      const targetId = result?.id ?? null;
-      const targetDropValue: string | boolean = result
-        ? result.intent === "reassign"
-          ? true
-          : result.intent
-        : false;
-
-      setNodes((prev) => {
-        const descSet = new Set(descendants || []);
-        return prev.map((n) => {
-          if (descSet.has(n.id) && (ddx !== 0 || ddy !== 0)) {
-            return {
-              ...n,
-              position: { x: n.position.x + ddx, y: n.position.y + ddy },
-              data: { ...n.data, dropTarget: false },
-            };
-          }
-          const isTarget = n.id === targetId;
-          const newDropValue = isTarget ? targetDropValue : false;
-          if (n.data.dropTarget !== newDropValue) {
-            return { ...n, data: { ...n.data, dropTarget: newDropValue } };
-          }
-          return n;
-        });
-      });
-    },
-    [descendantsMap, setNodes, findDropTarget]
-  );
-
-  // Clear all drop target previews
-  const clearDropTargets = useCallback(() => {
-    setNodes((prev) =>
-      prev.map((n) =>
-        n.data.dropTarget ? { ...n, data: { ...n.data, dropTarget: false } } : n
-      )
-    );
-  }, [setNodes]);
-
-  const handlePaneDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isEditor || !onCanvasDoubleClick) return;
-      const target = e.target as HTMLElement;
-      if (
-        target.closest(".react-flow__node") ||
-        target.closest(".react-flow__edge") ||
-        target.closest(".react-flow__minimap") ||
-        target.closest(".react-flow__controls")
-      ) return;
-      onCanvasDoubleClick();
-    },
-    [isEditor, onCanvasDoubleClick]
-  );
-
-  // Drag-to-edit: execute the drop and clear preview
-  const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, draggedNode: Node) => {
-      dragStartRef.current = null;
-      lastDeltaRef.current = { x: 0, y: 0 };
-      clearDropTargets();
-
-      if (!isEditor) return;
-
-      const result = findDropTarget(draggedNode);
-
-      if (!result) {
-        // Snap all nodes back to their computed layout positions (no valid drop target)
-        const posMap = new Map(initialNodes.map((n) => [n.id, n.position]));
-        setNodes((prev) =>
-          prev.map((n) => {
-            const pos = posMap.get(n.id);
-            return pos && (n.position.x !== pos.x || n.position.y !== pos.y)
-              ? { ...n, position: pos }
-              : n;
-          })
-        );
-        onDragMiss?.();
-        return;
-      }
-
-      if (result.intent === "reassign") {
-        onDrop?.(Number(draggedNode.id), Number(result.id));
-      } else {
-        const position =
-          result.intent === "reorder-before" ? "before" : "after";
-        onReorder?.(Number(draggedNode.id), Number(result.id), position);
-      }
-    },
-    [isEditor, onDrop, onDragMiss, onReorder, findDropTarget, clearDropTargets, initialNodes, setNodes]
   );
 
   // Right-click context menu
@@ -629,7 +417,7 @@ export function TopDownTree({
 
   return (
     <ReactFlowProvider>
-      <div className="relative h-full w-full" onDoubleClick={handlePaneDoubleClick}>
+      <div className="relative h-full w-full">
         <ChartBackgroundDecor />
         <ReactFlow
           nodes={nodes}
@@ -639,19 +427,13 @@ export function TopDownTree({
           onNodeClick={handleNodeClick}
           onNodeMouseEnter={handleNodeMouseEnter}
           onNodeMouseLeave={handleNodeMouseLeave}
-          onNodeDragStart={handleNodeDragStart}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragStop={handleNodeDragStop}
           onNodeContextMenu={handleNodeContextMenu}
           onPaneContextMenu={handlePaneContextMenu}
-          onSelectionChange={handleSelectionChange}
           onInit={onInit}
           nodeTypes={nodeTypes}
-          nodesDraggable={isEditor}
+          nodesDraggable={false}
           panOnDrag
           selectionOnDrag={false}
-          selectionMode={SelectionMode.Partial}
-          selectionKeyCode="Shift"
           fitView
           zoomOnDoubleClick={false}
           fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
@@ -672,8 +454,6 @@ export function TopDownTree({
             person={contextMenu.person}
             onClose={() => setContextMenu(null)}
             onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
-            onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
-            onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
           />
         )}
       </div>

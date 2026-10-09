@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
-import { people, departments } from "@/lib/db/schema";
-import { eq, asc } from "drizzle-orm";
 import { requireEditor, checkGlobalRateLimit } from "@/lib/auth";
-import { staffProfileFields, type StaffProfile } from "@/lib/automation/schema";
+import { staffProfileFields } from "@/lib/automation/schema";
+import { loadStaffProfiles } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 
+// Read-only staff list for the n8n staff snapshot (Certificate Creator, Email Signature).
+// Data comes from the Employee Portal; edit people there.
 export async function GET(request: Request) {
   const rateLimitErr = checkGlobalRateLimit(request);
   if (rateLimitErr) return rateLimitErr;
@@ -19,39 +19,8 @@ export async function GET(request: Request) {
   if (includeInactiveRaw && includeInactiveRaw !== "true" && includeInactiveRaw !== "false") {
     return NextResponse.json({ error: "includeInactive must be true or false" }, { status: 400 });
   }
-  const includeInactive = includeInactiveRaw === "true";
 
-  const query = db
-    .select({
-      id: people.id,
-      name: people.name,
-      title: people.title,
-      departmentId: people.departmentId,
-      departmentName: departments.name,
-      departmentColor: departments.color,
-      reportsTo: people.reportsTo,
-      photoUrl: people.photoUrl,
-      email: people.email,
-      displayOrder: people.displayOrder,
-      isActive: people.isActive,
-      employmentType: people.employmentType,
-      projectIds: people.projectIds,
-    })
-    .from(people)
-    .leftJoin(departments, eq(people.departmentId, departments.id))
-    .orderBy(asc(people.displayOrder));
-
-  const rows = includeInactive ? query.all() : query.where(eq(people.isActive, true)).all();
-  const staffProfiles: StaffProfile[] = rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    title: row.title,
-    email: row.email,
-    departmentId: row.departmentId,
-    departmentName: row.departmentName,
-    managerId: row.reportsTo,
-    isActive: row.isActive,
-  }));
+  const staffProfiles = await loadStaffProfiles(includeInactiveRaw === "true");
 
   return NextResponse.json(
     {
