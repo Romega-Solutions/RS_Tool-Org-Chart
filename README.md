@@ -2,7 +2,7 @@
 
 Internal org chart and team directory tool for Romega Solutions.
 
-The app manages people, departments, photos, audit history, chart views, exports, and role-based access for editors and viewers.
+The app is a read-only view of the Employee Portal (`RS-Tool-Ticketing-System`). People, departments, reporting lines and photos are edited only in the portal's User Management; this app reads them from the portal's Postgres `directory` views and renders chart views and exports.
 
 ## Current Status
 
@@ -19,19 +19,15 @@ Read the latest readiness note in [docs/production-readiness-2026-05-05.md](docs
 
 ## What It Does
 
-- Interactive org chart with top-down, horizontal, and department-grid views.
-- Admin CRUD for people and departments.
-- People table with status filters, sorting, saved views, bulk actions, and CSV export.
-- Photo management with upload, external Drive-photo import, WebP conversion, gallery assignment, missing-photo workflow, and delete cleanup.
-- Export to styled Excel, PNG, print/PDF view, and CSV.
-- Audit log for create, update, delete, toggle, and password-change activity.
-- Editor/viewer role model with JWT session cookies.
-- Rotatable public read-only chart link for onboarding access without a login.
-- API-key support for external integrations such as n8n or automation scripts.
-- n8n MCP workflow JSON for org chart tools plus daily Google Sheets review.
-- Google Sheets sync preserves good local WebP photos, inactive status, secondary reporting, and technical department aliases predictably.
-- Settings shows the latest sync review with created rows, updated rows, status/team/reporting/photo changes, protected web photos, and warnings.
-- Settings can preview sheet sync changes without applying them.
+- Interactive org chart with top-down, horizontal, and department-grid views, search, and secondary ("also reports to") connectors.
+- Reads people, departments, reporting lines and photos directly from the Employee Portal (read-only; no sync, no copy).
+- Export to styled Excel, PNG, and print/PDF view.
+- Editor/viewer role model with JWT session cookies. Editors manage branding, the public link, and the embed code in Settings.
+- Rotatable public read-only chart link and embed for onboarding access without a login.
+- API-key support for external integrations such as n8n (read-only chart and staff list).
+- n8n MCP workflow JSON with read-only org chart tools.
+
+To change who is on the chart, who they report to, their title, department or photo, use the portal's User Management.
 
 ## Quick Start
 
@@ -40,9 +36,11 @@ pnpm install
 pnpm dev
 ```
 
+Before starting, create `.env` with `DIRECTORY_DATABASE_URL` (see Environment Variables). Without it the chart has no data.
+
 Open `http://localhost:3000`.
 
-Default local accounts are seeded on first run:
+Default local login accounts are seeded on first run:
 
 | Username | Password | Role |
 |---|---|---|
@@ -132,13 +130,13 @@ The deploy job only runs after CI passes.
 | `NEXT_PUBLIC_BASE_PATH` | Production required | App base path. Production uses `/org-chart`. |
 | `PUBLIC_APP_ORIGIN` | Recommended behind proxy | Browser-facing origin for generated public links. Production uses `https://tools.romega-solutions.com`. |
 | `EMAIL_SIGNATURE_PUBLIC_URL` | Optional | External Email Signature app URL used by the `tools.romega-solutions.com/email-signature` handoff. Defaults to `https://rs-tool-email-signature.vercel.app`. |
-| `CRON_SECRET` | Optional | Bearer token for `/api/sync/cron`. |
-| `SYNC_INTERVAL` | Optional | Auto-sync interval: `1h`, `6h`, `12h`, `24h`, or `off`. |
+| `DIRECTORY_DATABASE_URL` | Required | Read-only connection to the Employee Portal's Supabase Postgres, as the `directory_reader` login through the pooler in transaction mode (port 6543), e.g. `postgresql://directory_reader.<project-ref>:<password>@<pooler-host>:6543/postgres`. The password comes from the portal admin; never commit it. |
+| `DIRECTORY_SUPABASE_URL` | Optional | Supabase project URL used to build public photo URLs (`user-photos` bucket). Derived from the project ref in `DIRECTORY_DATABASE_URL` when unset. |
 | `API_KEY` | Optional | External integration key. Grants editor access through `X-API-Key`. |
 | `N8N_URL` | Optional | n8n instance URL for durable Data Table-backed storage features. |
 | `N8N_API_KEY` | Optional | n8n API key for durable Data Table-backed storage features. |
-| `N8N_ORG_CHART_PHOTO_TABLE_ID` | Optional | n8n Data Table id for durable uploaded/cropped/imported photo storage. Falls back to local filesystem when unset. |
-| `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` | Optional | n8n Data Table id for a single-row SQLite DB snapshot used as a serverless durability bridge. Falls back to local SQLite only when unset. |
+| `N8N_ORG_CHART_PHOTO_TABLE_ID` | Optional | n8n Data Table id for durable storage of the uploaded logo. Falls back to local filesystem when unset. |
+| `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` | Optional | n8n Data Table id for a single-row SQLite snapshot (login accounts and settings) used as a serverless durability bridge. Falls back to local SQLite only when unset. |
 
 For n8n, set these on the n8n app, not the org chart app:
 
@@ -146,8 +144,6 @@ For n8n, set these on the n8n app, not the org chart app:
 |---|---|
 | `ORGCHART_BASE_URL` | Optional override for org chart API base URL. Current n8n workflow uses direct internal Easypanel service URLs instead. |
 | `ORGCHART_API_KEY` | Same value as the org chart app `API_KEY`. Prefer n8n credentials if `$env` access is blocked. |
-| `ORGCHART_SHEET_CSV_URL` | Published CSV export URL for the selected Google Sheet tab. |
-| `ORGCHART_REVIEW_EMAIL` | Recipient for daily review summaries. |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE` | Set to `false` only if trusted n8n workflows need `$env` access. Otherwise use n8n credentials. |
 
 Current n8n production MCP URL:
@@ -166,41 +162,14 @@ That internal URL is only valid inside Easypanel containers. Browser and externa
 
 ## API Summary
 
-All endpoints require session auth unless noted. Write operations require editor access. External integrations can send `X-API-Key` when `API_KEY` is configured.
+All endpoints require session auth unless noted. Write operations (settings only) require editor access. External integrations can send `X-API-Key` when `API_KEY` is configured. People and departments are read-only here.
 
-### People
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/people` | Editor | List people. Supports `?includeInactive=true`. |
-| `GET` | `/api/people/:id` | Editor | Get one person. |
-| `GET` | `/api/people/headless` | Editor | List people with emails for headless/integration use. Supports `?includeInactive=true`. |
-| `POST` | `/api/people` | Editor | Create person. |
-| `PATCH` | `/api/people/:id` | Editor | Update person. |
-| `DELETE` | `/api/people/:id` | Editor | Delete person. |
-| `PATCH` | `/api/people/:id/toggle` | Editor | Toggle active/inactive. |
-| `PATCH` | `/api/people/reassign` | Editor | Reassign reporting line. |
-
-### Departments
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/departments` | Any user | List departments. |
-| `POST` | `/api/departments` | Editor | Create department. |
-| `PATCH` | `/api/departments/:id` | Editor | Update department. |
-| `DELETE` | `/api/departments/:id` | Editor | Delete department. |
-
-### Chart, Photos, and Audit
+### Chart and Staff
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/chart-data` | Any user | Full org chart tree, departments, and settings (person email is excluded). |
-| `GET` | `/api/audit` | Any user | Audit log. Supports `?page=1&limit=50`. |
-| `GET` | `/api/photos` | Any user | List uploaded photos and assignment status. |
-| `POST` | `/api/photos/import-external` | Editor | Download external person photo URLs, convert to WebP, save to managed photo storage, and reassign people to the local uploaded files. |
-| `POST` | `/api/photos/cleanup-unused` | Editor | Delete uploaded photo files that are not assigned to any person. |
-| `DELETE` | `/api/photos/:filename` | Editor | Delete photo and clear linked person photo reference. |
-| `POST` | `/api/upload` | Editor | Upload image. Max 5MB, WebP output, rate limited. |
+| `GET` | `/api/people/headless` | Editor | Flat staff list with emails for the n8n staff snapshot (Certificate Creator, Email Signature). Supports `?includeInactive=true`. |
 
 ### System
 
@@ -208,9 +177,7 @@ All endpoints require session auth unless noted. Write operations require editor
 |---|---|---|---|
 | `GET` | `/api/settings` | Any user | Get app settings. |
 | `PATCH` | `/api/settings` | Editor | Update branding/settings. |
-| `POST` | `/api/import` | Editor | CSV import. Max 10MB. Supports `Email` and `Work Email` columns, including blank value to clear email. |
-| `POST` | `/api/sync` | Editor | Google Sheets sync. Reads optional `Status` / `Is Active` for active state, `Org Chart Team` / `Primary Team` for multi-team department overrides, and `Secondary Reports To` for dashed secondary chart connectors. Reads optional `Email` / `Work Email` and requires valid email format. Send `dryRun: true` to preview without writing. Applied syncs store the latest sync review in settings. |
-| `GET` | `/api/sync/cron` | Bearer token | Scheduled sync trigger. |
+| `POST` | `/api/upload` | Editor | Upload the logo image. Max 5MB, WebP output, rate limited. |
 | `GET` | `/api/health` | Public | Lightweight production health check. |
 
 ### Authentication
@@ -263,9 +230,9 @@ Current dependency baseline:
 
 Runtime data is intentionally ignored by git:
 
-- SQLite DB: `data/orgchart.db` locally and in standalone Docker. On serverless deployments, set `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to restore the DB into `/tmp` on cold start and persist snapshots after admin mutations.
-- Uploaded photos: `public/uploads/photos/` by default, served through `/uploads/photos/:filename` so runtime uploads and external photo imports work in standalone Docker deployments. On serverless deployments, set `N8N_ORG_CHART_PHOTO_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to persist managed photos in n8n Data Table storage instead. Use Photos -> Clean Unused to remove duplicate files or rows that are no longer assigned.
-- The n8n SQLite snapshot path is a pragmatic durability bridge for Vercel/serverless. It is not a full managed SQL replacement for high-concurrency editing because multiple warm instances can each hold a local SQLite copy.
+- People, departments, reporting lines and photos: the Employee Portal's Supabase Postgres (`directory` views) and its public `user-photos` bucket. Nothing is copied into this app.
+- SQLite DB: `data/orgchart.db` locally and in standalone Docker. It only holds this app's login accounts and settings. On serverless deployments, set `N8N_ORG_CHART_DB_SNAPSHOT_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to restore the DB into `/tmp` on cold start and persist snapshots after changes. Older databases may still contain the retired `people`, `departments` and `audit_log` tables; they are no longer read.
+- Uploaded logo: `public/uploads/photos/` by default, served through `/uploads/photos/:filename`. On serverless deployments, set `N8N_ORG_CHART_PHOTO_TABLE_ID` with `N8N_URL` and `N8N_API_KEY` to persist it in n8n Data Table storage instead.
 
 For QA, back up and restore those folders before running mutating product-flow tests against local data.
 

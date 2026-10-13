@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const SECRET_KEY = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
+  process.env.SESSION_SECRET || "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
 );
 const SESSION_COOKIE = "orgchart_token";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/org-chart";

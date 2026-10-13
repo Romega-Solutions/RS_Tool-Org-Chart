@@ -54,6 +54,9 @@ function toolRedirects(source: string, destination?: string) {
 const nextConfig: NextConfig = {
   basePath,
   output: "standalone",
+  // Pin the tracing root to this project so a stray lockfile in a parent folder
+  // can't nest the standalone output (e.g. .next/standalone/Desktop/.../server.js).
+  outputFileTracingRoot: process.cwd(),
   serverExternalPackages: ["better-sqlite3", "sharp"],
   async rewrites() {
     return [

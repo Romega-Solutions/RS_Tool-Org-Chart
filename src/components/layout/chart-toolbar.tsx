@@ -1,13 +1,11 @@
-﻿"use client";
-import { Undo2, Redo2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+"use client";
+import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ViewSwitcher, type ViewMode } from "@/components/chart/view-switcher";
 
 interface Props {
   view: ViewMode; onViewChange: (view: ViewMode) => void;
-  onUndo?: () => void; onRedo?: () => void;
   onZoomIn?: () => void; onZoomOut?: () => void; onFitView?: () => void;
-  canUndo?: boolean; canRedo?: boolean; isEditor?: boolean;
   searchSlot?: React.ReactNode;
   treeStats?: { people: number; depth: number };
   density?: "compact" | "comfortable";
@@ -15,8 +13,7 @@ interface Props {
 }
 
 export function ChartToolbar({
-  view, onViewChange, onUndo, onRedo, onZoomIn, onZoomOut, onFitView,
-  canUndo = false, canRedo = false, isEditor = false, searchSlot,
+  view, onViewChange, onZoomIn, onZoomOut, onFitView, searchSlot,
   treeStats, density = "comfortable", onDensityChange,
 }: Props) {
   return (
@@ -33,12 +30,6 @@ export function ChartToolbar({
       )}
       {searchSlot}
       {searchSlot && <div className="w-px h-6 bg-border" />}
-      
-      {isEditor && (<>
-        <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" aria-label="Undo" className="cursor-pointer transition-all duration-200"><Undo2 className="w-4 h-4" /><span className="hidden 2xl:inline ml-1.5">Undo</span></Button>  
-        <Button variant="ghost" size="sm" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)" aria-label="Redo" className="cursor-pointer transition-all duration-200"><Redo2 className="w-4 h-4" /><span className="hidden 2xl:inline ml-1.5">Redo</span></Button>  
-        <div className="w-px h-6 bg-border" />
-      </>)}
 
       {view === "grid" && onDensityChange && (
         <>

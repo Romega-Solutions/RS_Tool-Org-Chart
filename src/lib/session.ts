@@ -19,7 +19,7 @@ function getSecretKey(): Uint8Array {
     throw new Error("[orgchart] SESSION_SECRET must be set in production");
   }
   return new TextEncoder().encode(
-    secret ?? "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
+    secret || "orgchart-dev-only-insecure-key-do-not-use-in-prod!!"
   );
 }
 

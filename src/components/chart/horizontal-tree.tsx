@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
-  SelectionMode,
   useNodesState,
   useEdgesState,
   type Node,
@@ -43,13 +42,9 @@ const SECONDARY_EDGE_STYLE = {
 
 interface Props {
   tree: TreeNode[];
-  isEditor: boolean;
   onNodeClick: (person: TreeNode) => void;
   onInit?: (instance: ReactFlowInstance) => void;
   onBackgroundContextMenu?: (x: number, y: number) => void;
-  onToggle?: (personId: number) => void;
-  onDelete?: (personId: number, personName: string) => void;
-  onSelectionChange?: (nodeIds: number[]) => void;
   selectedNodeIds?: number[];
   highlightedNodeId?: number | null;
 }
@@ -151,7 +146,7 @@ function layoutTree(roots: TreeNode[]) {
   return { nodes, edges, personMap };
 }
 
-export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextMenu, onToggle, onDelete, onSelectionChange, selectedNodeIds, highlightedNodeId }: Props) {
+export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextMenu, selectedNodeIds, highlightedNodeId }: Props) {
   const {
     nodes: initialNodes,
     edges: initialEdges,
@@ -204,13 +199,6 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; person: TreeNode } | null>(null);
 
-  const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
-      onSelectionChange?.(selectedNodes.map((n) => Number(n.id)));
-    },
-    [onSelectionChange]
-  );
-
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       setContextMenu(null);
@@ -253,15 +241,12 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
           onNodeMouseLeave={handleNodeMouseLeave}
           onNodeContextMenu={handleNodeContextMenu}
           onPaneContextMenu={handlePaneContextMenu}
-          onSelectionChange={handleSelectionChange}
           onInit={onInit}
           nodeTypes={nodeTypes}
           nodesDraggable={false}
           nodesConnectable={false}
           panOnDrag
           selectionOnDrag={false}
-          selectionMode={SelectionMode.Partial}
-          selectionKeyCode="Shift"
           fitView
           fitViewOptions={{ padding: 0.35, maxZoom: 1.5 }}
           translateExtent={translateExtent}
@@ -281,8 +266,6 @@ export function HorizontalTree({ tree, onNodeClick, onInit, onBackgroundContextM
             person={contextMenu.person}
             onClose={() => setContextMenu(null)}
             onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
-            onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
-            onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
           />
         )}
       </div>

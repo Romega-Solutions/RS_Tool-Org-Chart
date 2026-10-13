@@ -1,4 +1,4 @@
-# n8n Setup: Org Chart MCP Tools and Google Sheets Review
+# n8n Setup: Org Chart MCP Tools (read-only)
 
 This repo includes an import-ready n8n workflow:
 
@@ -6,16 +6,12 @@ This repo includes an import-ready n8n workflow:
 n8n-workflows/orgchart-mcp-tools.json
 ```
 
-It combines:
+It contains an MCP Server Trigger with two read-only tools:
 
-- MCP Server Trigger for AI/client access.
-- MCP tools for org chart API actions.
-- Daily Google Sheets review automation.
-- Human-in-the-loop email summary for sheet changes.
+- `list_people` — flat staff list with emails (`/api/people/headless?includeInactive=true`).
+- `get_chart_data` — the rendered org chart tree and departments (`/api/chart-data`).
 
-The workflow does not auto-apply Google Sheet changes unless the `sync_google_sheet` MCP tool is called or the org chart app's Sync Now action is used.
-
-For manual operations in the org chart app, use Settings -> `Preview Changes` first. It calls `/api/sync` with `dryRun: true`, computes the same review, and does not mutate people, departments, reporting, photos, `last_sync_at`, or `last_sync_summary`.
+The org chart is a read-only view of the Employee Portal. People, departments and reporting lines are edited in the portal's User Management, so the earlier editing tools (`create_person`, `update_person`, `reassign_person`, `delete_person`, `list_departments`, `sync_google_sheet`, `read_audit_log`) and the daily Google Sheets review were removed. If the live n8n workflow still has them, re-import this file or delete those nodes; their org chart endpoints now return 404.
 
 ## Current Live URLs
 
@@ -52,8 +48,6 @@ N8N_HOST=0.0.0.0
 N8N_PORT=5678
 N8N_PROTOCOL=https
 ORGCHART_API_KEY=<org chart API key>
-ORGCHART_SHEET_CSV_URL=https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
-ORGCHART_REVIEW_EMAIL=mark@romega-solutions.com
 ```
 
 The import-ready workflow uses direct internal org chart URLs for HTTP/tool nodes, so `ORGCHART_BASE_URL` is not required for that workflow. Keep `ORGCHART_API_KEY` in n8n env because the tool nodes send it as `X-API-Key`.
@@ -119,18 +113,9 @@ Authentication: None
 ```txt
 list_people
 get_chart_data
-list_departments
-create_person
-update_person
-reassign_person
-delete_person
-sync_google_sheet
-read_audit_log
 ```
 
 6. Activate the workflow after the test URL works.
-
-7. Open `Email Review Summary` and select the Gmail credential. The live workflow currently uses the existing `Gmail account` credential. If this is missing after import, the MCP tools can still work, but n8n may refuse to publish the scheduled review workflow.
 
 ## MCP URLs
 
@@ -149,73 +134,6 @@ https://n8n-romega-n8n.ikuuwb.easypanel.host/mcp/rs-org-chart
 The test URL only works while n8n is listening for a test event. The production URL only works after the workflow is active.
 
 A browser GET is not a real MCP test. Use an MCP client to initialize/list tools/call tools.
-
-Known live verification on 2026-05-07:
-
-```txt
-Production MCP initialize -> HTTP 200
-tools/list -> 9 tools
-list_departments -> returned live department JSON
-read_audit_log -> returned live audit entries
-```
-
-## Google Sheet Setup
-
-Use the new tab:
-
-```txt
-https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/edit?gid=947755283#gid=947755283
-```
-
-CSV export URL:
-
-```txt
-https://docs.google.com/spreadsheets/d/161m2rlSDgZbstklDrlXZU87_0isWHJ2o3iLRVNUoW1A/export?format=csv&gid=947755283
-```
-
-Recommended headers:
-
-```txt
-No.,Name,Role/Position,Team,Reports To,Photo,Work Email,Status,Org Chart Team,Secondary Reports To
-```
-
-Required by the app sync:
-
-```txt
-Name
-Role/Position
-Team
-```
-
-Optional:
-
-```txt
-Reports To
-Photo
-Work Email
-Status
-Org Chart Team
-```
-
-`Photo` can contain a Google Drive share link, Google Drive open link, direct image URL, or uploaded filename. Sheet sync stores the external URL on the person first. To move those images into app-managed storage, open `/admin/photos` and run `Import External`; the app downloads the images, converts them to WebP, saves them under `/uploads/photos`, and updates each person to the managed local URL. Later syncs preserve an existing local `/uploads/photos/...` value when the sheet still points at an external URL, so you do not need to re-import every time.
-
-Photo sync tracks the last sheet photo source after an external image is imported. If the sheet still points at the same source, sync keeps the managed WebP. If the sheet photo source changes later, sync replaces the managed WebP reference with the new external source so `/admin/photos` can import the new image.
-
-`Status` is optional. Use `Active` for current people. Use `Resigned`, `Inactive`, `Offboarded`, or `Ended` to set `isActive=false` during sync. Blank status leaves the person's current active flag unchanged.
-
-`Org Chart Team` is optional but recommended when `Team` contains multiple departments. The app can display one department per person, so sync prefers `Org Chart Team` / `Primary Team` over `Team`. Example: `Team = HR/Finance & Tech`, `Org Chart Team = Technical`. Sync also maps common department aliases such as `Tech` and `Technical` to the existing technical department instead of creating duplicate departments.
-
-`Reports To` is optional. If the column is present, sync treats it as authoritative for reporting lines and clears the manager when the cell is blank. If the column is omitted entirely, existing reporting lines are left unchanged.
-
-`Secondary Reports To` is optional. Use it when one person should keep one primary tree position but also show a dashed secondary connector to another manager or team placeholder, for example `Duane Vargas -> HR Team`. If the column is omitted entirely, existing secondary connectors are left unchanged. If the column is present with a blank cell, that person's secondary connectors are cleared.
-
-Use Photos -> Clean Unused after a bulk re-import if duplicate unassigned files are left in managed storage.
-
-Applied org chart syncs save a latest sync review in Settings. The review includes created/updated/error counts, status changes, department changes, reporting changes, photo source changes, protected managed photos, and warnings. Dry-run previews are not saved as the latest review.
-
-Do not put MCP tool names, REST URLs, API actions, or API keys in the sheet. The sheet is only the employee data source.
-
-The new tab exports successfully and is populated with the current team data. Do not run `sync_google_sheet` or Sync Now if the tab is ever cleared or being rebuilt.
 
 ## Troubleshooting
 
@@ -253,11 +171,6 @@ Check the execution details. The most common causes are:
 
 ## Verification Snapshot
 
-Known verified behavior:
-
-- `GET /org-chart/api/people?includeInactive=true` returns live people JSON.
-- `read_audit_log` returns audit entries when configured with the Header Auth credential.
-- Production MCP URL initializes, lists 9 tools, and successfully calls `list_departments` and `read_audit_log`.
-- `gid=947755283` CSV export returns HTTP 200.
-- `gid=947755283` is populated with current team data.
-- `pnpm qa:weekly-live` verifies the public login page, people API, departments API, audit API, Google Sheet CSV, and MCP initialize plus `tools/list`.
+- `GET /org-chart/api/chart-data` and `GET /org-chart/api/people/headless` return live data from the Employee Portal (with `X-API-Key`).
+- Production MCP URL initializes and lists the read-only tools.
+- `pnpm qa:weekly-live` verifies the public login page, chart data, staff list, and MCP initialize plus `tools/list`.

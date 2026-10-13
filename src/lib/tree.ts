@@ -1,7 +1,10 @@
 import type { TreeNode, Person, Department } from "@/types";
-import { parseSecondaryReportsTo } from "@/lib/secondary-reporting";
 
-export function buildTree(people: Person[], departments: Department[]): TreeNode[] {
+export function buildTree(
+  people: Person[],
+  departments: Department[],
+  secondaryReportsTo: Map<number, number[]> = new Map(),
+): TreeNode[] {
   const deptMap = new Map<number, Department>();
   for (const d of departments) deptMap.set(d.id, d);
 
@@ -11,7 +14,7 @@ export function buildTree(people: Person[], departments: Department[]): TreeNode
       ...p,
       children: [],
       department: deptMap.get(p.departmentId),
-      secondaryReportsTo: parseSecondaryReportsTo(p.projectIds),
+      secondaryReportsTo: secondaryReportsTo.get(p.id) ?? [],
     });
   }
 
@@ -40,10 +43,14 @@ export function buildTree(people: Person[], departments: Department[]): TreeNode
     }
   }
 
+  const bySiblingOrder = (a: TreeNode, b: TreeNode) =>
+    a.displayOrder - b.displayOrder || a.name.localeCompare(b.name);
+
   function sortChildren(node: TreeNode) {
-    node.children.sort((a, b) => a.displayOrder - b.displayOrder);
+    node.children.sort(bySiblingOrder);
     for (const child of node.children) sortChildren(child);
   }
+  roots.sort(bySiblingOrder);
   for (const root of roots) sortChildren(root);
 
   return roots;

@@ -10,11 +10,8 @@ import type { TreeNode, Department } from "@/types";
 interface Props {
   tree: TreeNode[];
   departments: Department[];
-  isEditor?: boolean;
   onNodeClick: (person: TreeNode) => void;
   onBackgroundContextMenu?: (x: number, y: number) => void;
-  onToggle?: (personId: number) => void;
-  onDelete?: (personId: number, personName: string) => void;
   highlightedNodeId?: number | null;
   density?: "compact" | "comfortable";
 }
@@ -30,7 +27,7 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return result;
 }
 
-export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, onToggle, onDelete, highlightedNodeId, density = "comfortable" }: Props) {
+export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundContextMenu, highlightedNodeId, density = "comfortable" }: Props) {
   const grouped = useMemo(() => {
     const all = flattenTree(tree);
     const map = new Map<number, { department: Department; people: TreeNode[] }>();
@@ -185,8 +182,6 @@ export function DepartmentGrid({ tree, departments, onNodeClick, onBackgroundCon
           person={contextMenu.person}
           onClose={() => setContextMenu(null)}
           onEdit={() => { onNodeClick(contextMenu.person); setContextMenu(null); }}
-          onToggle={onToggle ? () => { onToggle(contextMenu.person.id); setContextMenu(null); } : undefined}
-          onDelete={onDelete ? () => { onDelete(contextMenu.person.id, contextMenu.person.name); setContextMenu(null); } : undefined}
         />
       )}
     </div>

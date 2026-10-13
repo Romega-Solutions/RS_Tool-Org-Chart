@@ -35,7 +35,7 @@ function EmbedContent() {
     default:
       return (
         <div className="h-screen bg-background">
-          <TopDownTree tree={data.tree} isEditor={false} onNodeClick={noop} />
+          <TopDownTree tree={data.tree} onNodeClick={noop} />
         </div>
       );
   }

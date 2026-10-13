@@ -22,12 +22,30 @@ const DIM_EDGE_STYLE = {
 export function usePathHighlight(tree: TreeNode[], selectedNodeIds?: number[]) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // Map each node ID to the set of ancestor IDs (including itself)
+  // Map each node ID to the set of ancestor IDs (including itself), plus the
+  // dashed "also reports to" links in both directions: the node's secondary
+  // leads, and the people who list the node as a secondary lead.
   const ancestorsMap = useMemo(() => {
+    const secondaryReports = new Map<string, string[]>();
+    function collectSecondary(node: TreeNode) {
+      for (const leadId of node.secondaryReportsTo ?? []) {
+        const key = String(leadId);
+        secondaryReports.set(key, [...(secondaryReports.get(key) ?? []), String(node.id)]);
+      }
+      node.children.forEach(collectSecondary);
+    }
+    tree.forEach(collectSecondary);
+
     const map = new Map<string, Set<string>>();
     function walk(node: TreeNode, ancestors: string[]) {
       const nodeId = String(node.id);
-      const chain = new Set([...ancestors, nodeId]);
+      const secondaryLeads = (node.secondaryReportsTo ?? []).map(String);
+      const chain = new Set([
+        ...ancestors,
+        nodeId,
+        ...secondaryLeads,
+        ...(secondaryReports.get(nodeId) ?? []),
+      ]);
       map.set(nodeId, chain);
       for (const child of node.children) {
         walk(child, [...ancestors, nodeId]);
@@ -91,24 +109,23 @@ export function usePathHighlight(tree: TreeNode[], selectedNodeIds?: number[]) {
     [isActive, activePathSet]
   );
 
-  // Apply path highlight styles to edges
+  // Apply path highlight styles to edges. The layout's own style (e.g. dashed
+  // secondary connectors) is kept in data.baseStyle so it survives highlighting.
   const applyToEdges = useCallback(
     (edges: Edge[]): Edge[] => {
-      if (!isActive) {
-        return edges.map((e) => ({
-          ...e,
-          style: undefined,
-          animated: false,
-        }));
-      }
-
       return edges.map((e) => {
+        const baseStyle = (e.data?.baseStyle as React.CSSProperties | undefined) ?? e.style;
+        const data = { ...e.data, baseStyle };
+
+        if (!isActive) {
+          return { ...e, data, style: baseStyle, animated: false };
+        }
+
         const inPath = activePathSet.has(e.source) && activePathSet.has(e.target);
-        return {
-          ...e,
-          style: inPath ? PATH_EDGE_STYLE : DIM_EDGE_STYLE,
-          animated: inPath,
-        };
+        const style = inPath
+          ? { ...PATH_EDGE_STYLE, strokeDasharray: baseStyle?.strokeDasharray }
+          : DIM_EDGE_STYLE;
+        return { ...e, data, style, animated: inPath };
       });
     },
     [isActive, activePathSet]

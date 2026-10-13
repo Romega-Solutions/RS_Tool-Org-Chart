@@ -1,12 +1,11 @@
 "use client";
 import { assetPath } from "@/lib/paths";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
-import { X, UserRound, Briefcase, ChevronLeft, Pencil } from "lucide-react";
+import { X, UserRound, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PersonForm } from "@/components/admin/person-form";
 import { getDeptIcon } from "@/lib/dept-icons";
 import type { TreeNode } from "@/types";
 
@@ -15,8 +14,6 @@ interface Props {
   onClose: () => void;
   onSelectPerson?: (person: TreeNode) => void;
   tree?: TreeNode[];
-  isEditor?: boolean;
-  onPersonUpdated?: () => void;
 }
 
 function getInitials(name: string) {
@@ -42,6 +39,32 @@ function findManager(tree: TreeNode[], targetId: number): TreeNode | null {
     if (found) return found;
   }
   return null;
+}
+
+function findPeopleByIds(tree: TreeNode[], ids: number[]): TreeNode[] {
+  const wanted = new Set(ids);
+  const found = new Map<number, TreeNode>();
+  function walk(nodes: TreeNode[]) {
+    for (const node of nodes) {
+      if (wanted.has(node.id)) found.set(node.id, node);
+      walk(node.children);
+    }
+  }
+  walk(tree);
+  return ids.map((id) => found.get(id)).filter((node): node is TreeNode => Boolean(node));
+}
+
+/** People who list `leadId` as an "also reports to" lead. */
+function findSecondaryReports(tree: TreeNode[], leadId: number): TreeNode[] {
+  const reports: TreeNode[] = [];
+  function walk(nodes: TreeNode[]) {
+    for (const node of nodes) {
+      if (node.secondaryReportsTo?.includes(leadId)) reports.push(node);
+      walk(node.children);
+    }
+  }
+  walk(tree);
+  return reports;
 }
 
 // UX §7: exit-faster-than-enter — exit ~70% of enter duration
@@ -114,7 +137,7 @@ function MiniHierarchyCard({
   );
 }
 
-export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEditor, onPersonUpdated }: Props) {
+export function PersonDetailPanel({ person, onClose, onSelectPerson, tree }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<TreeNode[]>([]);
   const handlePanelClose = useCallback(() => {
@@ -142,6 +165,18 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
   const manager = useMemo(() => {
     if (!person || !tree) return null;
     return findManager(tree, person.id);
+  }, [person, tree]);
+
+  // "Also reports to" leads (dashed connectors on the chart)
+  const secondaryLeads = useMemo(() => {
+    if (!person?.secondaryReportsTo?.length || !tree) return [];
+    return findPeopleByIds(tree, person.secondaryReportsTo);
+  }, [person, tree]);
+
+  // People who "also report to" this person
+  const secondaryReports = useMemo(() => {
+    if (!person || !tree) return [];
+    return findSecondaryReports(tree, person.id);
   }, [person, tree]);
 
   const hierarchyAccent = useMemo(
@@ -213,38 +248,6 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                 </h3>
               </div>
               <div className="flex items-center gap-1">
-                {isEditor && person && (
-                  <PersonForm
-                    person={{
-                      id: person.id,
-                      name: person.name,
-                      title: person.title,
-                      isActive: person.isActive,
-                      departmentId: person.department?.id ?? 0,
-                      reportsTo: person.reportsTo ?? null,
-                      displayOrder: person.displayOrder ?? 0,
-                      photoUrl: person.photoUrl,
-                      createdAt: person.createdAt ?? "",
-                      updatedAt: person.updatedAt ?? "",
-                      employmentType: person.employmentType ?? null,
-                      projectIds: person.projectIds ?? null,
-                      email: person.email ?? null,
-                      departmentName: person.department?.name ?? null,
-                      departmentColor: person.department?.color ?? null,
-                    }}
-                    onSave={() => onPersonUpdated?.()}
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Edit person"
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-150"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -302,25 +305,6 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
 
                 <div className="border-t border-border" />
 
-                {isEditor && person.email && (
-                  <>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                        Email
-                      </p>
-                      <a
-                        href={`mailto:${person.email}`}
-                        className="inline-flex text-sm text-rs-primary-600 hover:text-rs-primary-700 underline decoration-rs-primary-500/40"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {person.email}
-                      </a>
-                    </div>
-                    <div className="border-t border-border" />
-                  </>
-                )}
-
                 {/* Department */}
                 {person.department && (() => {
                   const DeptIcon = getDeptIcon(person.department.name);
@@ -345,7 +329,7 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                 })()}
 
                 {/* Local hierarchy */}
-                {(manager || person.children.length > 0) && (
+                {(manager || secondaryLeads.length > 0 || secondaryReports.length > 0 || person.children.length > 0) && (
                   <>
                     <div className="border-t border-border" />
                     <div>
@@ -424,21 +408,47 @@ export function PersonDetailPanel({ person, onClose, onSelectPerson, tree, isEdi
                             </>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  </>
-                )}
 
-                {/* Employment type */}
-                {person.employmentType && (
-                  <>
-                    <div className="border-t border-border" />
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" />
-                        Employment Type
-                      </p>
-                      <p className="text-sm text-foreground">{person.employmentType}</p>
+                        {/* "Also reports to" leads — the dashed connectors on the chart */}
+                        {secondaryLeads.length > 0 && (
+                          <div className="mt-3 border-t border-dashed border-border pt-3">
+                            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              Also reports to
+                            </p>
+                            <div className="flex flex-col items-center gap-2">
+                              {secondaryLeads.map((lead) => (
+                                <div key={lead.id} className="w-full max-w-[220px]">
+                                  <MiniHierarchyCard
+                                    person={lead}
+                                    label="Secondary Lead"
+                                    onClick={() => handleNavigate(lead)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* People who "also report to" this person */}
+                        {secondaryReports.length > 0 && (
+                          <div className="mt-3 border-t border-dashed border-border pt-3">
+                            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              Also leads
+                            </p>
+                            <div className="flex flex-col items-center gap-2">
+                              {secondaryReports.map((report) => (
+                                <div key={report.id} className="w-full max-w-[220px]">
+                                  <MiniHierarchyCard
+                                    person={report}
+                                    label="Secondary Report"
+                                    onClick={() => handleNavigate(report)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}

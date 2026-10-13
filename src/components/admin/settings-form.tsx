@@ -9,19 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Save,
   Upload,
@@ -41,79 +34,11 @@ import {
   EyeOff,
 } from "lucide-react";
 
-type SyncReviewChange = {
-  name: string;
-  before?: string | string[] | null;
-  after?: string | string[] | null;
-  title?: string;
-  department?: string;
-  managedPhoto?: string;
-  sheetPhoto?: string;
-  message?: string;
-};
-
-type SyncReview = {
-  timestamp: string;
-  summary: {
-    created: number;
-    updated: number;
-    errors: number;
-    total: number;
-  };
-  changes: Record<string, SyncReviewChange[]>;
-};
-
 type PublicViewLinkInfo = {
   code: string;
   url: string;
   expiresAt: string;
 };
-
-const SYNC_CHANGE_LABELS: Record<string, string> = {
-  created: "Created",
-  title: "Title Changes",
-  status: "Status Changes",
-  department: "Department Changes",
-  email: "Email Changes",
-  reporting: "Reports To Changes",
-  secondaryReporting: "Secondary Reports To Changes",
-  photo: "Photo Source Changes",
-  photoPreserved: "Protected Web Photos",
-  warnings: "Warnings",
-};
-
-function parseSyncReview(raw: string | undefined): SyncReview | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as SyncReview;
-    if (!parsed?.summary || !parsed?.changes) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function formatValue(value: string | string[] | null | undefined) {
-  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "None";
-  return value || "None";
-}
-
-function describeSyncChange(key: string, change: SyncReviewChange) {
-  if (key === "created") return `${change.title ?? "New person"} in ${change.department ?? "Unknown"}`;
-  if (key === "photoPreserved") return "Kept managed WebP photo";
-  if (key === "warnings") return change.message ?? "Review this row";
-  return `${formatValue(change.before)} → ${formatValue(change.after)}`;
-}
-
-function countMeaningfulSyncChanges(review: SyncReview) {
-  return Object.entries(review.changes)
-    .filter(([key]) => key !== "photoPreserved")
-    .reduce((total, [, items]) => total + items.length, 0);
-}
-
-/* ------------------------------------------------------------------ */
-/*  Color field                                                        */
-/* ------------------------------------------------------------------ */
 
 interface ColorFieldProps {
   label: string;
@@ -189,16 +114,13 @@ function SettingsSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export function SettingsForm() {
-  const { settings, loading, updateSettings, refetch } = useSettings();
+  const { settings, loading, updateSettings } = useSettings();
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedApi, setCopiedApi] = useState<string | null>(null);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [previewingSync, setPreviewingSync] = useState(false);
-  const [syncPreview, setSyncPreview] = useState<SyncReview | null>(null);
   const [publicLink, setPublicLink] = useState<PublicViewLinkInfo | null>(null);
   const [publicLinkLoading, setPublicLinkLoading] = useState(false);
   const [publicLinkRotating, setPublicLinkRotating] = useState(false);
@@ -340,66 +262,9 @@ export function SettingsForm() {
     return getAppUrl();
   }
 
-  async function handleSync() {
-    setSyncing(true);
-    try {
-      const nextUrl = form.sheets_url?.trim();
-      const init: RequestInit = {
-        method: "POST",
-      };
-      if (nextUrl) {
-        init.headers = { "Content-Type": "application/json" };
-        init.body = JSON.stringify({ url: nextUrl });
-      }
-      const res = await fetch(apiPath("/api/sync"), init);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Sync failed");
-      const { summary } = data;
-      setSyncPreview(null);
-      toast.success(`Sync complete: ${summary.created} created, ${summary.updated} updated, ${summary.errors} errors`);
-      await refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync failed");
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  async function handleSyncPreview() {
-    setPreviewingSync(true);
-    try {
-      const nextUrl = form.sheets_url?.trim();
-      const res = await fetch(apiPath("/api/sync"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        ...(nextUrl ? { body: JSON.stringify({ dryRun: true, url: nextUrl }) } : {}),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Sync preview failed");
-      setSyncPreview({
-        timestamp: new Date().toISOString(),
-        summary: data.summary,
-        changes: data.changes,
-      });
-      toast.success(`Preview ready: ${data.summary.created} created, ${data.summary.updated} updated, ${data.summary.errors} errors`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync preview failed");
-    } finally {
-      setPreviewingSync(false);
-    }
-  }
-
   if (loading) {
     return <SettingsSkeleton />;
   }
-
-  const lastSyncAt = settings.last_sync_at;
-  const lastSyncDisplay = lastSyncAt
-    ? new Date(lastSyncAt).toLocaleString()
-    : "Never synced";
-  const syncReview = parseSyncReview(settings.last_sync_summary);
-  const displayedSyncReview = syncPreview ?? syncReview;
-  const syncChangeCount = displayedSyncReview ? countMeaningfulSyncChanges(displayedSyncReview) : 0;
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-3xl mx-auto pb-20">
@@ -795,13 +660,13 @@ export function SettingsForm() {
           <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
             <p className="text-xs font-medium text-foreground">Quick Start</p>
             <div className="relative">
-              <pre className="text-[11px] font-mono text-foreground/80 overflow-x-auto whitespace-pre">{`curl ${getBaseUrl()}/api/people -H "X-API-Key: YOUR_KEY"`}</pre>
+              <pre className="text-[11px] font-mono text-foreground/80 overflow-x-auto whitespace-pre">{`curl ${getBaseUrl()}/api/chart-data -H "X-API-Key: YOUR_KEY"`}</pre>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="absolute -top-1 right-0 h-6 w-6 cursor-pointer text-muted-foreground hover:text-foreground"
-                onClick={() => handleCopyApi(`curl ${getBaseUrl()}/api/people -H "X-API-Key: YOUR_KEY"`, "Quick start")}
+                onClick={() => handleCopyApi(`curl ${getBaseUrl()}/api/chart-data -H "X-API-Key: YOUR_KEY"`, "Quick start")}
                 aria-label="Copy quick start command"
               >
                 {copiedApi === "Quick start" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -829,39 +694,11 @@ export function SettingsForm() {
             {/* Endpoint groups */}
             {([
               {
-                group: "People",
-                color: "text-blue-500",
-                endpoints: [
-                  ["List", "GET", "/api/people", "?includeInactive=true", "Editor"],
-                  ["Get", "GET", "/api/people/{id}", "", "Editor"],
-                  ["Headless profile", "GET", "/api/people/headless", "?includeInactive=true", "Editor"],
-                  ["Create", "POST", "/api/people", "name, title, departmentId, reportsTo?, photoUrl?, email?", "Editor"],
-                  ["Update", "PATCH", "/api/people/{id}", "name?, title?, departmentId?, reportsTo?, isActive?, email?", "Editor"],
-                  ["Delete", "DELETE", "/api/people/{id}", "", "Editor"],
-                  ["Toggle active", "PATCH", "/api/people/{id}/toggle", "", "Editor"],
-                  ["Reassign", "PATCH", "/api/people/reassign", "personId, reportsTo", "Editor"],
-                ],
-              },
-              {
-                group: "Departments",
-                color: "text-violet-500",
-                endpoints: [
-                  ["List", "GET", "/api/departments", "", "Auth"],
-                  ["Create", "POST", "/api/departments", "name, color?, displayOrder?", "Editor"],
-                  ["Update", "PATCH", "/api/departments/{id}", "name?, color?, displayOrder?", "Editor"],
-                  ["Delete", "DELETE", "/api/departments/{id}", "", "Editor"],
-                ],
-              },
-              {
                 group: "Chart & Data",
                 color: "text-emerald-500",
                 endpoints: [
                   ["Org chart tree", "GET", "/api/chart-data", "", "Auth"],
-                  ["Audit log", "GET", "/api/audit", "?page=1&limit=50", "Auth"],
-                  ["Photos", "GET", "/api/photos", "", "Auth"],
-                  ["Delete photo", "DELETE", "/api/photos/{filename}", "", "Editor"],
-                  ["Import external", "POST", "/api/photos/import-external", "", "Editor"],
-                  ["Clean unused", "POST", "/api/photos/cleanup-unused", "", "Editor"],
+                  ["Public chart tree", "GET", "/api/public-chart-data", "?code=", "Public"],
                 ],
               },
               {
@@ -870,9 +707,7 @@ export function SettingsForm() {
                 endpoints: [
                   ["Get settings", "GET", "/api/settings", "", "Public"],
                   ["Update settings", "PATCH", "/api/settings", '{"key":"value"}', "Editor"],
-                  ["Import CSV", "POST", "/api/import", "multipart file", "Editor"],
-                  ["Sync Sheets", "POST", "/api/sync", "url?, dryRun?", "Editor"],
-                  ["Upload photo", "POST", "/api/upload", "multipart file", "Editor"],
+                  ["Upload logo", "POST", "/api/upload", "multipart file", "Editor"],
                 ],
               },
             ] as { group: string; color: string; endpoints: [string, string, string, string, "Public" | "Auth" | "Editor"][] }[]).map(({ group, color, endpoints }) => (
@@ -925,13 +760,7 @@ export function SettingsForm() {
             <Label>Examples</Label>
             <div className="space-y-2">
               {([
-                ["List people", `curl ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY"`],
-                ["Headless profile list", `curl ${getBaseUrl()}/api/people/headless \\\n  -H "X-API-Key: YOUR_KEY"`],
-                ["Create person", `curl -X POST ${getBaseUrl()}/api/people \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"Jane Doe","title":"Engineer","departmentId":3,"email":"jane.doe@example.com"}'`],
-                ["Update person", `curl -X PATCH ${getBaseUrl()}/api/people/1 \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"title":"Senior Engineer"}'`],
-                ["Reassign", `curl -X PATCH ${getBaseUrl()}/api/people/reassign \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"personId":10,"reportsTo":14}'`],
-                ["Sync sheet (preview)", `curl -X POST ${getBaseUrl()}/api/sync \\\n  -H "X-API-Key: YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url":"https://docs.google.com/spreadsheets/d/<sheetId>/export?format=csv&gid=947755283","dryRun":true}'`],
-                ["Chart data", `curl ${getBaseUrl()}/api/chart-data`],
+                ["Chart data", `curl ${getBaseUrl()}/api/chart-data \\\n  -H "X-API-Key: YOUR_KEY"`],
               ] as [string, string][]).map(([label, cmd]) => (
                 <div key={label} className="rounded-lg border border-border overflow-hidden">
                   <div className="flex items-center justify-between bg-muted/40 px-3 py-1 border-b border-border">
@@ -952,191 +781,9 @@ export function SettingsForm() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              All mutation endpoints return the updated object as JSON. Unauthorized requests return <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">401</code> or <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">403</code>.
+              People, departments and reporting lines are read-only here; edit them in the Employee Portal. Unauthorized requests return <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">401</code> or <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">403</code>.
             </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Google Sheets Sync */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <Link2 className="w-4.5 h-4.5 text-emerald-400" />
-            </div>
-            <div>
-              <CardTitle className="text-base">Google Sheets Sync</CardTitle>
-              <CardDescription>
-                Keep people in sync from a Google Sheet by reading its CSV export.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="sheets_url">Google Sheet Source URL</Label>
-            <Input
-              id="sheets_url"
-              aria-label="Google Sheet Source URL"
-              value={form.sheets_url || ""}
-              onChange={(e) => setField("sheets_url", e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/<sheetId>/edit#gid=<tabId>"
-            />
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                You can paste either a normal Google Sheet view/edit link or an export URL. This app normalizes both to a CSV export URL.
-              </p>
-              <p className="font-mono text-[11px]">
-                https://docs.google.com/spreadsheets/d/&lt;sheetId&gt;/export?format=csv&amp;gid=&lt;tabId&gt;
-              </p>
-              <p>
-                Ensure the sheet is set to Anyone with the link can view, or otherwise publicly accessible to this server.
-              </p>
-              <p>
-                Required columns: <span className="font-medium text-foreground">Name</span>, <span className="font-medium text-foreground">Title</span>, <span className="font-medium text-foreground">Org Chart Team</span>. Email is optional via <span className="font-medium text-foreground">Work Email</span>.
-              </p>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Auto-Sync Interval</Label>
-            <Select
-              value={form.sync_interval || "off"}
-              onValueChange={(v) => setField("sync_interval", v ?? "off")}
-            >
-              <SelectTrigger className="w-full">
-                {
-                  {
-                    off: "Off — manual only",
-                    "1h": "Every hour",
-                    "6h": "Every 6 hours",
-                    "12h": "Every 12 hours",
-                    "24h": "Every 24 hours",
-                  }[form.sync_interval || "off"] ?? "Off — manual only"
-                }
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="off">Off — manual only</SelectItem>
-                <SelectItem value="1h">Every hour</SelectItem>
-                <SelectItem value="6h">Every 6 hours</SelectItem>
-                <SelectItem value="12h">Every 12 hours</SelectItem>
-                <SelectItem value="24h">Every 24 hours</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Requires <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">CRON_SECRET</code> env var and a cron job hitting <code className="text-[0.7rem] bg-muted px-1 py-0.5 rounded">GET /api/sync/cron</code>.
-            </p>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {lastSyncDisplay !== "Never synced" ? (
-                <>Last synced: <span className="font-medium text-foreground">{lastSyncDisplay}</span></>
-              ) : (
-                <span className="text-muted-foreground">Never synced</span>
-              )}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={previewingSync || syncing || !form.sheets_url}
-                onClick={handleSyncPreview}
-                className="cursor-pointer transition-all duration-200"
-              >
-                {previewingSync ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                {previewingSync ? "Previewing..." : "Preview Changes"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={syncing || previewingSync || !form.sheets_url}
-                onClick={handleSync}
-                className="cursor-pointer transition-all duration-200"
-              >
-                {syncing ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                {syncing ? "Syncing..." : "Sync Now"}
-              </Button>
-            </div>
-          </div>
-          {displayedSyncReview && (
-            <div className="rounded-lg border border-border bg-muted/20">
-              <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {syncPreview ? "Sync Preview" : "Latest Sync Review"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(displayedSyncReview.timestamp).toLocaleString()} · {displayedSyncReview.summary.total} sheet rows processed
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {syncPreview && (
-                    <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
-                      Preview only
-                    </Badge>
-                  )}
-                  <Badge
-                    variant="outline"
-                    className={displayedSyncReview.summary.errors > 0 ? "border-destructive/40 text-destructive" : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"}
-                  >
-                    {displayedSyncReview.summary.errors > 0 ? `${displayedSyncReview.summary.errors} errors` : `${syncChangeCount} changes`}
-                  </Badge>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4">
-                {[
-                  ["Created", displayedSyncReview.summary.created],
-                  ["Updated Rows", displayedSyncReview.summary.updated],
-                  ["Errors", displayedSyncReview.summary.errors],
-                  ["Protected Photos", displayedSyncReview.changes.photoPreserved?.length ?? 0],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-md border border-border bg-background px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground">{label}</p>
-                    <p className="text-lg font-semibold tabular-nums">{value}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-3 border-t border-border px-4 py-4">
-                {Object.entries(SYNC_CHANGE_LABELS)
-                  .map(([key, label]) => ({ key, label, items: displayedSyncReview.changes[key] ?? [] }))
-                  .filter(({ items }) => items.length > 0)
-                  .map(({ key, label, items }) => (
-                    <div key={key} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-foreground">{label}</p>
-                        <span className="text-[11px] tabular-nums text-muted-foreground">{items.length}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {items.slice(0, 5).map((item, index) => (
-                          <div key={`${key}-${item.name}-${index}`} className="flex items-start justify-between gap-3 rounded-md bg-background px-3 py-2 text-xs">
-                            <span className="font-medium text-foreground">{item.name}</span>
-                            <span className="max-w-[60%] text-right text-muted-foreground">{describeSyncChange(key, item)}</span>
-                          </div>
-                        ))}
-                        {items.length > 5 && (
-                          <p className="px-3 text-[11px] text-muted-foreground">
-                            {items.length - 5} more not shown
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                {syncChangeCount === 0 && (displayedSyncReview.changes.photoPreserved?.length ?? 0) === 0 && (
-                  <p className="text-sm text-muted-foreground">No data changes found in the latest sync.</p>
-                )}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

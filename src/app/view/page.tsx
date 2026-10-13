@@ -63,7 +63,7 @@ function ViewPageContent() {
 
   return (
     <div className="h-screen w-full">
-      <ChartCanvas isEditor={false} dataEndpoint={dataEndpoint} showExport={!publicCode} />
+      <ChartCanvas dataEndpoint={dataEndpoint} showExport={!publicCode} />
       {publicCode && <PublicLoginSnackbar />}
     </div>
   );

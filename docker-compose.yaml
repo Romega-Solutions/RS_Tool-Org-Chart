@@ -23,8 +23,8 @@ services:
       - PUBLIC_APP_ORIGIN=${PUBLIC_APP_ORIGIN:-https://tools.romega-solutions.com}
       - API_KEY=${API_KEY:-}
       - ORGCHART_API_KEY=${ORGCHART_API_KEY:-}
-      - CRON_SECRET=${CRON_SECRET:-}
-      - SYNC_INTERVAL=${SYNC_INTERVAL:-off}
+      - DIRECTORY_DATABASE_URL=${DIRECTORY_DATABASE_URL:-}
+      - DIRECTORY_SUPABASE_URL=${DIRECTORY_SUPABASE_URL:-}
     volumes:
       - orgchart_data:/app/data
       - orgchart_uploads:/app/public/uploads
@@ -34,45 +34,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Lightweight cron sidecar — reads sync_interval from the app settings
-  # and calls GET /api/sync/cron on the configured schedule.
-  # Set CRON_SECRET in .env to enable. Disabled when CRON_SECRET is empty.
-  sync-cron:
-    image: alpine:3.20
-    depends_on:
-      orgchart:
-        condition: service_healthy
-    environment:
-      - CRON_SECRET=${CRON_SECRET:-}
-      - SYNC_INTERVAL=${SYNC_INTERVAL:-off}
-      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-/org-chart}
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        apk add --no-cache curl > /dev/null 2>&1
-        if [ -z "$$CRON_SECRET" ]; then
-          echo "[sync-cron] CRON_SECRET not set — exiting. Set it in .env to enable auto-sync."
-          exit 0
-        fi
-        case "$$SYNC_INTERVAL" in
-          1h)  SLEEP=3600 ;;
-          6h)  SLEEP=21600 ;;
-          12h) SLEEP=43200 ;;
-          24h) SLEEP=86400 ;;
-          *)   echo "[sync-cron] SYNC_INTERVAL=$$SYNC_INTERVAL (off) — exiting."; exit 0 ;;
-        esac
-        echo "[sync-cron] Running every $$SYNC_INTERVAL ($$SLEEP seconds)"
-        BASE_PATH="$${NEXT_PUBLIC_BASE_PATH:-/org-chart}"
-        BASE_PATH="/$${BASE_PATH#/}"
-        BASE_PATH="$${BASE_PATH%/}"
-        while true; do
-          sleep $$SLEEP
-          echo "[sync-cron] Triggering sync..."
-          curl -sf -H "Authorization: Bearer $$CRON_SECRET" "http://orgchart:3000$${BASE_PATH}/api/sync/cron" || echo "[sync-cron] Sync request failed"
-        done
-    restart: unless-stopped
 
 volumes:
   orgchart_data:
