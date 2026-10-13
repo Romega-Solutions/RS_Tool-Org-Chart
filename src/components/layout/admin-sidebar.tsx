@@ -1,5 +1,5 @@
 "use client";
-import { assetPath } from "@/lib/paths";
+import { appPath, assetPath } from "@/lib/paths";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -178,7 +178,11 @@ export function AdminSidebar() {
             className={`${
               collapsed ? "w-full justify-center" : "w-full justify-start"
             } text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all duration-200`}
-            onClick={logout}
+            onClick={async () => {
+              await logout();
+              // Full page load so every useAuth() instance (e.g. ProtectedRoute) drops the old user.
+              window.location.replace(appPath("/login"));
+            }}
           >
             <LogOut className="w-4 h-4 shrink-0" />
             {!collapsed && <span className="ml-2">Sign Out</span>}
